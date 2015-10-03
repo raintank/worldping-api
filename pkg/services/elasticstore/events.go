@@ -42,7 +42,7 @@ func GetEventsQuery(query *m.GetEventsQuery) error {
 			},
 		},
 	}
-	out, err := es.Search("events", "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc"}, esQuery)
+	out, err := es.Search("events*", "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc"}, esQuery)
 	if err != nil {
 		return err
 	}
