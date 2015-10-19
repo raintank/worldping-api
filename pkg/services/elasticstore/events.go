@@ -2,6 +2,9 @@ package elasticstore
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/grafana/grafana/pkg/bus"
 	m "github.com/grafana/grafana/pkg/models"
@@ -42,7 +45,23 @@ func GetEventsQuery(query *m.GetEventsQuery) error {
 			},
 		},
 	}
-	out, err := es.Search("events*", "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc"}, esQuery)
+	start := time.Unix(query.Start / 1000, 0)
+	end := time.Unix(query.End / 1000, 0)
+	r := end.Sub(start) / time.Hour / 24
+	idxDates := make([]string, 0, r + 1)
+	y, m, d := start.Date()
+	if r > 0 {
+		for {
+			end = end.Add(-(time.Hour * 24))
+			y2, m2, d2 := end.Date()
+			idxDates = append(idxDates, fmt.Sprintf("events-%d-%d-%d", y, m, d))
+			if y2 <= y && m2 <= m && d2 <= d {
+				break
+			}
+		}
+	}
+	allTogether := strings.Join(idxDates, ",")
+	out, err := es.Search(allTogether, "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc"}, esQuery)
 	if err != nil {
 		return err
 	}
