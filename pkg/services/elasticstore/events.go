@@ -61,7 +61,7 @@ func GetEventsQuery(query *m.GetEventsQuery) error {
 		}
 	}
 	allTogether := strings.Join(idxDates, ",")
-	out, err := es.Search(allTogether, "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc"}, esQuery)
+	out, err := es.Search(allTogether, "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc", "ignore_unavailable":true}, esQuery)
 	if err != nil {
 		return err
 	}
