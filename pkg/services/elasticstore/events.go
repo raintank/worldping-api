@@ -54,7 +54,7 @@ func GetEventsQuery(query *m.GetEventsQuery) error {
 		for {
 			end = end.Add(-(time.Hour * 24))
 			y2, m2, d2 := end.Date()
-			idxDates = append(idxDates, fmt.Sprintf("events-%d-%d-%d", y, m, d))
+			idxDates = append(idxDates, fmt.Sprintf("events-%d-%02d-%02d", y, m, d))
 			if y2 <= y && m2 <= m && d2 <= d {
 				break
 			}
