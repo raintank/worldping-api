@@ -45,10 +45,10 @@ func GetEventsQuery(query *m.GetEventsQuery) error {
 			},
 		},
 	}
-	start := time.Unix(query.Start / 1000, 0)
-	end := time.Unix(query.End / 1000, 0)
+	start := time.Unix(query.Start/1000, 0)
+	end := time.Unix(query.End/1000, 0)
 	r := end.Sub(start) / time.Hour / 24
-	idxDates := make([]string, 0, r + 1)
+	idxDates := make([]string, 0, r+1)
 	y, m, d := start.Date()
 	if r > 0 {
 		for {
@@ -61,7 +61,7 @@ func GetEventsQuery(query *m.GetEventsQuery) error {
 		}
 	}
 	allTogether := strings.Join(idxDates, ",")
-	out, err := es.Search(allTogether, "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc", "ignore_unavailable":true}, esQuery)
+	out, err := es.Search(allTogether, "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc", "ignore_unavailable": true}, esQuery)
 	if err != nil {
 		return err
 	}
