@@ -8,6 +8,8 @@ import (
 
 	"github.com/grafana/grafana/pkg/bus"
 	m "github.com/grafana/grafana/pkg/models"
+	"github.com/grafana/grafana/pkg/setting"
+	elastigo "github.com/mattbaird/elastigo/lib"
 	"github.com/raintank/raintank-metric/schema"
 )
 
@@ -45,23 +47,33 @@ func GetEventsQuery(query *m.GetEventsQuery) error {
 			},
 		},
 	}
-	start := time.Unix(query.Start/1000, 0)
-	end := time.Unix(query.End/1000, 0)
-	r := end.Sub(start) / time.Hour / 24
-	idxDates := make([]string, 0, r+1)
-	y, m, d := start.Date()
-	if r > 0 {
-		for {
-			end = end.Add(-(time.Hour * 24))
-			y2, m2, d2 := end.Date()
-			idxDates = append(idxDates, fmt.Sprintf("events-%d-%02d-%02d", y, m, d))
-			if y2 <= y && m2 <= m && d2 <= d {
-				break
+	var out elastigo.SearchResult
+	var err error
+
+	wildcard := setting.Cfg.Section("elasticsearch").Key("wildcard_events").MustBool()
+
+	if wildcard {
+		out, err = es.Search("events*", "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc"}, esQuery)
+	} else {
+		start := time.Unix(query.Start/1000, 0)
+		end := time.Unix(query.End/1000, 0)
+		r := end.Sub(start) / time.Hour / 24
+		idxDates := make([]string, 0, r+1)
+		y, m, d := start.Date()
+		if r > 0 {
+			for {
+				end = end.Add(-(time.Hour * 24))
+				y2, m2, d2 := end.Date()
+				idxDates = append(idxDates, fmt.Sprintf("events-%d-%02d-%02d", y, m, d))
+				if y2 <= y && m2 <= m && d2 <= d {
+					break
+				}
 			}
 		}
+		allTogether := strings.Join(idxDates, ",")
+		out, err = es.Search(allTogether, "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc", "ignore_unavailable": true}, esQuery)
 	}
-	allTogether := strings.Join(idxDates, ",")
-	out, err := es.Search(allTogether, "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc", "ignore_unavailable": true}, esQuery)
+
 	if err != nil {
 		return err
 	}
