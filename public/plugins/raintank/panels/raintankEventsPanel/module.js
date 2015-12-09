@@ -2,7 +2,7 @@ define([
   'angular',
   'app/app',
   'lodash',
-  'kbn',
+  'app/core/utils/kbn',
   'app/features/panel/panel_meta',
 ],
 function (angular, app, _, kbn, PanelMeta) {
