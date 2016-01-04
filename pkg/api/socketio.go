@@ -32,13 +32,27 @@ var metricsRecvd met.Count
 
 type ContextCache struct {
 	sync.RWMutex
-	Contexts map[string]*CollectorContext
+	Contexts      map[string]*CollectorContext
+	monitorsIndex map[int64]*m.MonitorDTO // index of monitors by Id
 }
 
 func (s *ContextCache) Set(id string, context *CollectorContext) {
 	s.Lock()
 	defer s.Unlock()
 	s.Contexts[id] = context
+	if s.monitorsIndex == nil {
+		s.loadMonitors()
+	}
+	newIndex := make(map[int64]*m.MonitorDTO)
+	for _, mon := range s.monitorsIndex {
+		for _, col := range mon.Collectors {
+			if col == context.Collector.Id {
+				newIndex[mon.Id] = mon
+				break
+			}
+		}
+	}
+	context.MonitorsIndex = newIndex
 }
 
 func (s *ContextCache) Remove(id string) {
@@ -61,10 +75,127 @@ func (s *ContextCache) Emit(id string, event string, payload interface{}) {
 func (c *ContextCache) Refresh(collectorId int64) {
 	c.RLock()
 	defer c.RUnlock()
+
 	for _, ctx := range c.Contexts {
 		if ctx.Collector.Id == collectorId {
 			ctx.Refresh()
 		}
+	}
+}
+
+func (c *ContextCache) loadMonitors() {
+	monQuery := m.GetMonitorsQuery{
+		IsGrafanaAdmin: true,
+		Enabled:        "true",
+	}
+	newIndex := make(map[int64]*m.MonitorDTO)
+	newCollectorIndex := make(map[int64]map[int64]*m.MonitorDTO)
+
+	if err := bus.Dispatch(&monQuery); err != nil {
+		log.Error(0, "failed to get list of monitors.", err)
+	} else {
+		for _, mon := range monQuery.Result {
+			newIndex[mon.Id] = mon
+			for _, col := range mon.Collectors {
+				if _, ok := newCollectorIndex[col]; !ok {
+					newCollectorIndex[col] = make(map[int64]*m.MonitorDTO)
+				}
+				newCollectorIndex[col][mon.Id] = mon
+			}
+		}
+		c.monitorsIndex = newIndex
+	}
+	for _, ctx := range c.Contexts {
+		ctx.MonitorsIndex = newCollectorIndex[ctx.Collector.Id]
+	}
+}
+
+func (c *ContextCache) AddMonitor(event *events.MonitorCreated) {
+	mon := &m.MonitorDTO{
+		Id:            event.Id,
+		OrgId:         event.OrgId,
+		EndpointId:    event.EndpointId,
+		EndpointSlug:  event.EndpointSlug,
+		MonitorTypeId: event.MonitorTypeId,
+		CollectorIds:  event.CollectorIds,
+		CollectorTags: event.CollectorTags,
+		Collectors:    event.Collectors,
+		Settings:      event.Settings,
+		Frequency:     event.Frequency,
+		Offset:        event.Offset,
+		Enabled:       event.Enabled,
+		Updated:       event.Updated,
+	}
+	// get map of collectors.
+	colList := make(map[int64]bool)
+	for _, col := range mon.Collectors {
+		colList[col] = true
+	}
+	c.Lock()
+	defer c.Unlock()
+	// add the monitor to the full index.
+	c.monitorsIndex[event.Id] = mon
+
+	// add the monitor to the perCollector index, for each collector it is enabled on.
+	for _, ctx := range c.Contexts {
+		if _, ok := colList[ctx.Collector.Id]; ok {
+			ctx.MonitorsIndex[event.Id] = mon
+		}
+	}
+}
+
+func (c *ContextCache) UpdateMonitor(event *events.MonitorUpdated) {
+	mon := &m.MonitorDTO{
+		Id:            event.Id,
+		OrgId:         event.OrgId,
+		EndpointId:    event.EndpointId,
+		EndpointSlug:  event.EndpointSlug,
+		MonitorTypeId: event.MonitorTypeId,
+		CollectorIds:  event.CollectorIds,
+		CollectorTags: event.CollectorTags,
+		Collectors:    event.Collectors,
+		Settings:      event.Settings,
+		Frequency:     event.Frequency,
+		Offset:        event.Offset,
+		Enabled:       event.Enabled,
+		Updated:       event.Updated,
+	}
+	// get map of collectors.
+	colList := make(map[int64]bool)
+	for _, col := range mon.Collectors {
+		colList[col] = true
+	}
+	c.Lock()
+	defer c.Unlock()
+	c.monitorsIndex[event.Id] = mon
+	// add the monitor to the perCollector index, for each collector it is enabled on.
+	for _, ctx := range c.Contexts {
+		if _, ok := colList[ctx.Collector.Id]; ok {
+			ctx.MonitorsIndex[event.Id] = mon
+		}
+	}
+
+	// remove monitor from collectors it is no longer on.
+	toDelete := make(map[int64]bool)
+	for _, collectorId := range event.LastState.Collectors {
+		if _, ok := colList[collectorId]; !ok {
+			toDelete[collectorId] = true
+		}
+	}
+	for _, ctx := range c.Contexts {
+		if _, ok := toDelete[ctx.Collector.Id]; ok {
+			delete(ctx.MonitorsIndex, event.Id)
+		}
+	}
+}
+
+func (c *ContextCache) DeleteMonitor(event *events.MonitorRemoved) {
+	c.Lock()
+	defer c.Unlock()
+	delete(c.monitorsIndex, event.Id)
+
+	for _, ctx := range c.Contexts {
+		delete(ctx.MonitorsIndex, event.Id)
 	}
 }
 
@@ -74,6 +205,7 @@ func (c *ContextCache) RefreshLoop() {
 		select {
 		case <-ticker.C:
 			c.RLock()
+			c.loadMonitors()
 			for _, ctx := range c.Contexts {
 				ctx.Refresh()
 			}
@@ -86,15 +218,17 @@ func NewContextCache() *ContextCache {
 	cache := &ContextCache{
 		Contexts: make(map[string]*CollectorContext),
 	}
+
 	go cache.RefreshLoop()
 	return cache
 }
 
 type CollectorContext struct {
 	*m.SignedInUser
-	Collector *m.CollectorDTO
-	Socket    socketio.Socket
-	SocketId  string
+	Collector     *m.CollectorDTO
+	Socket        socketio.Socket
+	SocketId      string
+	MonitorsIndex map[int64]*m.MonitorDTO // index of monitors by Id
 }
 
 type BinMessage struct {
@@ -386,7 +520,7 @@ func (c *CollectorContext) Refresh() {
 	if c.Collector.Public {
 		org = 0
 	}
-	totalSessions := len(q.Result)
+	totalSessions := int64(len(q.Result))
 	//step 2. for each session
 	for pos, sess := range q.Result {
 		//we only need to refresh the 1 socket.
@@ -394,26 +528,13 @@ func (c *CollectorContext) Refresh() {
 			continue
 		}
 		//step 3. get list of monitors configured for this colletor.
-		monQuery := m.GetMonitorsQuery{
-			OrgId:          org,
-			IsGrafanaAdmin: true,
-			Modulo:         int64(totalSessions),
-			ModuloOffset:   int64(pos),
-			Enabled:        "true",
-		}
-		if err := bus.Dispatch(&monQuery); err != nil {
-			log.Error(0, "failed to get list of monitors.", err)
-			return
-		}
+
 		log.Info("sending refresh to " + sess.SocketId)
 		//step 5. send to socket.
-		monitors := make([]*m.MonitorDTO, 0)
-		for _, mon := range monQuery.Result {
-			for _, col := range mon.Collectors {
-				if col == c.Collector.Id {
-					monitors = append(monitors, mon)
-					break
-				}
+		monitors := make([]*m.MonitorDTO, 0, len(c.MonitorsIndex))
+		for _, mon := range c.MonitorsIndex {
+			if (org == 0 || mon.OrgId == org) && (mon.Id%totalSessions == int64(pos)) {
+				monitors = append(monitors, mon)
 			}
 		}
 		c.Socket.Emit("refresh", monitors)
@@ -430,6 +551,7 @@ func SocketIO(c *middleware.Context) {
 
 func EmitUpdateMonitor(event *events.MonitorUpdated) error {
 	log.Info("processing monitorUpdated event.")
+	contextCache.UpdateMonitor(event)
 	seenCollectors := make(map[int64]bool)
 	for _, collectorId := range event.Collectors {
 		seenCollectors[collectorId] = true
@@ -442,13 +564,16 @@ func EmitUpdateMonitor(event *events.MonitorUpdated) error {
 			if err := EmitEvent(collectorId, "removed", event); err != nil {
 				return err
 			}
+
 		}
 	}
+
 	return nil
 }
 
 func EmitAddMonitor(event *events.MonitorCreated) error {
 	log.Info("processing monitorCreated event")
+	contextCache.AddMonitor(event)
 	for _, collectorId := range event.Collectors {
 		if err := EmitEvent(collectorId, "created", event); err != nil {
 			return err
@@ -459,6 +584,7 @@ func EmitAddMonitor(event *events.MonitorCreated) error {
 
 func EmitDeleteMonitor(event *events.MonitorRemoved) error {
 	log.Info("processing monitorRemoved event")
+	contextCache.DeleteMonitor(event)
 	for _, collectorId := range event.Collectors {
 		if err := EmitEvent(collectorId, "removed", event); err != nil {
 			return err
