@@ -76,7 +76,7 @@
     "list": [
       {
         "allFormat": "regex values",
-        "datasource": null,
+        "datasource": "raintank",
         "includeAll": true,
         "multi": true,
         "multiFormat": "regex values",
@@ -90,7 +90,7 @@
       },
       {
         "allFormat": "regex values",
-        "datasource": null,
+        "datasource": "raintank",
         "includeAll": true,
         "label": "probe",
         "multi": true,
@@ -103,7 +103,7 @@
       },
       {
         "allFormat": "regex values",
-        "datasource": null,
+        "datasource": "raintank",
         "includeAll": true,
         "multi": true,
         "multiFormat": "regex values",
