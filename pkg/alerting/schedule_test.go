@@ -2,6 +2,7 @@ package alerting
 
 import (
 	"testing"
+	"time"
 
 	m "github.com/grafana/grafana/pkg/models"
 	. "github.com/smartystreets/goconvey/convey"
@@ -33,4 +34,32 @@ func TestScheduleBuilding(t *testing.T) {
 			t.Errorf("sched.Definition.CritExpr should be '%s' not '%s'", critExpr, sched.Definition.CritExpr)
 		}
 	})
+}
+
+func TestJobAssertStart(t *testing.T) {
+	type cas struct {
+		step  int
+		steps int
+		first int64
+		last  int64
+	}
+	cases := []cas{
+		// note that graphite quantizes down, so graphite output should be points at 10, 20
+		{
+			10, 2, 10, 23,
+		},
+	}
+
+	for i, c := range cases {
+		job := &Job{
+			LastPointTs: time.Unix(c.last, 0),
+			AssertStep:  c.step,
+			AssertSteps: c.steps,
+		}
+		job.assertStart()
+		start := job.AssertStart.Unix()
+		if start != c.first {
+			t.Fatalf("job assertStart case %d expected %d, got %d", i, c.first, start)
+		}
+	}
 }

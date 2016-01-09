@@ -70,6 +70,11 @@ func (job Job) StoreResult(res m.CheckEvalResult) {
 	metricpublisher.Publish(metrics)
 }
 
+func (job *Job) assertStart() {
+	startTs := job.LastPointTs.Unix() - int64(job.AssertStep*(job.AssertSteps))
+	job.AssertStart = time.Unix((startTs+1)+((startTs+1)%int64(job.AssertStep)), 0)
+}
+
 // getJobs retrieves all jobs for which lastPointAt % their freq == their offset.
 func getJobs(lastPointAt int64) ([]*Job, error) {
 
