@@ -1,7 +1,7 @@
 define([
   'angular',
   'lodash',
-  'kbn',
+  'app/core/utils/kbn',
 ],
 function (angular, _, kbn) {
   'use strict';
@@ -145,6 +145,11 @@ function (angular, _, kbn) {
       if (variable.type === 'interval') {
         self.updateAutoInterval(variable);
       }
+
+      if (variable.type === 'custom' && variable.includeAll) {
+        self.addAllOption(variable);
+      }
+
     };
 
     this.updateOptions = function(variable) {
@@ -292,7 +297,10 @@ function (angular, _, kbn) {
           break;
         }
         case 'lucene': {
-          allValue = '(' + _.pluck(variable.options, 'text').join(' OR ') + ')';
+          var quotedValues = _.map(variable.options, function(val) {
+            return '\\\"' + val.text + '\\\"';
+          });
+          allValue = '(' + quotedValues.join(' OR ') + ')';
           break;
         }
         case 'regex values': {

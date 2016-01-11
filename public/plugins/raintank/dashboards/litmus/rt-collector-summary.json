@@ -1,15 +1,15 @@
 {
   "id": 5,
-  "title": "Litmus: Collectors",
-  "originalTitle": "Litmus: Collectors",
+  "title": "Litmus: Probes",
+  "originalTitle": "Litmus: Probes",
   "tags": [
     "raintank",
-    "Collectors"
+    "Probes"
   ],
   "style": "dark",
   "timezone": "browser",
   "editable": true,
-  "hideControls": false,
+  "hideControls": true,
   "sharedCrosshair": false,
   "rows": [
     {
@@ -50,7 +50,7 @@
           },
           "targets": [
             {
-              "target": "scale(averageSeries(litmus.$endpoint.$collector.dns.ok_state), 100)"
+              "target": "scale(averageSeries(litmus.$endpoint.$probe.dns.ok_state), 100)"
             }
           ],
           "thresholds": "0,0,100",
@@ -100,7 +100,7 @@
           },
           "targets": [
             {
-              "target": "scale(averageSeries(litmus.$endpoint.$collector.ping.ok_state), 100)"
+              "target": "scale(averageSeries(litmus.$endpoint.$probe.ping.ok_state), 100)"
             }
           ],
           "thresholds": "0,0,100",
@@ -150,7 +150,7 @@
           },
           "targets": [
             {
-              "target": "scale(averageSeries(litmus.$endpoint.$collector.http.ok_state), 100)"
+              "target": "scale(averageSeries(litmus.$endpoint.$probe.http.ok_state), 100)"
             }
           ],
           "thresholds": "0,0,100",
@@ -200,7 +200,7 @@
           },
           "targets": [
             {
-              "target": "scale(litmus.$endpoint.$collector.https.ok_state, 100)"
+              "target": "scale(averageSeries(litmus.$endpoint.$probe.https.ok_state), 100)"
             }
           ],
           "thresholds": "0,0,100",
@@ -232,7 +232,7 @@
             "ok": "#508642"
           },
           "bars": true,
-          "datasource": null,
+          "datasource": "raintank",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -274,11 +274,11 @@
           "steppedLine": false,
           "targets": [
             {
-              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$collector.dns.error_state), 'sum'), 'error')"
+              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$probe.dns.error_state), 'sum'), 'error')"
             },
             {
               "hide": false,
-              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$collector.dns.ok_state), 'sum'), 'ok')"
+              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$probe.dns.ok_state), 'sum'), 'ok')"
             }
           ],
           "timeFrom": null,
@@ -303,7 +303,7 @@
             "ok": "#508642"
           },
           "bars": true,
-          "datasource": null,
+          "datasource": "raintank",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -345,10 +345,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$collector.ping.ok_state), 'sum'), 'ok')"
+              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$probe.ping.ok_state), 'sum'), 'ok')"
             },
             {
-              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$collector.ping.error_state), 'sum'), 'error')"
+              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$probe.ping.error_state), 'sum'), 'error')"
             }
           ],
           "timeFrom": null,
@@ -373,7 +373,7 @@
             "ok": "#508642"
           },
           "bars": true,
-          "datasource": null,
+          "datasource": "raintank",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -416,10 +416,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$collector.http.error_state), 'sum'), 'error')"
+              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$probe.http.error_state), 'sum'), 'error')"
             },
             {
-              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$collector.http.ok_state), 'sum'), 'ok')"
+              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$probe.http.ok_state), 'sum'), 'ok')"
             }
           ],
           "timeFrom": null,
@@ -444,7 +444,7 @@
             "ok": "#508642"
           },
           "bars": true,
-          "datasource": null,
+          "datasource": "raintank",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -486,10 +486,10 @@
           "steppedLine": false,
           "targets": [
             {
-              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$collector.https.ok_state), 'sum'), 'ok')"
+              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$probe.https.ok_state), 'sum'), 'ok')"
             },
             {
-              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$collector.https.error_state), 'sum'), 'error')"
+              "target": "alias(consolidateBy(sumSeries(litmus.$endpoint.$probe.https.error_state), 'sum'), 'error')"
             }
           ],
           "timeFrom": null,
@@ -520,7 +520,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": null,
+          "datasource": "raintank",
           "decimals": 1,
           "editable": true,
           "error": false,
@@ -565,12 +565,12 @@
           "steppedLine": false,
           "targets": [
             {
-              "target": "aliasByNode(litmus.$endpoint.$collector.dns.time, 1)"
+              "target": "aliasByNode(removeAbovePercentile(litmus.$endpoint.$probe.dns.time, $outliers), 1)"
             }
           ],
           "timeFrom": null,
           "timeShift": null,
-          "title": "DNS response by Collector",
+          "title": "DNS response by Probe",
           "tooltip": {
             "shared": true,
             "value_type": "cumulative"
@@ -586,7 +586,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": null,
+          "datasource": "raintank",
           "decimals": 1,
           "editable": true,
           "error": false,
@@ -630,12 +630,12 @@
           "steppedLine": false,
           "targets": [
             {
-              "target": "aliasByNode(litmus.$endpoint.$collector.ping.mean, 1)"
+              "target": "aliasByNode(removeAbovePercentile(litmus.$endpoint.$probe.ping.mean, $outliers), 1)"
             }
           ],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Ping response by Collector",
+          "title": "Ping response by Probe",
           "tooltip": {
             "shared": true,
             "value_type": "cumulative"
@@ -651,7 +651,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": null,
+          "datasource": "raintank",
           "decimals": 1,
           "editable": true,
           "error": false,
@@ -695,12 +695,12 @@
           "steppedLine": false,
           "targets": [
             {
-              "target": "aliasByNode(litmus.$endpoint.$collector.http.total, 1)"
+              "target": "aliasByNode(removeAbovePercentile(litmus.$endpoint.$probe.http.total, $outliers), 1)"
             }
           ],
           "timeFrom": null,
           "timeShift": null,
-          "title": "HTTP response by Collector",
+          "title": "HTTP response by Probe",
           "tooltip": {
             "shared": true,
             "value_type": "cumulative"
@@ -716,7 +716,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": null,
+          "datasource": "raintank",
           "decimals": 1,
           "editable": true,
           "error": false,
@@ -760,12 +760,12 @@
           "steppedLine": false,
           "targets": [
             {
-              "target": "aliasByNode(litmus.$endpoint.$collector.https.total, 1)"
+              "target": "aliasByNode(removeAbovePercentile(litmus.$endpoint.$probe.https.total, $outliers), 1)"
             }
           ],
           "timeFrom": null,
           "timeShift": null,
-          "title": "HTTPS response by Collector",
+          "title": "HTTPS response by Probe",
           "tooltip": {
             "shared": true,
             "value_type": "cumulative"
@@ -826,12 +826,12 @@
     "list": [
       {
         "allFormat": "glob",
-        "datasource": null,
+        "datasource": "raintank",
         "includeAll": false,
-        "label": "Collector",
+        "label": "Probe",
         "multi": false,
         "multiFormat": "glob",
-        "name": "collector",
+        "name": "probe",
         "options": [],
         "query": "litmus.$endpoint.*",
         "refresh": true,
@@ -843,7 +843,7 @@
       },
       {
         "allFormat": "glob",
-        "datasource": null,
+        "datasource": "raintank",
         "includeAll": false,
         "label": "Endpoint(s)",
         "multi": true,
@@ -860,7 +860,55 @@
         "tagsQuery": "raintank_db.tags.endpoints.*",
         "type": "query",
         "useTags": true
-      }
+      },
+      {
+        "type": "custom",
+        "datasource": "raintank",
+        "refresh_on_load": false,
+        "name": "outliers",
+        "options": [
+          {
+            "text": "100",
+            "value": "100",
+            "selected": true
+          },
+          {
+            "text": "99.9",
+            "value": "99.9",
+            "selected": false
+          },
+          {
+            "text": "99.5",
+            "value": "99.5",
+            "selected": false
+          },
+          {
+            "text": "99",
+            "value": "99",
+            "selected": false
+          },
+          {
+            "text": "95",
+            "value": "95",
+            "selected": false
+          },
+          {
+            "text": "50",
+            "value": "50",
+            "selected": false
+          }
+        ],
+        "includeAll": false,
+        "allFormat": "glob",
+        "multi": false,
+        "multiFormat": "glob",
+        "query": "100,99.9,99.5,99,95,50",
+        "current": {
+          "text": "100",
+          "value": "100"
+        },
+        "label": "Outliers"
+      }      
     ]
   },
   "annotations": {

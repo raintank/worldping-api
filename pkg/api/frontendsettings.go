@@ -81,6 +81,11 @@ func getFrontendSettingsMap(c *middleware.Context) (map[string]interface{}, erro
 			dsMap["index"] = ds.Database
 		}
 
+		if ds.Type == m.DS_PROMETHEUS {
+			// add unproxied server URL for link to Prometheus web UI
+			dsMap["directUrl"] = ds.Url
+		}
+
 		datasources[ds.Name] = dsMap
 	}
 
@@ -125,6 +130,7 @@ func getFrontendSettingsMap(c *middleware.Context) (map[string]interface{}, erro
 			"panels": map[string]interface{}{
 				"raintankCallToAction": map[string]string{"path": "../plugins/raintank/panels/raintankCallToAction", "name": "Raintank Call To Action"},
 				"raintankEventsPanel":  map[string]string{"path": "../plugins/raintank/panels/raintankEventsPanel", "name": "Raintank Events"},
+				"raintankEndpointList": map[string]string{"path": "../plugins/raintank/panels/raintankEndpointList", "name": "Raintank Endpoint List"},
 			},
 		},
 	}
