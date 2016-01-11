@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/grafana/grafana/pkg/bus"
+	"github.com/grafana/grafana/pkg/log"
 	m "github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/setting"
 	elastigo "github.com/mattbaird/elastigo/lib"
@@ -55,20 +56,16 @@ func GetEventsQuery(query *m.GetEventsQuery) error {
 	if wildcard {
 		out, err = es.Search("events*", "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc"}, esQuery)
 	} else {
-		start := time.Unix(query.Start/1000, 0)
+		//TODO(awoods): this needs optimizations for when the requested time range is very large. The index names are
+		// used in the url sent to Elasticsearch, and the url is limited to 4096bytes.  At 18bytes per index name, that is only
+		// 227days of data.  So if you try to request more the 227days of data, ES will return an Internal Server Error.
+		current := time.Unix(query.Start/1000, 0)
 		end := time.Unix(query.End/1000, 0)
-		r := end.Sub(start) / time.Hour / 24
-		idxDates := make([]string, 0, r+1)
-		y, m, d := start.Date()
-		if r > 0 {
-			for {
-				end = end.Add(-(time.Hour * 24))
-				y2, m2, d2 := end.Date()
-				idxDates = append(idxDates, fmt.Sprintf("events-%d-%02d-%02d", y, m, d))
-				if y2 <= y && m2 <= m && d2 <= d {
-					break
-				}
-			}
+		idxDates := make([]string, 0)
+		for current.Unix() <= end.Unix() {
+			y, m, d := current.Date()
+			idxDates = append(idxDates, fmt.Sprintf("events-%d-%02d-%02d", y, m, d))
+			current = current.Add(time.Hour * 24)
 		}
 		allTogether := strings.Join(idxDates, ",")
 		out, err = es.Search(allTogether, "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc", "ignore_unavailable": true}, esQuery)
