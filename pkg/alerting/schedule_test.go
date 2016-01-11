@@ -44,9 +44,9 @@ func TestJobAssertStart(t *testing.T) {
 		last  int64
 	}
 	cases := []cas{
-		// note that graphite quantizes down, so graphite output should be points at 10, 20
+		// note that graphite quantizes down, so graphite output should be points at 20, 30
 		{
-			10, 2, 10, 23,
+			10, 2, 20, 33,
 		},
 	}
 
