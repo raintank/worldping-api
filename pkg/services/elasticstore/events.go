@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/grafana/grafana/pkg/bus"
-	"github.com/grafana/grafana/pkg/log"
 	m "github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/setting"
 	elastigo "github.com/mattbaird/elastigo/lib"
@@ -67,7 +66,11 @@ func GetEventsQuery(query *m.GetEventsQuery) error {
 			idxDates = append(idxDates, fmt.Sprintf("events-%d-%02d-%02d", y, m, d))
 			current = current.Add(time.Hour * 24)
 		}
+		if len(idxDates) < 1 {
+			return fmt.Errorf("Failed to get index list to query.")
+		}
 		allTogether := strings.Join(idxDates, ",")
+
 		out, err = es.Search(allTogether, "", map[string]interface{}{"size": query.Size, "sort": "timestamp:desc", "ignore_unavailable": true}, esQuery)
 	}
 
