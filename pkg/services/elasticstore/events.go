@@ -40,8 +40,9 @@ func GetEventsQuery(query *m.GetEventsQuery) error {
 					},
 				},
 				"query": map[string]interface{}{
-					"query_string": map[string]string{
-						"query": query.Query,
+					"query_string": map[string]interface{}{
+						"query":                    query.Query,
+						"lowercase_expanded_terms": false,
 					},
 				},
 			},
