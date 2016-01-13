@@ -4,12 +4,13 @@ import (
 	"fmt"
 
 	"github.com/grafana/grafana/pkg/metric"
+	"github.com/grafana/grafana/pkg/metric/cesaro"
 	"github.com/grafana/grafana/pkg/metric/dogstatsd"
 	"github.com/grafana/grafana/pkg/metric/statsd"
 )
 
 func New(enabled bool, addr, t, service, instance string) (metric.Backend, error) {
-	if t != "standard" && t != "datadog" {
+	if t != "standard" && t != "datadog" && t != "cesaro" {
 		panic(fmt.Sprintf("unrecognized statsd type: '%s'", t))
 	}
 	if !enabled {
@@ -19,6 +20,8 @@ func New(enabled bool, addr, t, service, instance string) (metric.Backend, error
 	}
 	if t == "standard" {
 		return statsd.New(enabled, addr, fmt.Sprintf("%s.%s.", service, instance))
+	} else if t == "cesaro" {
+		return cesaro.New(enabled, addr, fmt.Sprintf("%s.%s.", service, instance))
 	} else {
 		return dogstatsd.New(addr, service+".", []string{"instance:" + instance})
 	}

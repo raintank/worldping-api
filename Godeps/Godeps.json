@@ -219,6 +219,10 @@
 			"Rev": "acbfe36e16c17e0a227948c76749ca81a4ebf262"
 		},
 		{
+			"ImportPath": "github.com/alexcesaro/statsd",
+			"Rev": "bbc5756ebb41c2ac4c4f6abe584d25eb7cbe2e18"
+		},
+		{
 			"ImportPath": "github.com/mattbaird/elastigo/lib",
 			"Comment": "v1.0-139-gba038c1",
 			"Rev": "ba038c10f634af5e7f3bd27b81bd8c37af844edf"
