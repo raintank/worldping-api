@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/grafana/grafana/pkg/log"
-	met "github.com/grafana/grafana/pkg/metric"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/nsqio/go-nsq"
+	"github.com/raintank/met"
 	msg "github.com/raintank/raintank-metric/msg"
 	"github.com/raintank/raintank-metric/schema"
 )

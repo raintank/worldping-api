@@ -1,7 +1,7 @@
-package dogstatsd
+package statsd
 
 import "time"
-import "github.com/grafana/grafana/pkg/metric"
+import "github.com/raintank/met"
 
 // note that due the preseeding in init, you shouldn't rely on the count and count_ps summaries
 // rather, consider maintaining a separate counter
@@ -12,12 +12,12 @@ type Timer struct {
 	backend Backend
 }
 
-func (b Backend) NewTimer(key string, val time.Duration) metric.Timer {
+func (b Backend) NewTimer(key string, val time.Duration) met.Timer {
 	t := Timer{key, b}
 	t.Value(val)
 	return t
 }
 
 func (t Timer) Value(val time.Duration) {
-	t.backend.client.TimeInMilliseconds(t.key, val.Seconds()*1000, []string{}, 1)
+	t.backend.client.Timing(t.key, int(val/time.Millisecond), 1)
 }

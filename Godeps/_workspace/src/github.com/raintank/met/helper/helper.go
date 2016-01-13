@@ -3,12 +3,12 @@ package helper
 import (
 	"fmt"
 
-	"github.com/grafana/grafana/pkg/metric"
-	"github.com/grafana/grafana/pkg/metric/dogstatsd"
-	"github.com/grafana/grafana/pkg/metric/statsd"
+	"github.com/raintank/met"
+	"github.com/raintank/met/dogstatsd"
+	"github.com/raintank/met/statsd"
 )
 
-func New(enabled bool, addr, t, service, instance string) (metric.Backend, error) {
+func New(enabled bool, addr, t, service, instance string) (met.Backend, error) {
 	if t != "standard" && t != "datadog" {
 		panic(fmt.Sprintf("unrecognized statsd type: '%s'", t))
 	}

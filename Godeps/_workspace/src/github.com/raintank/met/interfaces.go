@@ -1,4 +1,4 @@
-package metric
+package met
 
 import "time"
 

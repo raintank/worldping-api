@@ -1,11 +1,10 @@
-package statsd
+package dogstatsd
 
 import (
 	"sync"
 	"time"
-
-	"github.com/grafana/grafana/pkg/metric"
 )
+import "github.com/raintank/met"
 
 type Gauge struct {
 	key string
@@ -14,7 +13,7 @@ type Gauge struct {
 	backend Backend
 }
 
-func (b Backend) NewGauge(key string, val int64) metric.Gauge {
+func (b Backend) NewGauge(key string, val int64) met.Gauge {
 	g := Gauge{
 		key:     key,
 		backend: b,
@@ -22,7 +21,7 @@ func (b Backend) NewGauge(key string, val int64) metric.Gauge {
 	go func() {
 		for {
 			g.Lock()
-			g.backend.client.Gauge(g.key, int(g.val))
+			g.backend.client.Gauge(g.key, float64(g.val), []string{}, 1)
 			g.Unlock()
 			time.Sleep(time.Duration(1) * time.Second)
 		}
@@ -32,21 +31,21 @@ func (b Backend) NewGauge(key string, val int64) metric.Gauge {
 
 func (g *Gauge) Value(val int64) {
 	g.Lock()
+	defer g.Unlock()
 	g.val = val
-	g.Unlock()
-	g.backend.client.Gauge(g.key, int(val))
+	g.backend.client.Gauge(g.key, float64(g.val), []string{}, 1)
 }
 
 func (g *Gauge) Inc(val int64) {
 	g.Lock()
 	defer g.Unlock()
 	g.val += val
-	g.backend.client.Gauge(g.key, int(g.val))
+	g.backend.client.Gauge(g.key, float64(g.val), []string{}, 1)
 }
 
 func (g *Gauge) Dec(val int64) {
 	g.Lock()
 	defer g.Unlock()
 	g.val -= val
-	g.backend.client.Gauge(g.key, int(g.val))
+	g.backend.client.Gauge(g.key, float64(g.val), []string{}, 1)
 }

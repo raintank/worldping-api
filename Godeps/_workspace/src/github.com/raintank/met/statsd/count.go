@@ -1,13 +1,13 @@
 package statsd
 
-import "github.com/grafana/grafana/pkg/metric"
+import "github.com/raintank/met"
 
 type Count struct {
 	key     string
 	backend Backend
 }
 
-func (b Backend) NewCount(key string) metric.Count {
+func (b Backend) NewCount(key string) met.Count {
 	c := Count{key, b}
 	c.Inc(0)
 	return c
