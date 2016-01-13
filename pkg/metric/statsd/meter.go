@@ -16,5 +16,5 @@ func (b Backend) NewMeter(key string, val int64) metric.Meter {
 }
 
 func (m Meter) Value(val int64) {
-	m.backend.client.Timing(m.key, val)
+	m.backend.client.Timing(m.key, int(val), 1)
 }

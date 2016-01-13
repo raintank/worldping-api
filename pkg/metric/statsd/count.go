@@ -14,5 +14,5 @@ func (b Backend) NewCount(key string) metric.Count {
 }
 
 func (c Count) Inc(val int64) {
-	c.backend.client.IncrementValue(c.key, val)
+	c.backend.client.Count(c.key, int(val), 1)
 }

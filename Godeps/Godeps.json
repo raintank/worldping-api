@@ -69,10 +69,6 @@
 			"Rev": "98e0b12887d327f412fe36bf0ab33d3fc15dad47"
 		},
 		{
-			"ImportPath": "github.com/Dieterbe/statsd-go",
-			"Rev": "6f55e9b6e154104c5aefbdbb8ea37d82e1b31f4b"
-		},
-		{
 			"ImportPath": "github.com/Unknwon/com",
 			"Rev": "d9bcf409c8a368d06c9b347705c381e7c12d54df"
 		},
@@ -217,6 +213,10 @@
 		{
 			"ImportPath": "github.com/macaron-contrib/toolbox",
 			"Rev": "acbfe36e16c17e0a227948c76749ca81a4ebf262"
+		},
+		{
+			"ImportPath": "github.com/alexcesaro/statsd",
+			"Rev": "bbc5756ebb41c2ac4c4f6abe584d25eb7cbe2e18"
 		},
 		{
 			"ImportPath": "github.com/mattbaird/elastigo/lib",
