@@ -69,10 +69,6 @@
 			"Rev": "98e0b12887d327f412fe36bf0ab33d3fc15dad47"
 		},
 		{
-			"ImportPath": "github.com/Dieterbe/statsd-go",
-			"Rev": "6f55e9b6e154104c5aefbdbb8ea37d82e1b31f4b"
-		},
-		{
 			"ImportPath": "github.com/Unknwon/com",
 			"Rev": "d9bcf409c8a368d06c9b347705c381e7c12d54df"
 		},

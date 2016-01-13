@@ -19,5 +19,5 @@ func (b Backend) NewTimer(key string, val time.Duration) metric.Timer {
 }
 
 func (t Timer) Value(val time.Duration) {
-	t.backend.client.TimeDuration(t.key, val)
+	t.backend.client.Timing(t.key, int(val/time.Millisecond), 1)
 }
