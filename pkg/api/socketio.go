@@ -106,7 +106,11 @@ func (c *ContextCache) loadMonitors() {
 		c.monitorsIndex = newIndex
 	}
 	for _, ctx := range c.Contexts {
-		ctx.MonitorsIndex = newCollectorIndex[ctx.Collector.Id]
+		cIdx, ok := newCollectorIndex[ctx.Collector.Id]
+		if !ok {
+			cIdx = make(map[int64]*m.MonitorDTO)
+		}
+		ctx.MonitorsIndex = cIdx
 	}
 }
 
