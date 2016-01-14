@@ -242,6 +242,10 @@
 			"Rev": "4dbda5e2904d044d23cc4bef84e8360c458caf7f"
 		},
 		{
+			"ImportPath": "github.com/raintank/raintank-metric/met",
+			"Rev": "daf6d57fc20532f01eb2320040a8054b5618cbf1"
+		},
+		{
 			"ImportPath": "github.com/raintank/raintank-metric/msg",
 			"Comment": "pkg-0.1.0-1442246038ubuntu1",
 			"Rev": "cda26b60379bd2d8fbb4cc5e6c34b155e1615b1c"

@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/grafana/grafana/pkg/log"
-	met "github.com/grafana/grafana/pkg/metric"
 	"github.com/grafana/grafana/pkg/services/rabbitmq"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/hashicorp/golang-lru"
+	"github.com/raintank/met"
 )
 
 var jobQueueInternalItems met.Gauge

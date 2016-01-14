@@ -2,14 +2,14 @@
 // what this is for.
 package statsd
 
-import "github.com/grafana/grafana/pkg/metric"
+import "github.com/raintank/met"
 
 type Meter struct {
 	key     string
 	backend Backend
 }
 
-func (b Backend) NewMeter(key string, val int64) metric.Meter {
+func (b Backend) NewMeter(key string, val int64) met.Meter {
 	m := Meter{key, b}
 	m.Value(val)
 	return m
