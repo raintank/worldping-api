@@ -242,7 +242,7 @@
 			"Rev": "4dbda5e2904d044d23cc4bef84e8360c458caf7f"
 		},
 		{
-			"ImportPath": "github.com/raintank/raintank-metric/met",
+			"ImportPath": "github.com/raintank/met",
 			"Rev": "daf6d57fc20532f01eb2320040a8054b5618cbf1"
 		},
 		{
