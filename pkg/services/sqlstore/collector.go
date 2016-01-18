@@ -572,9 +572,9 @@ func ClearCollectorSession(cmd *m.ClearCollectorSessionCommand) error {
 			return err
 		}
 
-		rawSql = `select collector.id as collector_id, online, collector_session.id as session_id
-		      from collector LEFT join collector_session
-		      on collector_session.collector_id = collector.id group by collector.id`
+		rawSql = `select collector.id as collector_id, collector.online, collector_session.id as session_id
+              from collector LEFT join collector_session
+              on collector_session.collector_id = collector.id group by collector.id, collector_session.id`
 		result := make([]*collectorOnlineSession, 0)
 		if err := sess.Sql(rawSql).Find(&result); err != nil {
 			return err
