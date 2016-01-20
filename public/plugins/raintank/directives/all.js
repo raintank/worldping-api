@@ -175,6 +175,13 @@ define([
     };
   });
 
+  module.directive("rtEndpointHealthDashboard", function() {
+    return {
+      templateUrl: 'plugins/raintank/directives/partials/endpointHealthDashboard.html',
+      scope: false,
+    };
+  });
+
   module.directive('panelScroll', function() {
     function getPanelHeight(scope) {
       if (scope.fullscreen) {

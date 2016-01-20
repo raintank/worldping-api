@@ -8,6 +8,7 @@
 @import "components/mini-form.less";
 @import "layout/forms.less";
 @import "layout/page.less";
+// layout/panels.less imported at the bottom to address specificity issues, pending refactor of rt.less
 @import "layout/tables.less";
 
 @import "components/box.less";
@@ -1804,3 +1805,4 @@ a.rt-dashboard-blurb:hover{
   font-size: 60px;
 }
 
+@import "layout/panels.less";
