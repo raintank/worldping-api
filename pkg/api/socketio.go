@@ -418,7 +418,10 @@ func init() {
 		c.Socket.On("event", c.OnEvent)
 		c.Socket.On("results", c.OnResults)
 		c.Socket.On("disconnection", c.OnDisconnection)
+
 		log.Info("calling refresh for collector %s owned by OrgId: %d", c.Collector.Name, c.OrgId)
+		time.Sleep(time.Second)
+		c.Refresh()
 	})
 
 	server.On("error", func(so socketio.Socket, err error) {
