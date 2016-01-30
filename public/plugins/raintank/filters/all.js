@@ -17,6 +17,7 @@ define(['angular', 'lodash'], function (angular, _) {
       return filtered;
     };
   });
+
   module.filter('timeDuration', function() {
     return function(time) {
       var duration = new Date().getTime() - new Date(time).getTime();
