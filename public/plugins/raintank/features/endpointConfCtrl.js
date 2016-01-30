@@ -21,6 +21,7 @@ function (angular, _) {
     _.forEach(freqOpt, function(f) {
       $scope.frequencyOpts.push({value: f, label: "Every "+f+"s"});
     });
+    $scope.timeoutRegex = /^([1-9](\.\d)?|10)$/;
 
     $scope.init = function() {
       var promises = [];
