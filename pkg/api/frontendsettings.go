@@ -128,10 +128,10 @@ func getFrontendSettingsMap(c *middleware.Context) (map[string]interface{}, erro
 		"plugins": map[string]interface{}{
 			"dependencies": []string{"raintank/all"},
 			"panels": map[string]interface{}{
-				"raintankCallToAction": map[string]string{"path": "../plugins/raintank/panels/raintankCallToAction", "name": "Raintank Call To Action"},
-				"raintankEventsPanel":  map[string]string{"path": "../plugins/raintank/panels/raintankEventsPanel", "name": "Raintank Events"},
-				"raintankEndpointNavPanel":  map[string]string{"path": "../plugins/raintank/panels/raintankEndpointNavPanel", "name": "Raintank Nav Panel"},				
-				"raintankEndpointList": map[string]string{"path": "../plugins/raintank/panels/raintankEndpointList", "name": "Raintank Endpoint List"},
+				"raintankCallToAction":     map[string]string{"path": "../plugins/raintank/panels/raintankCallToAction", "name": "Raintank Call To Action"},
+				"raintankEventsPanel":      map[string]string{"path": "../plugins/raintank/panels/raintankEventsPanel", "name": "Raintank Events"},
+				"raintankEndpointNavPanel": map[string]string{"path": "../plugins/raintank/panels/raintankEndpointNavPanel", "name": "Raintank Nav Panel"},
+				"raintankEndpointList":     map[string]string{"path": "../plugins/raintank/panels/raintankEndpointList", "name": "Raintank Endpoint List"},
 			},
 		},
 	}
