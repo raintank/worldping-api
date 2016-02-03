@@ -6,7 +6,7 @@ import (
 	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/log"
 	"github.com/grafana/grafana/pkg/middleware"
-	m "github.com/grafana/grafana/pkg/models"
+	"github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/grafana/grafana/pkg/util"
@@ -130,6 +130,7 @@ func getFrontendSettingsMap(c *middleware.Context) (map[string]interface{}, erro
 			"panels": map[string]interface{}{
 				"raintankCallToAction": map[string]string{"path": "../plugins/raintank/panels/raintankCallToAction", "name": "Raintank Call To Action"},
 				"raintankEventsPanel":  map[string]string{"path": "../plugins/raintank/panels/raintankEventsPanel", "name": "Raintank Events"},
+				"raintankEndpointNavPanel":  map[string]string{"path": "../plugins/raintank/panels/raintankEndpointNavPanel", "name": "Raintank Nav Panel"},				
 				"raintankEndpointList": map[string]string{"path": "../plugins/raintank/panels/raintankEndpointList", "name": "Raintank Endpoint List"},
 			},
 		},
