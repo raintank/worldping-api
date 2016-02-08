@@ -657,10 +657,10 @@
         },
         "datasource": "raintank",
         "includeAll": false,
-        "label": "Protocol",
+        "label": "Monitor Type",
         "multi": false,
         "multiFormat": "glob",
-        "name": "protocol",
+        "name": "monitor_type",
         "options": [
           {
             "text": "http",
