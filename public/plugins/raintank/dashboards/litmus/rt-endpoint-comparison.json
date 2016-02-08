@@ -63,7 +63,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "target": "groupByNode(sortByName(litmus.$endpoint.$probe.$protocol.default), 1, 'avg')"
+              "target": "groupByNode(sortByName(litmus.$endpoint.$probe.$monitor_type.default), 1, 'avg')"
             }
           ],
           "timeFrom": null,
@@ -83,7 +83,7 @@
         }
       ],
       "showTitle": true,
-      "title": "overall $protocol endpoint performance (average all selected probes)"
+      "title": "overall $monitor_type endpoint performance (average all selected probes)"
     },
     {
       "collapse": false,
@@ -147,7 +147,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "target": "aliasByNode(sortByName(litmus.$endpoint.$probe.$protocol.default), 1)"
+              "target": "aliasByNode(sortByName(litmus.$endpoint.$probe.$monitor_type.default), 1)"
             }
           ],
           "timeFrom": null,
@@ -168,7 +168,7 @@
       ],
       "repeat": null,
       "showTitle": true,
-      "title": "$protocol PERFORMANCE (FOR EACH PROBE)"
+      "title": "$monitor_type PERFORMANCE (FOR EACH PROBE)"
     }
   ],
   "nav": [
@@ -253,10 +253,10 @@
         "allFormat": "glob",
         "datasource": "raintank",
         "includeAll": false,
-        "label": "Protocol",
+        "label": "Monitor Type",
         "multi": false,
         "multiFormat": "glob",
-        "name": "protocol",
+        "name": "monitor_type",
         "query": "litmus.$endpoint.$probe.*",
         "refresh": true,
         "refresh_on_load": false,
