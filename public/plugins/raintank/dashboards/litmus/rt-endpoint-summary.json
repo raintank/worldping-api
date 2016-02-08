@@ -161,7 +161,7 @@
               "dashboard": "Litmus Endpoint: |--- Web",
               "includeVars": true,
               "keepTime": true,
-              "params": "var-protocol=http",
+              "params": "var-monitor_type=http",
               "title": "Litmus Endpoint: |--- Web",
               "type": "dashboard"
             }
@@ -222,7 +222,7 @@
               "dashboard": "Litmus Endpoint: |--- Web",
               "dashUri": "file/rt-endpoint-web.json",
               "title": "Litmus Endpoint: |--- Web",
-              "params": "var-protocol=https",
+              "params": "var-monitor_type=https",
               "keepTime": true,
               "includeVars": true
             }
@@ -470,7 +470,7 @@
               "dashboard": "Litmus Endpoint: |--- Web",
               "includeVars": true,
               "keepTime": true,
-              "params": "var-protocol=http",
+              "params": "var-monitor_type=http",
               "title": "Litmus Endpoint: |--- Web",
               "type": "dashboard"
             }
@@ -550,7 +550,7 @@
               "dashboard": "Litmus Endpoint: |--- Web",
               "dashUri": "file/rt-endpoint-web.json",
               "title": "Litmus Endpoint: |--- Web",
-              "params": "var-protocol=https",
+              "params": "var-monitor_type=https",
               "keepTime": true,
               "includeVars": true
             }
@@ -787,7 +787,7 @@
               "dashboard": "Litmus Endpoint: |--- Web",
               "dashUri": "file/rt-endpoint-web.json",
               "title": "Litmus Endpoint: |--- Web",
-              "params": "var-protocol=http",
+              "params": "var-monitor_type=http",
               "includeVars": true,
               "keepTime": true
             }
@@ -862,7 +862,7 @@
               "dashboard": "Litmus Endpoint: |--- Web",
               "dashUri": "file/rt-endpoint-web.json",
               "title": "Litmus Endpoint: |--- Web",
-              "params": "var-protocol=https",
+              "params": "var-monitor_type=https",
               "keepTime": true,
               "includeVars": true
             }
