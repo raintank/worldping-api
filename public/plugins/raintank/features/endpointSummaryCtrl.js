@@ -145,11 +145,11 @@ function (angular, _) {
           $location.path("/dashboard/file/rt-endpoint-dns.json").search(search);
           break;
         case "http":
-          search['var-protocol'] = "http";
+          search['var-monitor_type'] = "http";
           $location.path("/dashboard/file/rt-endpoint-web.json").search(search);
           break;
         case "https":
-          search['var-protocol'] = "https";
+          search['var-monitor_type'] = "https";
           $location.path("/dashboard/file/rt-endpoint-web.json").search(search);
           break;
         default:
