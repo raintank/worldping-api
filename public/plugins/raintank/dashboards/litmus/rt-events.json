@@ -69,7 +69,7 @@
     }
   ],
   "time": {
-    "from": "now-30d",
+    "from": "now-1d",
     "to": "now"
   },
   "templating": {
