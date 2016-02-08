@@ -275,7 +275,7 @@
               "dashboard": "Litmus Events",
               "includeVars": true,
               "keepTime": true,
-              "params": "var-monitor_type=ping",
+              "params": "var-monitor_type=dns",
               "title": "Litmus Events",
               "type": "dashboard"
             }
