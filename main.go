@@ -20,7 +20,6 @@ import (
 	"github.com/grafana/grafana/pkg/metrics"
 	"github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/services/collectoreventpublisher"
-	"github.com/grafana/grafana/pkg/services/elasticstore"
 	"github.com/grafana/grafana/pkg/services/eventpublisher"
 	"github.com/grafana/grafana/pkg/services/metricpublisher"
 	"github.com/grafana/grafana/pkg/services/notifications"
@@ -73,7 +72,6 @@ func main() {
 	social.NewOAuthService()
 	eventpublisher.Init()
 	plugins.Init()
-	elasticstore.Init()
 
 	metricsBackend, err := helper.New(setting.StatsdEnabled, setting.StatsdAddr, setting.StatsdType, "grafana", setting.InstanceId)
 	if err != nil {

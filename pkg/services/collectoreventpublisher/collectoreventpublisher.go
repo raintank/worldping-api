@@ -1,9 +1,6 @@
 package collectoreventpublisher
 
 import (
-	"bytes"
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -11,12 +8,8 @@ import (
 	"github.com/grafana/grafana/pkg/setting"
 	"github.com/nsqio/go-nsq"
 	"github.com/raintank/met"
+	"github.com/raintank/raintank-metric/msg"
 	"github.com/raintank/raintank-metric/schema"
-)
-
-// identifier of message format
-const (
-	msgFormatJson = iota
 )
 
 var (
@@ -51,33 +44,17 @@ func Publish(event *schema.ProbeEvent) error {
 	if !enabled {
 		return nil
 	}
-	version := uint8(msgFormatJson)
-
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.LittleEndian, version)
-	if err != nil {
-		log.Fatal(0, "binary.Write failed: %s", err.Error())
-	}
 	id := time.Now().UnixNano()
-	binary.Write(buf, binary.BigEndian, id)
+	data, err := msg.CreateProbeEventMsg(event, id, msg.FormatProbeEventMsgp)
 	if err != nil {
-		log.Fatal(0, "binary.Write failed: %s", err.Error())
-	}
-	msg, err := json.Marshal(event)
-	if err != nil {
-		return fmt.Errorf("Failed to marshal event payload: %s", err)
-	}
-	_, err = buf.Write(msg)
-	if err != nil {
-		log.Fatal(0, "buf.Write failed: %s", err.Error())
+		log.Fatal(4, "Fatal error creating event message: %s", err)
 	}
 	collectorEventPublisherMsgs.Inc(1)
-	err = globalProducer.Publish(topic, buf.Bytes())
+	err = globalProducer.Publish(topic, data)
 	if err != nil {
-		panic(fmt.Errorf("can't publish to nsqd: %s", err))
+		log.Fatal(4, "can't publish to nsqd: %s", err)
 	}
 	log.Info("event published to NSQ %d", id)
 
-	//globalProducer.Stop()
 	return nil
 }
