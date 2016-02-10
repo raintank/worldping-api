@@ -233,6 +233,8 @@ type CollectorContext struct {
 	Socket        socketio.Socket
 	SocketId      string
 	MonitorsIndex map[int64]*m.MonitorDTO // index of monitors by Id
+	VersionMajor  int
+	VersionMinor  float64
 }
 
 type BinMessage struct {
@@ -315,9 +317,11 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 				OrgId:          apikey.OrgId,
 				Name:           apikey.Name,
 			},
-			Collector: colQuery.Result,
-			Socket:    so,
-			SocketId:  so.Id(),
+			Collector:    colQuery.Result,
+			Socket:       so,
+			SocketId:     so.Id(),
+			VersionMajor: versionMajor,
+			VersionMinor: versionMinor,
 		}
 		log.Info("collector %s with id %d owned by %d authenticated successfully.", name, colQuery.Result.Id, apikey.OrgId)
 		if lastSocketId != "" {
@@ -415,7 +419,11 @@ func init() {
 			return
 		}
 		log.Info("binding event handlers for collector %s owned by OrgId: %d", c.Collector.Name, c.OrgId)
-		c.Socket.On("event", c.OnEvent)
+		if c.VersionMinor == 1.3 {
+			c.Socket.On("event", c.OnEventOld)
+		} else {
+			c.Socket.On("event", c.OnEvent)
+		}
 		c.Socket.On("results", c.OnResults)
 		c.Socket.On("disconnection", c.OnDisconnection)
 
@@ -501,6 +509,45 @@ func (c *CollectorContext) OnEvent(msg *schema.ProbeEvent) {
 	}
 
 	if err := collectoreventpublisher.Publish(msg); err != nil {
+		log.Error(0, "failed to publish event.", err)
+	}
+}
+
+/* handle old eventFormat.*/
+type probeEventOld struct {
+	Id        string   `json:"id"`
+	EventType string   `json:"event_type"`
+	OrgId     int64    `json:"org_id"`
+	Severity  string   `json:"severity"`
+	Source    string   `json:"source"`
+	Timestamp int64    `json:"timestamp"`
+	Message   string   `json:"message"`
+	Tags      []string `json:"tags"`
+}
+
+func (c *CollectorContext) OnEventOld(msg *probeEventOld) {
+	log.Info(fmt.Sprintf("received event from %s", c.Collector.Name))
+	if !c.Collector.Public {
+		msg.OrgId = c.OrgId
+	}
+	//convert our []string of key:valy pairs to
+	// map[string]string
+	tags := make(map[string]string)
+	for _, t := range msg.Tags {
+		parts := strings.SplitN(t, ":", 2)
+		tags[parts[0]] = parts[1]
+	}
+	e = &schema.ProbeEvent{
+		Id:        msg.Id,
+		EventType: msg.EventType,
+		OrgId:     msg.OrgId,
+		Severity:  msg.Severity,
+		Source:    msg.Source,
+		Timestamp: msg.Timestamp,
+		Message:   msg.Message,
+		Tags:      tags,
+	}
+	if err := collectoreventpublisher.Publish(e); err != nil {
 		log.Error(0, "failed to publish event.", err)
 	}
 }
