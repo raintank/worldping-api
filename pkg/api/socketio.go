@@ -233,7 +233,7 @@ type CollectorContext struct {
 	Socket        socketio.Socket
 	SocketId      string
 	MonitorsIndex map[int64]*m.MonitorDTO // index of monitors by Id
-	VersionMajor  int
+	VersionMajor  int64
 	VersionMinor  float64
 }
 
@@ -537,7 +537,7 @@ func (c *CollectorContext) OnEventOld(msg *probeEventOld) {
 		parts := strings.SplitN(t, ":", 2)
 		tags[parts[0]] = parts[1]
 	}
-	e = &schema.ProbeEvent{
+	e := &schema.ProbeEvent{
 		Id:        msg.Id,
 		EventType: msg.EventType,
 		OrgId:     msg.OrgId,
