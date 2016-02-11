@@ -145,7 +145,7 @@ func transformSearch(orgId int64, search []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	orgCondition := map[string]map[string]int64{"term": map[string]int64{"org_id": orgId}}
+	orgCondition := map[string]map[string]int64{"term": {"org_id": orgId}}
 
 	s.Query.Filtered.Filter.Bool.Must = append(s.Query.Filtered.Filter.Bool.Must, orgCondition)
 
