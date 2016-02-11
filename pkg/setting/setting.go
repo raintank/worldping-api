@@ -114,7 +114,8 @@ var (
 	PhantomDir string
 
 	//Raintank Graphite Backend
-	GraphiteUrl string
+	GraphiteUrl      string
+	ElasticsearchUrl string
 
 	// for logging purposes
 	configFiles                  []string
@@ -481,6 +482,16 @@ func NewConfigContext(args *CommandLineArgs) error {
 	_, err := url.Parse(GraphiteUrl)
 	if err != nil {
 		log.Fatal(4, "Invalid graphite_url(%s): %s", GraphiteUrl, err)
+	}
+
+	ElasticsearchUrl = Cfg.Section("raintank").Key("elasticsearch_url").MustString("http://localhost:9200/")
+	if ElasticsearchUrl[len(ElasticsearchUrl)-1] != '/' {
+		ElasticsearchUrl += "/"
+	}
+	// Check if has app suburl.
+	_, err = url.Parse(ElasticsearchUrl)
+	if err != nil {
+		log.Fatal(4, "Invalid elasticsearch_url(%s): %s", ElasticsearchUrl, err)
 	}
 
 	alerting := Cfg.Section("alerting")

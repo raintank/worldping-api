@@ -77,16 +77,8 @@
 			"Rev": "93de4f3fad97bf246b838f828e2348f46f21f20a"
 		},
 		{
-			"ImportPath": "github.com/araddon/gou",
-			"Rev": "cf9cf25f52be174c5878920a8021bd224cbe32c7"
-		},
-		{
-			"ImportPath": "github.com/benbjohnson/clock",
-			"Rev": "ae77645379a07929edeef20b47ba761ecfe5fde8"
-		},
-		{
-			"ImportPath": "github.com/bitly/go-hostpool",
-			"Rev": "d0e59c22a56e8dadfed24f74f452cea5a52722d2"
+			"ImportPath": "github.com/alexcesaro/statsd",
+			"Rev": "bbc5756ebb41c2ac4c4f6abe584d25eb7cbe2e18"
 		},
 		{
 			"ImportPath": "github.com/aws/aws-sdk-go/aws",
@@ -137,6 +129,14 @@
 			"ImportPath": "github.com/aws/aws-sdk-go/service/ec2",
 			"Comment": "v0.10.4-18-gce51895",
 			"Rev": "ce51895e994693d65ab997ae48032bf13a9290b7"
+		},
+		{
+			"ImportPath": "github.com/benbjohnson/clock",
+			"Rev": "ae77645379a07929edeef20b47ba761ecfe5fde8"
+		},
+		{
+			"ImportPath": "github.com/codeskyblue/go-uuid",
+			"Rev": "952abbca900b023c1a80bc522ff4795db50d9d6c"
 		},
 		{
 			"ImportPath": "github.com/davecgh/go-spew/spew",
@@ -214,15 +214,6 @@
 			"Rev": "acbfe36e16c17e0a227948c76749ca81a4ebf262"
 		},
 		{
-			"ImportPath": "github.com/alexcesaro/statsd",
-			"Rev": "bbc5756ebb41c2ac4c4f6abe584d25eb7cbe2e18"
-		},
-		{
-			"ImportPath": "github.com/mattbaird/elastigo/lib",
-			"Comment": "v1.0-139-gba038c1",
-			"Rev": "ba038c10f634af5e7f3bd27b81bd8c37af844edf"
-		},
-		{
 			"ImportPath": "github.com/mattn/go-sqlite3",
 			"Rev": "e28cd440fabdd39b9520344bc26829f61db40ece"
 		},
@@ -246,13 +237,13 @@
 		},
 		{
 			"ImportPath": "github.com/raintank/raintank-metric/msg",
-			"Comment": "pkg-0.1.0-1454032195ubuntu1-1-ge9f7088",
-			"Rev": "e9f7088097749e5f4c2299e5c44f95b874a0a173"
+			"Comment": "pkg-0.1.0-1455069596ubuntu1-2-g07dac12",
+			"Rev": "07dac121dd1983e110d62e8450a8b7e2d61bff13"
 		},
 		{
 			"ImportPath": "github.com/raintank/raintank-metric/schema",
-			"Comment": "pkg-0.1.0-1454032195ubuntu1-1-ge9f7088",
-			"Rev": "e9f7088097749e5f4c2299e5c44f95b874a0a173"
+			"Comment": "pkg-0.1.0-1455069596ubuntu1-2-g07dac12",
+			"Rev": "07dac121dd1983e110d62e8450a8b7e2d61bff13"
 		},
 		{
 			"ImportPath": "github.com/rainycape/unidecode",
@@ -276,10 +267,6 @@
 			"ImportPath": "github.com/tinylib/msgp/msgp",
 			"Comment": "v1.0-alpha-43-gcd4fb15",
 			"Rev": "cd4fb1548c31d88af25205dc021be20935aec720"
-		},
-		{
-			"ImportPath": "github.com/vaughan0/go-ini",
-			"Rev": "a98ad7ee00ec53921f08832bc06ecf7fd600e6a1"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",

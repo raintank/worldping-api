@@ -213,6 +213,9 @@ func Register(r *macaron.Macaron) {
 		//Get Graph data from Graphite.
 		r.Any("/graphite/*", GraphiteProxy)
 
+		//Elasticsearch proxy
+		r.Any("/elasticsearch/*", ElasticsearchProxy)
+
 	}, reqSignedIn)
 
 	// admin api

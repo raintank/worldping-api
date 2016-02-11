@@ -100,11 +100,11 @@ function (angular, _) {
     };
 
     $scope.gotoDashboard = function(collector) {
-      $location.path("/dashboard/file/rt-collector-summary.json").search({"var-collector": collector.slug, "var-endpoint": "All"});
+      $location.path("/dashboard/file/rt-collector-summary.json").search({"var-probe": collector.slug, "var-endpoint": "All"});
     };
 
     $scope.gotoEventDashboard = function(collector) {
-      $location.path("/dashboard/file/rt-events.json").search({"var-collector": collector.slug, "var-endpoint": "All"});
+      $location.path("/dashboard/file/rt-events.json").search({"var-probe": collector.slug, "var-endpoint": "All"});
     };
 
     $scope.getEventsDashboardLink = function() {
@@ -112,7 +112,7 @@ function (angular, _) {
         return "";
       }
       var path = "/dashboard-solo/file/rt-events.json";
-      var qstring = "?panelId=1&fullscreen&from=now-30d&to=now&var-collector="+$scope.collector.slug;
+      var qstring = "?panelId=1&fullscreen&from=now-7d&to=now&var-probe="+$scope.collector.slug;
       return path + qstring;
     };
 
