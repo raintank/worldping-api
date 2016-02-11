@@ -114,6 +114,19 @@ func getFrontendSettingsMap(c *middleware.Context) (map[string]interface{}, erro
 		"url":  "/api/graphite",
 	}
 
+	// add raintank ES backend.
+	esMeta, _ := plugins.DataSources["elasticsearch"]
+	datasources["raintankEvents"] = map[string]interface{}{
+		"type":  "elasticsearch",
+		"meta":  esMeta,
+		"url":   "/api/elasticsearch",
+		"index": "[events-]YYYY-MM-DD",
+		"jsonData": map[string]string{
+			"interval":  "Daily",
+			"timeField": "timestamp",
+		},
+	}
+
 	jsonObj := map[string]interface{}{
 		"defaultDatasource": defaultDatasource,
 		"datasources":       datasources,
