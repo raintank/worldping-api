@@ -1,5 +1,5 @@
 {
-  "id": null,
+  "id": 5,
   "title": "Litmus Events",
   "originalTitle": "Litmus Events",
   "tags": [
@@ -18,7 +18,10 @@
       "height": 142,
       "panels": [
         {
-          "aliasColors": {},
+          "aliasColors": {
+            "ERROR": "#58140C",
+            "OK": "#508642"
+          },
           "bars": true,
           "datasource": "raintankEvents",
           "editable": true,
@@ -57,11 +60,22 @@
           "renderer": "flot",
           "seriesOverrides": [],
           "span": 12,
-          "stack": false,
+          "stack": true,
           "steppedLine": false,
           "targets": [
             {
               "bucketAggs": [
+                {
+                  "fake": true,
+                  "field": "severity",
+                  "id": "3",
+                  "settings": {
+                    "order": "asc",
+                    "orderBy": "_term",
+                    "size": "0"
+                  },
+                  "type": "terms"
+                },
                 {
                   "field": "timestamp",
                   "id": "2",
@@ -89,7 +103,7 @@
           "title": "",
           "tooltip": {
             "shared": true,
-            "value_type": "cumulative"
+            "value_type": "individual"
           },
           "type": "graph",
           "x-axis": true,
@@ -184,7 +198,7 @@
     }
   ],
   "time": {
-    "from": "now-6h",
+    "from": "now-12h",
     "to": "now"
   },
   "timepicker": {
@@ -225,8 +239,7 @@
         "allFormat": "wildcard",
         "current": {
           "text": "All",
-          "value": "*",
-          "tags": []
+          "value": "*"
         },
         "datasource": "raintank",
         "includeAll": true,
@@ -297,12 +310,12 @@
       {
         "allFormat": "glob",
         "current": {
+          "tags": [],
           "text": "ERROR + OK",
           "value": [
             "ERROR",
             "OK"
-          ],
-          "tags": []
+          ]
         },
         "datasource": null,
         "includeAll": false,
@@ -311,14 +324,14 @@
         "name": "severity",
         "options": [
           {
+            "selected": true,
             "text": "ERROR",
-            "value": "ERROR",
-            "selected": true
+            "value": "ERROR"
           },
           {
+            "selected": true,
             "text": "OK",
-            "value": "OK",
-            "selected": true
+            "value": "OK"
           }
         ],
         "query": "ERROR,OK",
@@ -333,6 +346,6 @@
   },
   "refresh": false,
   "schemaVersion": 7,
-  "version": 4,
+  "version": 1,
   "links": []
 }
