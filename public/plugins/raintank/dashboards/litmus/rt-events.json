@@ -19,7 +19,7 @@
       "panels": [
         {
           "aliasColors": {
-            "ERROR": "#58140C",
+            "ERROR": "#E24D42",
             "OK": "#508642"
           },
           "bars": true,
