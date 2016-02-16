@@ -326,7 +326,7 @@
             "value": "ERROR"
           },
           {
-            "selected": true,
+            "selected": false,
             "text": "OK",
             "value": "OK"
           }
