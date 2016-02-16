@@ -63,6 +63,7 @@ func (job Job) StoreResult(res m.CheckEvalResult) {
 				fmt.Sprintf("monitor_id:%d", job.MonitorId),
 			},
 		}
+		metrics[pos].SetId()
 	}
 	if int(res) >= 0 {
 		metrics[int(res)].Value = 1.0
