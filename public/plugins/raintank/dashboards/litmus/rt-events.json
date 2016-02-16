@@ -311,11 +311,8 @@
         "allFormat": "glob",
         "current": {
           "tags": [],
-          "text": "ERROR + OK",
-          "value": [
-            "ERROR",
-            "OK"
-          ]
+          "text": "ERROR",
+          "value": "ERROR"
         },
         "datasource": null,
         "includeAll": false,
