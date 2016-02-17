@@ -101,9 +101,8 @@ func (p *Publisher) getChannel() error {
 	// listen for close events so we can reconnect.
 	errChan := p.channel.NotifyClose(make(chan *amqp.Error))
 	go func() {
-		for er := range errChan {
-			fmt.Println("connection to rabbitmq lost.")
-			fmt.Println(er)
+		for err := range errChan {
+			fmt.Println("ERROR: connection to rabbitmq lost:", err)
 			p.Reconnect()
 		}
 	}()
@@ -132,6 +131,6 @@ func (p *Publisher) Publish(routingKey string, msgString []byte) {
 		// the connection will be re-established, so just keep
 		// retrying every 2seconds until we successfully publish.
 		time.Sleep(2 * time.Second)
-		fmt.Println("publish failed, retrying.")
+		fmt.Println("ERROR: rabbitmq publish failed, retrying.")
 	}
 }
