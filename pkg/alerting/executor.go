@@ -119,6 +119,11 @@ func execute(fn GraphiteReturner, job *Job, cache *lru.Cache) error {
 
 	preConsider := time.Now()
 
+	if time.Now().Sub(job.GeneratedAt) > time.Minute*time.Duration(10) {
+		executorNumTooOld.Inc(1)
+		return nil
+	}
+
 	if found, _ := cache.ContainsOrAdd(key, true); found {
 		//log.Debug("T %s already done", key)
 		executorNumAlreadyDone.Inc(1)

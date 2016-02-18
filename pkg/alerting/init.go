@@ -30,6 +30,7 @@ var executorNum met.Gauge
 var executorConsiderJobAlreadyDone met.Timer
 var executorConsiderJobOriginalTodo met.Timer
 
+var executorNumTooOld met.Count
 var executorNumAlreadyDone met.Count
 var executorNumOriginalTodo met.Count
 var executorAlertOutcomesErr met.Count
@@ -70,6 +71,7 @@ func Init(metrics met.Backend) {
 	executorConsiderJobAlreadyDone = metrics.NewTimer("alert-executor.consider-job.already-done", 0)
 	executorConsiderJobOriginalTodo = metrics.NewTimer("alert-executor.consider-job.original-todo", 0)
 
+	executorNumTooOld = metrics.NewCount("alert-executor.too-old")
 	executorNumAlreadyDone = metrics.NewCount("alert-executor.already-done")
 	executorNumOriginalTodo = metrics.NewCount("alert-executor.original-todo")
 	executorAlertOutcomesErr = metrics.NewCount("alert-executor.alert-outcomes.error")
