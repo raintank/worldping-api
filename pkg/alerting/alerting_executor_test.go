@@ -46,6 +46,7 @@ func TestExecutor(t *testing.T) {
 					WarnExpr: "0",
 				},
 				LastPointTs: time.Unix(ts, 0),
+				GeneratedAt: time.Now(),
 			}
 		}
 		jobQueue := newInternalJobQueue(10)
