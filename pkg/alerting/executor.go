@@ -33,7 +33,8 @@ func GraphiteAuthContextReturner(org_id int64) (bgraphite.Context, error) {
 	ctx := graphite.GraphiteContext{
 		Host: u.String(),
 		Header: http.Header{
-			"X-Org-Id": []string{fmt.Sprintf("%d", org_id)},
+			"X-Org-Id":   []string{fmt.Sprintf("%d", org_id)},
+			"User-Agent": []string{"grafana alert-executor"},
 		},
 		Traces: make([]graphite.Trace, 0),
 	}
