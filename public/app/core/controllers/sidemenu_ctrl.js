@@ -17,23 +17,23 @@ function (angular, _, $, coreModule, config) {
     $scope.setupMainNav = function() {
       $scope.mainLinks.push({
         text: "Dashboards",
-        icon: "fa-fw icon-rt-dashboard",
+        icon: "icon-gf icon-gf-dashboard",
         href: $scope.getUrl("/"),
       });
       $scope.mainLinks.push({
         text: "Endpoints",
-        icon: "fa-fw icon-rt-endpoint",
+        icon: "icon-gf icon-gf-endpoint",
         href: $scope.getUrl("/endpoints"),
       });
       $scope.mainLinks.push({
         text: "Probes",
-        icon: "fa-fw icon-rt-probe",
+        icon: "icon-gf icon-gf-probe",
         href: $scope.getUrl("/collectors"),
       });
       if (contextSrv.hasRole('Admin')) {
         $scope.mainLinks.push({
           text: "Data Sources",
-          icon: "fa-fw icon-rt-datasources",
+          icon: "icon-gf icon-gf-datasources",
           href: $scope.getUrl("/datasources"),
         });
       }
