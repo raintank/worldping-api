@@ -1,4 +1,4 @@
-<topnav toggle="toggleSideMenu()" icon="icon-rt-collector" section="Probes" show-menu-btn="!grafana.sidemenu">
+<topnav toggle="toggleSideMenu()" icon="icon-gf icon-gf-probe" section="Probes" show-menu-btn="!grafana.sidemenu">
 	<ul class="nav">
 		<li class="top-nav-title ng-binding"> <!-- <span class="top-nav-title ng-binding" style="margin-left:-20px; margin-right:20px;">{{collector.name}}</span> -->
 			<div>
@@ -28,8 +28,8 @@
 	<div class="rt-page-header-area">
 		<h1 class="rt-h1">{{collector.name}}</h1>
 
-		<span class="collector_icon public"><i ng-class="icon" class="icon-rt-raintank_icn" style="" ng-if="collector.public" bs-tooltip="'This is a public probe'"></i></span>
-		<span class="collector_icon private"><i ng-class="icon" class="icon-rt-private-collector" style="" ng-if="!collector.public" bs-tooltip="'This is a private collector'"></i></span>
+		<span class="collector_icon public"><i ng-class="icon" class="icon-gf icon-gf-raintank_icn" style="" ng-if="collector.public" bs-tooltip="'This is a public probe'"></i></span>
+		<span class="collector_icon private"><i ng-class="icon" class="icon-gf icon-gf-private-collector" style="" ng-if="!collector.public" bs-tooltip="'This is a private collector'"></i></span>
 	</div>
 	<div class="editor-row rt-detail-pages">
 		<div class="editor-option">
@@ -50,13 +50,13 @@
 	<div class="detailContainer">
 		<div class="detailColumn detailLeft">
 		<div class="rt-box clearBack oneCol">
-				<span><a class="superCTA" ng-click="gotoDashboard(collector)">Go to {{collector.name}} Dashboard <i ng-class="icon" class="icon-rt-dashboard"></i></a></span>
+				<span><a class="superCTA" ng-click="gotoDashboard(collector)">Go to {{collector.name}} Dashboard <i ng-class="icon" class="icon-gf icon-gf-dashboard"></i></a></span>
 			</div>
 			<div class="rt-box">
 				<div class="rt-box-header">Probe Details
 					<div ng-show="collector.online" style="float: right; display: inline;">
 						<div style="display: inline; margin-left:6px;">
-							<a ng-click="gotoDashboard(collector)"><i ng-class="icon" class="dashboard-icon icon-rt-jump-to-dashboard" bs-tooltip="'Go to Litmus: {{collector.name}} dashboard'"></i></a>
+							<a ng-click="gotoDashboard(collector)"><i ng-class="icon" class="icon-gf dashboard-icon icon-gf-jump-to-dashboard" bs-tooltip="'Go to Litmus: {{collector.name}} dashboard'"></i></a>
 						</div>
 					</div>
 				</div>

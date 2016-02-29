@@ -1,7 +1,7 @@
 {
   "id": null,
-  "title": "Litmus Endpoint: Summary",
-  "originalTitle": "Litmus Endpoint: Summary",
+  "title": "worldPing Endpoint: Summary",
+  "originalTitle": "worldPing Endpoint: Summary",
   "tags": [
     "raintank",
     "Endpoints"
@@ -37,11 +37,11 @@
           "links": [
             {
               "dashUri": "file/rt-endpoint-dns.json",
-              "dashboard": "Litmus Endpoint: |--- DNS",
+              "dashboard": "worldPing Endpoint: |--- DNS",
               "includeVars": true,
               "keepTime": true,
               "targetBlank": false,
-              "title": "Litmus Endpoint: |--- DNS",
+              "title": "worldPing Endpoint: |--- DNS",
               "type": "dashboard"
             }
           ],
@@ -98,10 +98,10 @@
           "links": [
             {
               "dashUri": "file/rt-endpoint-ping.json",
-              "dashboard": "Litmus Endpoint: |--- Ping",
+              "dashboard": "worldPing Endpoint: |--- Ping",
               "includeVars": true,
               "keepTime": true,
-              "title": "Litmus Endpoint: |--- Ping",
+              "title": "worldPing Endpoint: |--- Ping",
               "type": "dashboard"
             }
           ],
@@ -158,11 +158,11 @@
           "links": [
             {
               "dashUri": "file/rt-endpoint-web.json",
-              "dashboard": "Litmus Endpoint: |--- Web",
+              "dashboard": "worldPing Endpoint: |--- Web",
               "includeVars": true,
               "keepTime": true,
               "params": "var-monitor_type=http",
-              "title": "Litmus Endpoint: |--- Web",
+              "title": "worldPing Endpoint: |--- Web",
               "type": "dashboard"
             }
           ],
@@ -219,9 +219,9 @@
           "links": [
             {
               "type": "dashboard",
-              "dashboard": "Litmus Endpoint: |--- Web",
+              "dashboard": "worldPing Endpoint: |--- Web",
               "dashUri": "file/rt-endpoint-web.json",
-              "title": "Litmus Endpoint: |--- Web",
+              "title": "worldPing Endpoint: |--- Web",
               "params": "var-monitor_type=https",
               "keepTime": true,
               "includeVars": true
@@ -307,10 +307,10 @@
           "links": [
             {
               "dashUri": "file/rt-endpoint-dns.json",
-              "dashboard": "Litmus Endpoint: |--- DNS",
+              "dashboard": "worldPing Endpoint: |--- DNS",
               "includeVars": true,
               "keepTime": true,
-              "title": "Litmus Endpoint: |--- DNS",
+              "title": "worldPing Endpoint: |--- DNS",
               "type": "dashboard"
             }
           ],
@@ -387,10 +387,10 @@
           "links": [
             {
               "dashUri": "file/rt-endpoint-ping.json",
-              "dashboard": "Litmus Endpoint: |--- Ping",
+              "dashboard": "worldPing Endpoint: |--- Ping",
               "includeVars": true,
               "keepTime": true,
-              "title": "Litmus Endpoint: |--- Ping",
+              "title": "worldPing Endpoint: |--- Ping",
               "type": "dashboard"
             }
           ],
@@ -467,11 +467,11 @@
           "links": [
             {
               "dashUri": "file/rt-endpoint-web.json",
-              "dashboard": "Litmus Endpoint: |--- Web",
+              "dashboard": "worldPing Endpoint: |--- Web",
               "includeVars": true,
               "keepTime": true,
               "params": "var-monitor_type=http",
-              "title": "Litmus Endpoint: |--- Web",
+              "title": "worldPing Endpoint: |--- Web",
               "type": "dashboard"
             }
           ],
@@ -547,9 +547,9 @@
           "links": [
             {
               "type": "dashboard",
-              "dashboard": "Litmus Endpoint: |--- Web",
+              "dashboard": "worldPing Endpoint: |--- Web",
               "dashUri": "file/rt-endpoint-web.json",
-              "title": "Litmus Endpoint: |--- Web",
+              "title": "worldPing Endpoint: |--- Web",
               "params": "var-monitor_type=https",
               "keepTime": true,
               "includeVars": true
@@ -636,9 +636,9 @@
           "links": [
             {
               "type": "dashboard",
-              "dashboard": "Litmus Endpoint: |--- DNS",
+              "dashboard": "worldPing Endpoint: |--- DNS",
               "dashUri": "file/rt-endpoint-dns.json",
-              "title": "Litmus Endpoint: |--- DNS",
+              "title": "worldPing Endpoint: |--- DNS",
               "keepTime": true,
               "includeVars": true
             }
@@ -710,9 +710,9 @@
           "links": [
             {
               "type": "dashboard",
-              "dashboard": "Litmus Endpoint: |--- Ping",
+              "dashboard": "worldPing Endpoint: |--- Ping",
               "dashUri": "file/rt-endpoint-ping.json",
-              "title": "Litmus Endpoint: |--- Ping",
+              "title": "worldPing Endpoint: |--- Ping",
               "includeVars": true,
               "keepTime": true
             }
@@ -784,9 +784,9 @@
           "links": [
             {
               "type": "dashboard",
-              "dashboard": "Litmus Endpoint: |--- Web",
+              "dashboard": "worldPing Endpoint: |--- Web",
               "dashUri": "file/rt-endpoint-web.json",
-              "title": "Litmus Endpoint: |--- Web",
+              "title": "worldPing Endpoint: |--- Web",
               "params": "var-monitor_type=http",
               "includeVars": true,
               "keepTime": true
@@ -859,9 +859,9 @@
           "links": [
             {
               "type": "dashboard",
-              "dashboard": "Litmus Endpoint: |--- Web",
+              "dashboard": "worldPing Endpoint: |--- Web",
               "dashUri": "file/rt-endpoint-web.json",
-              "title": "Litmus Endpoint: |--- Web",
+              "title": "worldPing Endpoint: |--- Web",
               "params": "var-monitor_type=https",
               "keepTime": true,
               "includeVars": true

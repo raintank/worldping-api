@@ -1,7 +1,7 @@
 {
   "id": null,
-  "title": "Litmus Endpoint: |--- Web",
-  "originalTitle": "Litmus Endpoint: |--- Web",
+  "title": "worldPing Endpoint: |--- Web",
+  "originalTitle": "worldPing Endpoint: |--- Web",
   "tags": [
     "raintank",
     "Endpoints"
@@ -273,11 +273,11 @@
           "links": [
             {
               "dashUri": "file/rt-events.json",
-              "dashboard": "Litmus Events",
+              "dashboard": "worldPing Events",
               "includeVars": true,
               "keepTime": true,
               "params": "",
-              "title": "Litmus Events",
+              "title": "worldPing Events",
               "type": "dashboard"
             }
           ],

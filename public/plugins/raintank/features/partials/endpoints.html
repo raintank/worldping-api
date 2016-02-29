@@ -1,4 +1,4 @@
-<topnav toggle="toggleSideMenu()" icon="icon-rt-endpoint" section="Endpoints" show-menu-btn="!grafana.sidemenu">
+<topnav toggle="toggleSideMenu()" icon="icon-gf icon-gf-endpoint" section="Endpoints" show-menu-btn="!grafana.sidemenu">
 </topnav>
 <div style="margin: 15px; position: relative; display: block; max-width: 1000px; min-width: 400px;">
 	<div class="rt-page-header-area">
@@ -18,7 +18,7 @@
 	<div ng-if="pageReady">
 		<div ng-if="endpoints.length === 0" style="display: flex; flex-direction: column; align-items: center; justify-content: flex-start; height: 350px;">
 			<div style="text-align: center; padding-top: 90px; min-height: 220px; min-width: 400px;  margin: 0 auto;">
-				<i ng-class="icon" class="icon-rt-endpoint no-endpoints"></i>
+				<i ng-class="icon" class="icon-gf icon-gf-endpoint no-endpoints"></i>
 				<p>Looks like you don’t have any endpoints yet. <a class="rt-body-link" href="endpoints/new">Add an endpoint now.</a></p>
 			</div>
 	        <div class="rt-panel-CTA-flex-container">
@@ -74,17 +74,17 @@
 
 			<div style="display: inline-block;">
 				<span class="label rt-label-tag dropdown rt-list-tag-menu" ng-repeat="tag in endpoint.tags" tag-color-from-name="tag">
-					<a data-toggle="dropdown">{{tag}} <i ng-class="icon" class="tag-icon icon-rt-endpoint-tiny"></i></a>
+					<a data-toggle="dropdown">{{tag}} <i ng-class="icon" class="icon-gf tag-icon icon-gf-endpoint-tiny"></i></a>
 					<ul class="dropdown-menu rt-tag-dropup">
 						<li>
 							<a href="#" bs-tooltip="'Coming Soon'">
-								<i ng-class="icon" class="dashboard-icon icon-rt-jump-to-dashboard"></i>
+								<i ng-class="icon" class="icon-gf dashboard-icon icon-gf-jump-to-dashboard"></i>
 								Dashboard
 							</a>
 						</li>
 						<li>
 							<a ng-click="setTagFilter(tag)">
-								<i ng-class="icon" class="dashboard-icon icon-rt-filter"></i>
+								<i ng-class="icon" class="icon-gf dashboard-icon icon-gf-filter"></i>
 								Filter
 							</a>
 						</li>
@@ -96,7 +96,7 @@
 					<rt-endpoint-health endpoint="endpoint"></rt-endpoint-health>
 				</div>
 				<div style="display: inline; margin-left:25px;">
-					<a ng-click="gotoDashboard(endpoint)"><i ng-class="icon" class="primary-icon dashboard-icon icon-rt-jump-to-dashboard" bs-tooltip="'Go to Litmus: Endpoint Summary</br> dashboard for {{endpoint.name}}'"></i></a>
+					<a ng-click="gotoDashboard(endpoint)"><i ng-class="icon" class="icon-gf primary-icon dashboard-icon icon-gf-jump-to-dashboard" bs-tooltip="'Go to Litmus: Endpoint Summary</br> dashboard for {{endpoint.name}}'"></i></a>
 				</div>
 <!-- 				<div class="dropdown" style="float: right; margin-left: 5px;">
 					<a data-toggle="dropdown">

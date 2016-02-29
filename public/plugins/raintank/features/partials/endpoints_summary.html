@@ -1,4 +1,4 @@
-<topnav toggle="toggleSideMenu()" icon="icon-rt-endpoint" section="Endpoints" show-menu-btn="!grafana.sidemenu">
+<topnav toggle="toggleSideMenu()" icon="icon-gf icon-gf-endpoint" section="Endpoints" show-menu-btn="!grafana.sidemenu">
 	<ul class="nav">
 		<li class="top-nav-title ng-binding">
 			<div>
@@ -19,7 +19,7 @@
 	</ul>
 	<div class="pull-right refresh">
 		<a ng-click="refresh()">
-			<span class="small">As of {{refreshTime | date:'shortTime'}}</span> <i ng-class="icon" class="icon-rt-refresh" style="font-size:20px; vertical-align:text-bottom;"></i>
+			<span class="small">As of {{refreshTime | date:'shortTime'}}</span> <i ng-class="icon" class="icon-gf icon-gf-refresh" style="font-size:20px; vertical-align:text-bottom;"></i>
 		</a>
 	</div>
 </topnav>
@@ -28,7 +28,7 @@
 
 	<!-- page title -->
 	<div class="rt-page-header-area">
-		<h1 class="rt-h1">{{endpoint.name}}</h1><a ng-click="gotoDashboard(endpoint)"><i ng-class="icon" class="primary-icon-header dashboard-icon icon-rt-jump-to-dashboard" bs-tooltip="'Go to Litmus: Summary </br>dashboard for this endpoint'"></i></a>
+		<h1 class="rt-h1">{{endpoint.name}}</h1><a ng-click="gotoDashboard(endpoint)"><i ng-class="icon" class="icon-gf primary-icon-header dashboard-icon icon-gf-jump-to-dashboard" bs-tooltip="'Go to Litmus: Summary </br>dashboard for this endpoint'"></i></a>
 	</div>
 	<div class="editor-row rt-detail-pages">
 		<div class="editor-option">
@@ -51,12 +51,12 @@
 						<ul class="summary-table-actions">
 							<li ng-show="getMonitorByTypeName('Ping').enabled">
 								<a ng-click="gotoDashboard(endpoint, 'ping')">
-									<i ng-class="icon" class="primary-icon dashboard-icon icon-rt-jump-to-dashboard" bs-tooltip="'Go to Litmus Endpoint: </br>dashboard for Ping'"></i>
+									<i ng-class="icon" class="icon-gf primary-icon dashboard-icon icon-gf-jump-to-dashboard" bs-tooltip="'Go to Litmus Endpoint: </br>dashboard for Ping'"></i>
 								</a>					
 							</li>
 							<li>
 								<a href="endpoints/edit/{{endpoint.id}}#ping">
-									<i ng-class="icon" class="icon-rt-settings miniCTA" style="vertical-align: middle; font-size: 22px; margin-left: 10px;"></i>
+									<i ng-class="icon" class="icon-gf icon-gf-settings miniCTA" style="vertical-align: middle; font-size: 22px; margin-left: 10px;"></i>
 								</a>
 							</li>
 						</ul>
@@ -87,11 +87,11 @@
 							<li>
 								<div class="endpoint-alerting" ng-show="getMonitorByTypeName('Ping').enabled">
 									<div ng-if="!getMonitorByTypeName('Ping').health_settings.notifications.enabled">
-										<span class="endpoint-alerting-status not-enabled"><i ng-class="icon" class="icon icon-rt-alert-disabled"></i><a href="endpoints/edit/{{endpoint.id}}#ping" class="freqMsg disabled">Alerting not enabled,<br>configure now</a></span>
+										<span class="endpoint-alerting-status not-enabled"><i ng-class="icon" class="icon-gf icon icon-gf-alert-disabled"></i><a href="endpoints/edit/{{endpoint.id}}#ping" class="freqMsg disabled">Alerting not enabled,<br>configure now</a></span>
 									</div>
 									<div ng-if="getMonitorByTypeName('Ping').health_settings.notifications.enabled">
-										<span class="endpoint-alerting-status"><i ng-class="icon" class="icon icon-rt-alert"></i><a href="endpoints/edit/{{endpoint.id}}#ping">Alerting Enabled</span>
-										<span class="endpoint-alerting-recipients" bs-tooltip="'{{getNotificationEmailsAsString('Ping')}}'"><i ng-class="icon" class="icon icon-rt-users"></i>{{getNotificationEmails('Ping').length}} recipients</span></a>
+										<span class="endpoint-alerting-status"><i ng-class="icon" class="icon-gf icon icon-gf-alert"></i><a href="endpoints/edit/{{endpoint.id}}#ping">Alerting Enabled</span>
+										<span class="endpoint-alerting-recipients" bs-tooltip="'{{getNotificationEmailsAsString('Ping')}}'"><i ng-class="icon" class="icon-gf icon icon-gf-users"></i>{{getNotificationEmails('Ping').length}} recipients</span></a>
 									</div>
 								</div>								
 							</li>
@@ -108,11 +108,11 @@
 					<div class="currentStatus summary-table">
 						<ul class="summary-table-actions">
 							<li ng-show="getMonitorByTypeName('DNS').enabled">
-								<a ng-click="gotoDashboard(endpoint, 'dns')"><i ng-class="icon" class="primary-icon dashboard-icon icon-rt-jump-to-dashboard" bs-tooltip="'Go to Litmus Endpoint: </br>dashboard for DNS'"></i></a>					
+								<a ng-click="gotoDashboard(endpoint, 'dns')"><i ng-class="icon" class="icon-gf primary-icon dashboard-icon icon-gf-jump-to-dashboard" bs-tooltip="'Go to Litmus Endpoint: </br>dashboard for DNS'"></i></a>					
 							</li>
 							<li>
 								<a href="endpoints/edit/{{endpoint.id}}#dns">
-									<i ng-class="icon" class="icon-rt-settings in-row-icons miniCTA"></i>
+									<i ng-class="icon" class="icon-gf icon-gf-settings in-row-icons miniCTA"></i>
 								</a>
 							</li>
 						</ul>
@@ -135,11 +135,11 @@
 							<li>
 								<div class="endpoint-alerting" ng-show="getMonitorByTypeName('DNS').enabled">
 									<div ng-if="!getMonitorByTypeName('DNS').health_settings.notifications.enabled">
-										<span class="endpoint-alerting-status not-enabled"><i ng-class="icon" class="icon icon-rt-alert-disabled"></i><a href="endpoints/edit/{{endpoint.id}}#dns" class="freqMsg disabled">Alerting not enabled,<br>configure now</a></span>
+										<span class="endpoint-alerting-status not-enabled"><i ng-class="icon" class="icon-gf icon icon-gf-alert-disabled"></i><a href="endpoints/edit/{{endpoint.id}}#dns" class="freqMsg disabled">Alerting not enabled,<br>configure now</a></span>
 									</div>
 									<div ng-if="getMonitorByTypeName('DNS').health_settings.notifications.enabled">
-										<span class="endpoint-alerting-status"><i ng-class="icon" class="icon icon-rt-alert"></i><a href="endpoints/edit/{{endpoint.id}}#dns">Alerting Enabled</span>
-										<span class="endpoint-alerting-recipients" bs-tooltip="'{{getNotificationEmailsAsString('DNS')}}'"><i ng-class="icon" class="icon icon-rt-users"></i>{{getNotificationEmails('DNS').length}} recipients</span></a>
+										<span class="endpoint-alerting-status"><i ng-class="icon" class="icon-gf icon icon-gf-alert"></i><a href="endpoints/edit/{{endpoint.id}}#dns">Alerting Enabled</span>
+										<span class="endpoint-alerting-recipients" bs-tooltip="'{{getNotificationEmailsAsString('DNS')}}'"><i ng-class="icon" class="icon-gf icon icon-gf-users"></i>{{getNotificationEmails('DNS').length}} recipients</span></a>
 									</div>
 								</div>
 							</li>							
@@ -157,12 +157,12 @@
 						<ul class="summary-table-actions">
 							<li ng-show="getMonitorByTypeName('HTTP').enabled">
 								<a ng-click="gotoDashboard(endpoint, 'http')">
-									<i ng-class="icon" class="primary-icon dashboard-icon icon-rt-jump-to-dashboard" bs-tooltip="'Go to Litmus Endpoint: </br>dashboard for HTTP'"></i>
+									<i ng-class="icon" class="icon-gf primary-icon dashboard-icon icon-gf-jump-to-dashboard" bs-tooltip="'Go to Litmus Endpoint: </br>dashboard for HTTP'"></i>
 								</a>
 							</li>
 							<li>
 								<a href="endpoints/edit/{{endpoint.id}}#http">
-									<i ng-class="icon" class="icon-rt-settings in-row-icons miniCTA"></i>
+									<i ng-class="icon" class="icon-gf icon-gf-settings in-row-icons miniCTA"></i>
 								</a>
 							</li>
 						</ul>
@@ -186,12 +186,12 @@
 								<div class="endpoint-alerting" ng-show="getMonitorByTypeName('HTTP').enabled">
 									<div ng-if="!getMonitorByTypeName('HTTP').health_settings.notifications.enabled">
 										<span class="endpoint-alerting-status not-enabled">
-											<i ng-class="icon" class="icon icon-rt-alert-disabled"></i><a href="endpoints/edit/{{endpoint.id}}#http" class="freqMsg disabled">Alerting not enabled,<br>configure now</a>
+											<i ng-class="icon" class="icon-gf icon icon-gf-alert-disabled"></i><a href="endpoints/edit/{{endpoint.id}}#http" class="freqMsg disabled">Alerting not enabled,<br>configure now</a>
 										</span>
 									</div>
 									<div ng-if="getMonitorByTypeName('HTTP').health_settings.notifications.enabled">
-										<span class="endpoint-alerting-status"><i ng-class="icon" class="icon icon-rt-alert"></i><a href="endpoints/edit/{{endpoint.id}}#http">Alerting Enabled</span>
-										<span class="endpoint-alerting-recipients" bs-tooltip="'{{getNotificationEmailsAsString('HTTP')}}'"><i ng-class="icon" class="icon icon-rt-users"></i>{{getNotificationEmails('HTTP').length}} recipients</span></a>
+										<span class="endpoint-alerting-status"><i ng-class="icon" class="icon-gf icon icon-gf-alert"></i><a href="endpoints/edit/{{endpoint.id}}#http">Alerting Enabled</span>
+										<span class="endpoint-alerting-recipients" bs-tooltip="'{{getNotificationEmailsAsString('HTTP')}}'"><i ng-class="icon" class="icon-gf icon icon-gf-users"></i>{{getNotificationEmails('HTTP').length}} recipients</span></a>
 									</div>
 								</div>
 							</li>
@@ -209,12 +209,12 @@
 						<ul class="summary-table-actions">
 							<li ng-show="getMonitorByTypeName('HTTPS').enabled">
 								<a ng-click="gotoDashboard(endpoint, 'https')">
-									<i ng-class="icon" class="primary-icon dashboard-icon icon-rt-jump-to-dashboard" bs-tooltip="'Go to Litmus Endpoint: </br>dashboard for HTTPS'"></i>
+									<i ng-class="icon" class="icon-gf primary-icon dashboard-icon icon-gf-jump-to-dashboard" bs-tooltip="'Go to Litmus Endpoint: </br>dashboard for HTTPS'"></i>
 								</a>
 							</li>
 							<li>
 								<a href="endpoints/edit/{{endpoint.id}}#https">
-									<i ng-class="icon" class="icon-rt-settings in-row-icons miniCTA"></i>
+									<i ng-class="icon" class="icon-gf icon-gf-settings in-row-icons miniCTA"></i>
 								</a>
 							</li>
 						</ul>
@@ -238,12 +238,12 @@
 								<div class="endpoint-alerting" ng-show="getMonitorByTypeName('HTTPS').enabled">
 									<div ng-if="!getMonitorByTypeName('HTTPS').health_settings.notifications.enabled">
 										<span class="endpoint-alerting-status not-enabled">
-											<i ng-class="icon" class="icon icon-rt-alert-disabled"></i><a href="endpoints/edit/{{endpoint.id}}#https" class="freqMsg disabled">Alerting not enabled,<br>configure now</a>
+											<i ng-class="icon" class="icon-gf icon icon-gf-alert-disabled"></i><a href="endpoints/edit/{{endpoint.id}}#https" class="freqMsg disabled">Alerting not enabled,<br>configure now</a>
 										</span>
 									</div>
 									<div ng-if="getMonitorByTypeName('HTTPS').health_settings.notifications.enabled">
-										<span class="endpoint-alerting-status"><i ng-class="icon" class="icon icon-rt-alert"></i><a href="endpoints/edit/{{endpoint.id}}#http">Alerting Enabled</span>
-										<span class="endpoint-alerting-recipients" bs-tooltip="'{{getNotificationEmailsAsString('HTTPS')}}'"><i ng-class="icon" class="icon icon-rt-users"></i>{{getNotificationEmails('HTTPS').length}} recipients</span></a>
+										<span class="endpoint-alerting-status"><i ng-class="icon" class="icon-gf icon icon-gf-alert"></i><a href="endpoints/edit/{{endpoint.id}}#http">Alerting Enabled</span>
+										<span class="endpoint-alerting-recipients" bs-tooltip="'{{getNotificationEmailsAsString('HTTPS')}}'"><i ng-class="icon" class="icon-gf icon icon-gf-users"></i>{{getNotificationEmails('HTTPS').length}} recipients</span></a>
 									</div>
 								</div>
 							</li>

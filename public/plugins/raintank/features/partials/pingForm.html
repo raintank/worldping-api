@@ -6,9 +6,9 @@
             </div>
             <div class="rt-box-row-info">
               <a href="#">
-                <i class="icon icon-rt-monitoring-tiny" style="font-size:17px;"ng-show="monitors['ping'].enabled"></i>
+                <i class="icon-gf icon icon-gf-monitoring-tiny" style="font-size:17px;"ng-show="monitors['ping'].enabled"></i>
                 <span class="freqMsg" ng-show="monitors['ping'].enabled" > Every {{monitors['ping'].frequency}}s from {{collectorCount(monitors['ping'])}} {{collectorCount(monitors['ping']) == 1 ? "Probe" : "Probes"}} |</span>
-                <i class="icon icon-rt-monitoring-tiny" style="font-size:17px;"ng-show="!monitors['ping'].enabled"></i>
+                <i class="icon-gf icon icon-gf-monitoring-tiny" style="font-size:17px;"ng-show="!monitors['ping'].enabled"></i>
                 <span class="freqMsg disabled" ng-show="!monitors['ping'].enabled" > Not enabled |</span>
                 <span class="freqMsg" ng-show="!monitors['ping'].enabled && discovered" > Not Discovered |</span>
                 <span class="freqMsg" style="color: #13b2d4"> Configure</span>
@@ -20,7 +20,7 @@
           <div class="rt-box-body rt-page-box-body">
             <div class="rt-box-interior-section">
               <div class="rt-box-interior-header-icon">
-                <i class="icon icon-rt-monitoring" style="font-size:32px;"></i>
+                <i class="icon-gf icon icon-gf-monitoring" style="font-size:32px;"></i>
               </div>
               <div class="rt-box-interior-header rt-h3">Monitoring
                 <div style="margin-left: 15px; display: inline;">
@@ -62,7 +62,7 @@
             </div>
              <div class="rt-box-interior-section">
               <div class="rt-box-interior-header-icon">
-                <i class="icon icon-rt-online" style="font-size: 30px;"></i>
+                <i class="icon-gf icon icon-gf-online" style="font-size: 30px;"></i>
               </div>
               <div class="rt-box-interior-header rt-h3">Health</div>
               <div class="rt-box-interior-content" style="margin-top: 10px;">
@@ -81,7 +81,7 @@
             </div>
             <div class="rt-box-interior-section">
               <div class="rt-box-interior-header-icon">
-                <i class="icon icon-rt-alert" style="font-size: 26px;"></i>
+                <i class="icon-gf icon icon-gf-alert" style="font-size: 26px;"></i>
               </div>
               <div class="rt-box-interior-header rt-h3">Alerting</div>
                 <div style="margin-left: 15px; display: inline;">

@@ -1,4 +1,4 @@
-<topnav toggle="toggleSideMenu()" icon="icon-rt-collector" section="Probes" show-menu-btn="!grafana.sidemenu">
+<topnav toggle="toggleSideMenu()" icon="icon-gf icon-gf-probe" section="Probes" show-menu-btn="!grafana.sidemenu">
   <ul class="nav">
     <li class="top-nav-title ng-binding">
       <div>
@@ -17,7 +17,7 @@
   <!-- Step 1 Accept, check for probe duplicates and add probe record. -->
   <div ng-if="!collector.id">
     <div class="rt-page-header">
-      <i ng-class="icon" class="icon-rt-collector" style="font-size:24px;"></i>
+      <i ng-class="icon" class="icon-gf icon-gf-probe" style="font-size:24px;"></i>
       <h1 class="rt-h1">Add a new probe</h1>
       <span class="form-step-count">Step 1 of 2</span>
     </div>
@@ -34,13 +34,13 @@
   <!-- Step 2 - Show after collector record has been added. -->
   <div ng-if="collector.id">
     <div class="rt-page-header">
-      <i ng-class="icon" class="icon-rt-collector" style="font-size:24px;"></i>
+      <i ng-class="icon" class="icon-gf icon-gf-probe" style="font-size:24px;"></i>
       <h1 class="rt-h1">Add a new probe</h1>
       <span class="form-step-count">Step 2 of 2</span>
     </div>
     <label class="rt-form-label-medium">Probe Name:</label>
     <h2 class="collector-name">{{collector.name}}</h2>
-    <p><i class="fa-fw icon-rt-check rt-icon-success" style="font-size: 20px;"></i><strong>Probe record added</strong>. Please install the application or <a class="rt-dashboard-blurb" ng-href="/collectors/summary/{{collector.id}}">skip to probe summary</a>.</p>
+    <p><i class="icon-gf icon-gf-check rt-icon-success" style="font-size: 20px;"></i><strong>Probe record added</strong>. Please install the application or <a class="rt-dashboard-blurb" ng-href="/collectors/summary/{{collector.id}}">skip to probe summary</a>.</p>
     <div class="rt-collector-config rt-config-box">
       <div class="rt-collector-config-header rt-box-header">
         <h2>Install the probe application</h2>
