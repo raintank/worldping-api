@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x 
 # Find the directory we exist within
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd ${DIR}
@@ -24,6 +24,6 @@ cp -a ${DIR}/artifacts/public ${BUILD}/usr/share/${NAME}/
 cp ${DIR}/artifacts/conf/sample.ini ${BUILD}/etc/raintank/worldping-api.ini
 
 fpm -s dir -t deb \
-  -v ${VERSION} -n ${VAR} -a ${ARCH} --iteration $ITERATION --description "Worldping Backend service" \
-  --deb-upstart ${DIR}/conf/worldping-api.conf \
+  -v ${VERSION} -n ${NAME} -a ${ARCH} --iteration $ITERATION --description "Worldping Backend service" \
+  --deb-upstart ${DIR}/conf/worldping-api \
   -C ${BUILD} -p ${PACKAGE_NAME} .
