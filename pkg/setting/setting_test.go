@@ -15,11 +15,11 @@ func TestLoadingSettings(t *testing.T) {
 			err := NewConfigContext(&CommandLineArgs{HomePath: "../../"})
 			So(err, ShouldBeNil)
 
-			So(AdminUser, ShouldEqual, "admin")
+			So(AdminKey, ShouldEqual, "changeme")
 		})
 
 		Convey("Should be able to override via environment variables", func() {
-			os.Setenv("GF_SECURITY_ADMIN_KEY", "superduper")
+			os.Setenv("GF_SERVER_ADMIN_KEY", "superduper")
 			NewConfigContext(&CommandLineArgs{HomePath: "../../"})
 
 			So(AdminKey, ShouldEqual, "superduper")
