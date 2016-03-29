@@ -12,7 +12,6 @@ import (
 
 	"github.com/googollee/go-socket.io"
 	"github.com/grafana/grafana/pkg/bus"
-	"github.com/grafana/grafana/pkg/components/apikeygen"
 	"github.com/grafana/grafana/pkg/events"
 	"github.com/grafana/grafana/pkg/log"
 	"github.com/grafana/grafana/pkg/middleware"
@@ -278,28 +277,17 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	//--------- set required version of collector.------------//
 	log.Info("collector %s with version %d.%f connected", name, versionMajor, versionMinor)
 	if keyString != "" {
-		// base64 decode key
-		decoded, err := apikeygen.Decode(keyString)
+		user, err := middleware.UserFromGrafanaNetApiKey(keyString)
 		if err != nil {
 			return nil, m.ErrInvalidApiKey
 		}
-		// fetch key
-		keyQuery := m.GetApiKeyByNameQuery{KeyName: decoded.Name, OrgId: decoded.OrgId}
-		if err := bus.Dispatch(&keyQuery); err != nil {
-			return nil, m.ErrInvalidApiKey
-		}
-		apikey := keyQuery.Result
 
-		// validate api key
-		if !apikeygen.IsValid(decoded, apikey.Key) {
-			return nil, m.ErrInvalidApiKey
-		}
 		// lookup collector
-		colQuery := m.GetCollectorByNameQuery{Name: name, OrgId: apikey.OrgId}
+		colQuery := m.GetCollectorByNameQuery{Name: name, OrgId: user.OrgId}
 		if err := bus.Dispatch(&colQuery); err != nil {
 			//collector not found, so lets create a new one.
 			colCmd := m.AddCollectorCommand{
-				OrgId:   apikey.OrgId,
+				OrgId:   user.OrgId,
 				Name:    name,
 				Enabled: true,
 			}
@@ -310,20 +298,14 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 		}
 
 		sess := &CollectorContext{
-			SignedInUser: &m.SignedInUser{
-				IsGrafanaAdmin: apikey.IsAdmin,
-				OrgRole:        apikey.Role,
-				ApiKeyId:       apikey.Id,
-				OrgId:          apikey.OrgId,
-				Name:           apikey.Name,
-			},
+			SignedInUser: user,
 			Collector:    colQuery.Result,
 			Socket:       so,
 			SocketId:     so.Id(),
 			VersionMajor: versionMajor,
 			VersionMinor: versionMinor,
 		}
-		log.Info("collector %s with id %d owned by %d authenticated successfully.", name, colQuery.Result.Id, apikey.OrgId)
+		log.Info("collector %s with id %d owned by %d authenticated successfully.", name, colQuery.Result.Id, user.OrgId)
 		if lastSocketId != "" {
 			log.Info("removing socket with Id %s", lastSocketId)
 			cmd := &m.DeleteCollectorSessionCommand{

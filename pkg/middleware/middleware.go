@@ -1,10 +1,14 @@
 package middleware
 
 import (
+	"encoding/json"
+	"github.com/Unknwon/macaron"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
-
-	"github.com/Unknwon/macaron"
+	"time"
 
 	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/components/apikeygen"
@@ -39,16 +43,75 @@ func GetContextHandler() macaron.Handler {
 		// then init session and look for userId in session
 		// then look for api key in session (special case for render calls via api)
 		// then test if anonymous access is enabled
-		if initContextWithApiKey(ctx) ||
+		/*if initContextWithApiKey(ctx) ||
 			initContextWithBasicAuth(ctx) ||
 			initContextWithAuthProxy(ctx) ||
 			initContextWithUserSessionCookie(ctx) ||
 			initContextWithApiKeyFromSession(ctx) ||
 			initContextWithAnonymousUser(ctx) {
-		}
+		}*/
+		initContextWithGrafanaNetApiKey(ctx)
 
 		c.Map(ctx)
 	}
+}
+
+type grafanaNetApiDetails struct {
+	OrgSlug   string     `json:"orgSlug"`
+	CreatedAt time.Time  `json:"createAt"`
+	Name      string     `json:"name"`
+	Id        int64      `json:"id"`
+	Role      m.RoleType `json:"role"`
+	OrgName   string     `json:"orgName"`
+	OrgId     int64      `json:"orgId"`
+}
+
+func UserFromGrafanaNetApiKey(keyString string) (*m.SignedInUser, error) {
+	//validate the API key against grafana.net
+	payload := url.Values{}
+	payload.Add("token", keyString)
+	res, err := http.PostForm("https://grafana.net/api/api-keys/check", payload)
+
+	if err != nil {
+		log.Error(3, "failed to check apiKey. %s", err)
+		return nil, err
+	}
+	body, err := ioutil.ReadAll(res.Body)
+	log.Debug("apiKey check response was: %s", body)
+	res.Body.Close()
+	if res.StatusCode != 200 {
+		return nil, m.ErrInvalidApiKey
+	}
+
+	apikey := new(grafanaNetApiDetails)
+	err = json.Unmarshal(body, apikey)
+	if err != nil {
+		log.Error(3, "failed to parse api-keys/check response. %s", err)
+		return nil, err
+	}
+
+	user := &m.SignedInUser{
+		OrgRole: apikey.Role,
+		OrgId:   apikey.OrgId,
+		OrgName: apikey.OrgName,
+	}
+	return user, nil
+}
+
+func initContextWithGrafanaNetApiKey(ctx *Context) {
+	var keyString string
+	if keyString = getApiKey(ctx); keyString == "" {
+		return
+	}
+
+	user, err := UserFromGrafanaNetApiKey(keyString)
+	if err != nil {
+		return
+	}
+
+	ctx.IsSignedIn = true
+	ctx.SignedInUser = user
+	return
 }
 
 func initContextWithAnonymousUser(ctx *Context) bool {
