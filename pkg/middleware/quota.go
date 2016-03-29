@@ -81,24 +81,6 @@ func QuotaReached(c *Context, target string) (bool, error) {
 			if query.Result.Used >= query.Result.Limit {
 				return true, nil
 			}
-		case "user":
-			if !c.IsSignedIn || c.UserId == 0 {
-				continue
-			}
-			query := m.GetUserQuotaByTargetQuery{UserId: c.UserId, Target: scope.Target, Default: scope.DefaultLimit}
-			if err := bus.Dispatch(&query); err != nil {
-				return true, err
-			}
-			if query.Result.Limit < 0 {
-				continue
-			}
-			if query.Result.Limit == 0 {
-				return true, nil
-			}
-
-			if query.Result.Used >= query.Result.Limit {
-				return true, nil
-			}
 		}
 	}
 

@@ -69,12 +69,6 @@ func Register(r *macaron.Macaron) {
 
 	}, reqSignedIn)
 
-	// admin api
-	r.Group("/api/admin", func() {
-		r.Get("/users/:id/quotas", wrap(GetUserQuotas))
-		r.Put("/users/:id/quotas/:target", bind(m.UpdateUserQuotaCmd{}), wrap(UpdateUserQuota))
-	}, reqGrafanaAdmin)
-
 	// rendering
 	//r.Get("/render/*", reqSignedIn, RenderToPng)
 
