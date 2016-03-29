@@ -22,9 +22,6 @@ test:
      - go vet ./pkg/...
      # Go test
      - godep go test -v ./pkg/...
-     # js tests
-     - ./node_modules/grunt-cli/bin/grunt test
-     - npm run coveralls
   post:
      - cd rt-pkg && /bin/bash packaging.sh 
 deployment:
