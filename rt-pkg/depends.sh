@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x
 # Find the directory we exist within
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd ${DIR}
@@ -16,16 +16,16 @@ fi
 
 export GOPATH
 
-mkdir -p artifacts
+mkdir -p artifacts/bin
+cp -a ../conf artifacts/
+cp -a ../public artifacts/
+
 bundle install
 sudo apt-get update
-sudo apt-get install rpm
-
 
 echo "Linking ${GOPATH}/src/${REPO_PATH} to ${CHECKOUT}"
 mkdir -p ${GOPATH}/src/${ORG_PATH}
 ln -s ${CHECKOUT} ${GOPATH}/src/${REPO_PATH}
 
 go get github.com/tools/godep
-npm install
-npm install -g grunt-cli
+
