@@ -35,13 +35,6 @@ func newMacaron() *macaron.Macaron {
 	if setting.EnableGzip {
 		m.Use(middleware.Gziper())
 	}
-
-	mapStatic(m, "", "public")
-	mapStatic(m, "app", "app")
-	mapStatic(m, "css", "css")
-	mapStatic(m, "img", "img")
-	mapStatic(m, "fonts", "fonts")
-	mapStatic(m, "plugins", "plugins")
 	mapStatic(m, "robots.txt", "robots.txxt")
 
 	m.Use(macaron.Renderer(macaron.RenderOptions{
@@ -55,7 +48,6 @@ func newMacaron() *macaron.Macaron {
 	}
 
 	m.Use(middleware.GetContextHandler())
-	m.Use(middleware.Sessioner(&setting.SessionOptions))
 
 	return m
 }

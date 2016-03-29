@@ -10,13 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/grafana/grafana/pkg/bus"
-	"github.com/grafana/grafana/pkg/components/apikeygen"
 	"github.com/grafana/grafana/pkg/log"
 	"github.com/grafana/grafana/pkg/metrics"
 	m "github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/setting"
-	"github.com/grafana/grafana/pkg/util"
 )
 
 type Context struct {
@@ -103,7 +100,15 @@ func initContextWithGrafanaNetApiKey(ctx *Context) {
 	if keyString = getApiKey(ctx); keyString == "" {
 		return
 	}
-
+	if keyString == setting.AdminKey {
+		ctx.IsSignedIn = true
+		ctx.SignedInUser = &m.SignedInUser{
+			OrgRole:        m.ROLE_ADMIN,
+			OrgId:          1,
+			OrgName:        "Admin",
+			IsGrafanaAdmin: true,
+		}
+	}
 	user, err := UserFromGrafanaNetApiKey(keyString)
 	if err != nil {
 		return
@@ -112,148 +117,6 @@ func initContextWithGrafanaNetApiKey(ctx *Context) {
 	ctx.IsSignedIn = true
 	ctx.SignedInUser = user
 	return
-}
-
-func initContextWithAnonymousUser(ctx *Context) bool {
-	if !setting.AnonymousEnabled {
-		return false
-	}
-
-	orgQuery := m.GetOrgByNameQuery{Name: setting.AnonymousOrgName}
-	if err := bus.Dispatch(&orgQuery); err != nil {
-		log.Error(3, "Anonymous access organization error: '%s': %s", setting.AnonymousOrgName, err)
-		return false
-	} else {
-		ctx.IsSignedIn = false
-		ctx.AllowAnonymous = true
-		ctx.SignedInUser = &m.SignedInUser{}
-		ctx.OrgRole = m.RoleType(setting.AnonymousOrgRole)
-		ctx.OrgId = orgQuery.Result.Id
-		ctx.OrgName = orgQuery.Result.Name
-		return true
-	}
-}
-
-func initContextWithUserSessionCookie(ctx *Context) bool {
-	// initialize session
-	if err := ctx.Session.Start(ctx); err != nil {
-		log.Error(3, "Failed to start session", err)
-		return false
-	}
-
-	var userId int64
-	if userId = getRequestUserId(ctx); userId == 0 {
-		return false
-	}
-
-	query := m.GetSignedInUserQuery{UserId: userId}
-	if err := bus.Dispatch(&query); err != nil {
-		log.Error(3, "Failed to get user with id %v", userId)
-		return false
-	} else {
-		ctx.SignedInUser = query.Result
-		ctx.IsSignedIn = true
-		return true
-	}
-}
-
-func initContextWithApiKey(ctx *Context) bool {
-	var keyString string
-	if keyString = getApiKey(ctx); keyString == "" {
-		return false
-	}
-
-	// base64 decode key
-	decoded, err := apikeygen.Decode(keyString)
-	if err != nil {
-		ctx.JsonApiErr(401, "Invalid API key", err)
-		return true
-	}
-	// fetch key
-	keyQuery := m.GetApiKeyByNameQuery{KeyName: decoded.Name, OrgId: decoded.OrgId}
-	if err := bus.Dispatch(&keyQuery); err != nil {
-		ctx.JsonApiErr(401, "Invalid API key", err)
-		return true
-	} else {
-		apikey := keyQuery.Result
-
-		// validate api key
-		if !apikeygen.IsValid(decoded, apikey.Key) {
-			ctx.JsonApiErr(401, "Invalid API key", err)
-			return true
-		}
-
-		ctx.IsSignedIn = true
-		ctx.SignedInUser = &m.SignedInUser{IsGrafanaAdmin: apikey.IsAdmin}
-		ctx.OrgRole = apikey.Role
-		ctx.ApiKeyId = apikey.Id
-		ctx.OrgId = apikey.OrgId
-		return true
-	}
-}
-
-func initContextWithBasicAuth(ctx *Context) bool {
-	if !setting.BasicAuthEnabled {
-		return false
-	}
-
-	header := ctx.Req.Header.Get("Authorization")
-	if header == "" {
-		return false
-	}
-
-	username, password, err := util.DecodeBasicAuthHeader(header)
-	if err != nil {
-		ctx.JsonApiErr(401, "Invalid Basic Auth Header", err)
-		return true
-	}
-
-	loginQuery := m.GetUserByLoginQuery{LoginOrEmail: username}
-	if err := bus.Dispatch(&loginQuery); err != nil {
-		ctx.JsonApiErr(401, "Basic auth failed", err)
-		return true
-	}
-
-	user := loginQuery.Result
-
-	// validate password
-	if util.EncodePassword(password, user.Salt) != user.Password {
-		ctx.JsonApiErr(401, "Invalid username or password", nil)
-		return true
-	}
-
-	query := m.GetSignedInUserQuery{UserId: user.Id}
-	if err := bus.Dispatch(&query); err != nil {
-		ctx.JsonApiErr(401, "Authentication error", err)
-		return true
-	} else {
-		ctx.SignedInUser = query.Result
-		ctx.IsSignedIn = true
-		return true
-	}
-}
-
-// special case for panel render calls with api key
-func initContextWithApiKeyFromSession(ctx *Context) bool {
-	keyId := ctx.Session.Get(SESS_KEY_APIKEY)
-	if keyId == nil {
-		return false
-	}
-
-	keyQuery := m.GetApiKeyByIdQuery{ApiKeyId: keyId.(int64)}
-	if err := bus.Dispatch(&keyQuery); err != nil {
-		log.Error(3, "Failed to get api key by id", err)
-		return false
-	} else {
-		apikey := keyQuery.Result
-
-		ctx.IsSignedIn = true
-		ctx.SignedInUser = &m.SignedInUser{}
-		ctx.OrgRole = apikey.Role
-		ctx.ApiKeyId = apikey.Id
-		ctx.OrgId = apikey.OrgId
-		return true
-	}
 }
 
 // Handle handles and logs error by given status.

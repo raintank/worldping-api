@@ -7,9 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/grafana/grafana/pkg/bus"
 	"github.com/grafana/grafana/pkg/log"
-	m "github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/services/sqlstore/migrations"
 	"github.com/grafana/grafana/pkg/services/sqlstore/migrator"
 	"github.com/grafana/grafana/pkg/setting"
@@ -32,32 +30,6 @@ var (
 
 	UseSQLite3 bool
 )
-
-func EnsureAdminUser() {
-	statsQuery := m.GetSystemStatsQuery{}
-
-	if err := bus.Dispatch(&statsQuery); err != nil {
-		log.Fatal(3, "Could not determine if admin user exists: %v", err)
-		return
-	}
-
-	if statsQuery.Result.UserCount > 0 {
-		return
-	}
-
-	cmd := m.CreateUserCommand{}
-	cmd.Login = setting.AdminUser
-	cmd.Email = setting.AdminUser + "@localhost"
-	cmd.Password = setting.AdminPassword
-	cmd.IsAdmin = true
-
-	if err := bus.Dispatch(&cmd); err != nil {
-		log.Error(3, "Failed to create default admin user", err)
-		return
-	}
-
-	log.Info("Created default admin user: %v", setting.AdminUser)
-}
 
 func NewEngine() {
 	x, err := getEngine()

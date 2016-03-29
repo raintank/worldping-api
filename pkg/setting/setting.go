@@ -6,7 +6,6 @@ package setting
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -16,7 +15,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/macaron-contrib/session"
 	"gopkg.in/ini.v1"
 
 	"github.com/grafana/grafana/pkg/log"
@@ -68,50 +66,13 @@ var (
 	EnableGzip         bool
 	EnforceDomain      bool
 
-	// Security settings.
-	SecretKey             string
-	LogInRememberDays     int
-	CookieUserName        string
-	CookieRememberName    string
-	DisableGravatar       bool
-	EmailCodeValidMinutes int
-	DataProxyWhiteList    map[string]bool
-
-	// User settings
-	AllowUserSignUp    bool
-	AllowUserOrgCreate bool
-	AutoAssignOrg      bool
-	AutoAssignOrgRole  string
-	VerifyEmailEnabled bool
-
 	// Http auth
-	AdminUser     string
-	AdminPassword string
-
-	AnonymousEnabled bool
-	AnonymousOrgName string
-	AnonymousOrgRole string
-
-	// Auth proxy settings
-	AuthProxyEnabled        bool
-	AuthProxyHeaderName     string
-	AuthProxyHeaderProperty string
-	AuthProxyAutoSignUp     bool
-
-	// Basic Auth
-	BasicAuthEnabled bool
-
-	// Session settings.
-	SessionOptions session.Options
+	AdminKey string
 
 	// Global setting objects.
 	Cfg          *ini.File
 	ConfRootPath string
 	IsWindows    bool
-
-	// PhantomJs Rendering
-	ImagesDir  string
-	PhantomDir string
 
 	//Raintank Graphite Backend
 	GraphiteUrl      string
@@ -133,20 +94,12 @@ var (
 	WriteIndividualAlertResults bool
 	AlertingInspect             bool
 
-	ReportingEnabled   bool
-	GoogleAnalyticsId  string
-	GoogleTagManagerId string
-
 	StatsdEnabled   bool
 	StatsdAddr      string
 	StatsdType      string
 	ProfileHeapMB   int
 	ProfileHeapWait int
 	ProfileHeapDir  string
-
-	// LDAP
-	LdapEnabled    bool
-	LdapConfigFile string
 
 	// SMTP email settings
 	Smtp SmtpSettings
@@ -382,25 +335,6 @@ func setHomePath(args *CommandLineArgs) {
 	}
 }
 
-var skipStaticRootValidation bool = false
-
-func validateStaticRootPath() error {
-	if skipStaticRootValidation {
-		return nil
-	}
-
-	if _, err := os.Stat(path.Join(StaticRootPath, "css")); err == nil {
-		return nil
-	}
-
-	if _, err := os.Stat(StaticRootPath + "_gen/css"); err == nil {
-		StaticRootPath = StaticRootPath + "_gen"
-		return nil
-	}
-
-	return errors.New("Failed to detect generated css or javascript files in static root (%s), have you executed default grunt task?")
-}
-
 func NewConfigContext(args *CommandLineArgs) error {
 	setHomePath(args)
 	loadConfiguration(args)
@@ -426,53 +360,7 @@ func NewConfigContext(args *CommandLineArgs) error {
 	EnforceDomain = server.Key("enforce_domain").MustBool(false)
 	StaticRootPath = makeAbsolute(server.Key("static_root_path").String(), HomePath)
 
-	if err := validateStaticRootPath(); err != nil {
-		return err
-	}
-
-	// read security settings
-	security := Cfg.Section("security")
-	SecretKey = security.Key("secret_key").String()
-	LogInRememberDays = security.Key("login_remember_days").MustInt()
-	CookieUserName = security.Key("cookie_username").String()
-	CookieRememberName = security.Key("cookie_remember_name").String()
-	DisableGravatar = security.Key("disable_gravatar").MustBool(true)
-
-	//  read data source proxy white list
-	DataProxyWhiteList = make(map[string]bool)
-	for _, hostAndIp := range security.Key("data_source_proxy_whitelist").Strings(" ") {
-		DataProxyWhiteList[hostAndIp] = true
-	}
-
-	// admin
-	AdminUser = security.Key("admin_user").String()
-	AdminPassword = security.Key("admin_password").String()
-
-	users := Cfg.Section("users")
-	AllowUserSignUp = users.Key("allow_sign_up").MustBool(true)
-	AllowUserOrgCreate = users.Key("allow_org_create").MustBool(true)
-	AutoAssignOrg = users.Key("auto_assign_org").MustBool(true)
-	AutoAssignOrgRole = users.Key("auto_assign_org_role").In("Editor", []string{"Editor", "Admin", "Read Only Editor", "Viewer"})
-	VerifyEmailEnabled = users.Key("verify_email_enabled").MustBool(false)
-
-	// anonymous access
-	AnonymousEnabled = Cfg.Section("auth.anonymous").Key("enabled").MustBool(false)
-	AnonymousOrgName = Cfg.Section("auth.anonymous").Key("org_name").String()
-	AnonymousOrgRole = Cfg.Section("auth.anonymous").Key("org_role").String()
-
-	// auth proxy
-	authProxy := Cfg.Section("auth.proxy")
-	AuthProxyEnabled = authProxy.Key("enabled").MustBool(false)
-	AuthProxyHeaderName = authProxy.Key("header_name").String()
-	AuthProxyHeaderProperty = authProxy.Key("header_property").String()
-	AuthProxyAutoSignUp = authProxy.Key("auto_sign_up").MustBool(true)
-
-	authBasic := Cfg.Section("auth.basic")
-	BasicAuthEnabled = authBasic.Key("enabled").MustBool(true)
-
-	// PhantomJS rendering
-	ImagesDir = filepath.Join(DataPath, "png")
-	PhantomDir = filepath.Join(HomePath, "vendor/phantomjs")
+	AdminKey = server.Key("admin_key").String()
 
 	GraphiteUrl = Cfg.Section("raintank").Key("graphite_url").MustString("http://localhost:8888/")
 	if GraphiteUrl[len(GraphiteUrl)-1] != '/' {
@@ -506,11 +394,6 @@ func NewConfigContext(args *CommandLineArgs) error {
 	WriteIndividualAlertResults = alerting.Key("write_individual_alert_results").MustBool(false)
 	AlertingInspect = alerting.Key("inspect").MustBool(false)
 
-	analytics := Cfg.Section("analytics")
-	ReportingEnabled = analytics.Key("reporting_enabled").MustBool(true)
-	GoogleAnalyticsId = analytics.Key("google_analytics_ua_id").String()
-	GoogleTagManagerId = analytics.Key("google_tag_manager_id").String()
-
 	telemetry := Cfg.Section("telemetry")
 	StatsdEnabled = telemetry.Key("statsd_enabled").MustBool(false)
 	StatsdAddr = telemetry.Key("statsd_addr").String()
@@ -519,41 +402,10 @@ func NewConfigContext(args *CommandLineArgs) error {
 	ProfileHeapWait = telemetry.Key("profile_heap_wait").MustInt(3600)
 	ProfileHeapDir = telemetry.Key("profile_heap_dir").MustString("/tmp")
 
-	ldapSec := Cfg.Section("auth.ldap")
-	LdapEnabled = ldapSec.Key("enabled").MustBool(false)
-	LdapConfigFile = ldapSec.Key("config_file").String()
-
-	readSessionConfig()
 	readSmtpSettings()
 	readQuotaSettings()
 
-	if VerifyEmailEnabled && !Smtp.Enabled {
-		log.Warn("require_email_validation is enabled but smpt is disabled")
-	}
-
 	return nil
-}
-
-func readSessionConfig() {
-	sec := Cfg.Section("session")
-	SessionOptions = session.Options{}
-	SessionOptions.Provider = sec.Key("provider").In("memory", []string{"memory", "file", "redis", "mysql", "postgres"})
-	SessionOptions.ProviderConfig = strings.Trim(sec.Key("provider_config").String(), "\" ")
-	SessionOptions.CookieName = sec.Key("cookie_name").MustString("grafana_sess")
-	SessionOptions.CookiePath = AppSubUrl
-	SessionOptions.Secure = sec.Key("cookie_secure").MustBool()
-	SessionOptions.Gclifetime = Cfg.Section("session").Key("gc_interval_time").MustInt64(86400)
-	SessionOptions.Maxlifetime = Cfg.Section("session").Key("session_life_time").MustInt64(86400)
-	SessionOptions.IDLength = 16
-
-	if SessionOptions.Provider == "file" {
-		SessionOptions.ProviderConfig = makeAbsolute(SessionOptions.ProviderConfig, DataPath)
-		os.MkdirAll(path.Dir(SessionOptions.ProviderConfig), os.ModePerm)
-	}
-
-	if SessionOptions.CookiePath == "" {
-		SessionOptions.CookiePath = "/"
-	}
 }
 
 var logLevels = map[string]int{

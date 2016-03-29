@@ -11,8 +11,6 @@ import (
 func TestLoadingSettings(t *testing.T) {
 
 	Convey("Testing loading settings from ini file", t, func() {
-		skipStaticRootValidation = true
-
 		Convey("Given the default ini files", func() {
 			err := NewConfigContext(&CommandLineArgs{HomePath: "../../"})
 			So(err, ShouldBeNil)
@@ -21,10 +19,10 @@ func TestLoadingSettings(t *testing.T) {
 		})
 
 		Convey("Should be able to override via environment variables", func() {
-			os.Setenv("GF_SECURITY_ADMIN_USER", "superduper")
+			os.Setenv("GF_SECURITY_ADMIN_KEY", "superduper")
 			NewConfigContext(&CommandLineArgs{HomePath: "../../"})
 
-			So(AdminUser, ShouldEqual, "superduper")
+			So(AdminKey, ShouldEqual, "superduper")
 			So(DataPath, ShouldEqual, filepath.Join(HomePath, "data"))
 			So(LogsPath, ShouldEqual, filepath.Join(DataPath, "log"))
 		})

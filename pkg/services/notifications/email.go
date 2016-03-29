@@ -1,7 +1,6 @@
 package notifications
 
 import (
-	m "github.com/grafana/grafana/pkg/models"
 	"github.com/grafana/grafana/pkg/setting"
 )
 
@@ -21,13 +20,9 @@ func (m *Message) Content() string {
 	return content
 }
 
-func setDefaultTemplateData(data map[string]interface{}, u *m.User) {
+func setDefaultTemplateData(data map[string]interface{}) {
 	data["AppUrl"] = setting.AppUrl
 	data["BuildVersion"] = setting.BuildVersion
 	data["BuildStamp"] = setting.BuildStamp
-	data["EmailCodeValidHours"] = setting.EmailCodeValidMinutes / 60
 	data["Subject"] = map[string]interface{}{}
-	if u != nil {
-		data["Name"] = u.NameOrFallback()
-	}
 }
