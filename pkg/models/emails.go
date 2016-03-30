@@ -11,12 +11,3 @@ type SendEmailCommand struct {
 	Massive  bool
 	Info     string
 }
-
-type SendResetPasswordEmailCommand struct {
-	User *User
-}
-
-type ValidateResetPasswordCodeQuery struct {
-	Code   string
-	Result *User
-}

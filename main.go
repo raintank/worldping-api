@@ -16,17 +16,12 @@ import (
 	"github.com/grafana/grafana/pkg/api"
 	"github.com/grafana/grafana/pkg/cmd"
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/login"
-	"github.com/grafana/grafana/pkg/metrics"
-	"github.com/grafana/grafana/pkg/plugins"
 	"github.com/grafana/grafana/pkg/services/collectoreventpublisher"
 	"github.com/grafana/grafana/pkg/services/eventpublisher"
 	"github.com/grafana/grafana/pkg/services/metricpublisher"
 	"github.com/grafana/grafana/pkg/services/notifications"
-	"github.com/grafana/grafana/pkg/services/search"
 	"github.com/grafana/grafana/pkg/services/sqlstore"
 	"github.com/grafana/grafana/pkg/setting"
-	"github.com/grafana/grafana/pkg/social"
 	"github.com/raintank/met/helper"
 )
 
@@ -67,11 +62,7 @@ func main() {
 		go heap.Run()
 	}
 
-	search.Init()
-	login.Init()
-	social.NewOAuthService()
 	eventpublisher.Init()
-	plugins.Init()
 
 	metricsBackend, err := helper.New(setting.StatsdEnabled, setting.StatsdAddr, setting.StatsdType, "grafana", setting.InstanceId)
 	if err != nil {
@@ -87,10 +78,6 @@ func main() {
 
 	if err := notifications.Init(); err != nil {
 		log.Fatal(3, "Notification service failed to initialize", err)
-	}
-
-	if setting.ReportingEnabled {
-		go metrics.StartUsageReportLoop()
 	}
 
 	cmd.StartServer()
@@ -113,7 +100,6 @@ func initRuntime() {
 	setting.LogConfigurationInfo()
 
 	sqlstore.NewEngine()
-	sqlstore.EnsureAdminUser()
 }
 
 func writePIDFile() {

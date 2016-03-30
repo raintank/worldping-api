@@ -1,22 +1,29 @@
 #!/bin/bash
-
+set -x 
 # Find the directory we exist within
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd ${DIR}
-mkdir -p ${DIR}/artifacts
 
-: ${GOPATH:="${HOME}/.go_workspace"}
-: ${GOBIN:="${DIR}/build"}
-: ${ORG_PATH:="github.com/grafana"}
-: ${REPO_PATH:="${ORG_PATH}/grafana"}
+NAME=worldping-api
+VERSION="0.0.1" # need an automatic way to do this again :-/
+BUILD="${DIR}/${NAME}-${VERSION}"
+ARCH="$(uname -m)"
+PACKAGE_NAME="${DIR}/artifacts/${NAME}-VERSION-ITERATION_ARCH.deb"
+GOBIN="${DIR}/.."
+ITERATION=`date +%s`ubuntu1
+TAG="pkg-${VERSION}-${ITERATION}"
 
-export PATH=$GOPATH/bin:$PATH
-export GOPATH GOBIN
+git tag $TAG
 
-cd ${GOPATH}/src/github.com/grafana/grafana
-go run build.go package
-cp dist/* ${DIR}/artifacts
-VER=`ls dist/*ubuntu_amd64.deb | ruby -e 'STDIN.read =~ /grafana_(\d+\.\d+\.\d+-\d+)/; print $1'`
-if [ ! -z "$VER" ]; then
-	git tag pkg-$VER
-fi
+mkdir -p ${BUILD}/usr/share/${NAME}
+mkdir -p ${BUILD}/etc/init
+mkdir -p ${BUILD}/etc/raintank
+
+cp -a ${DIR}/artifacts/conf ${BUILD}/usr/share/${NAME}/
+cp -a ${DIR}/artifacts/public ${BUILD}/usr/share/${NAME}/
+cp ${DIR}/artifacts/conf/sample.ini ${BUILD}/etc/raintank/worldping-api.ini
+
+fpm -s dir -t deb \
+  -v ${VERSION} -n ${NAME} -a ${ARCH} --iteration $ITERATION --description "Worldping Backend service" \
+  --deb-upstart ${DIR}/conf/worldping-api \
+  -C ${BUILD} -p ${PACKAGE_NAME} .

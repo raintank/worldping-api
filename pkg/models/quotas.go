@@ -31,13 +31,6 @@ type OrgQuotaDTO struct {
 	Used   int64  `json:"used"`
 }
 
-type UserQuotaDTO struct {
-	UserId int64  `json:"user_id"`
-	Target string `json:"target"`
-	Limit  int64  `json:"limit"`
-	Used   int64  `json:"used"`
-}
-
 type GlobalQuotaDTO struct {
 	Target string `json:"target"`
 	Limit  int64  `json:"limit"`
@@ -56,18 +49,6 @@ type GetOrgQuotasQuery struct {
 	Result []*OrgQuotaDTO
 }
 
-type GetUserQuotaByTargetQuery struct {
-	Target  string
-	UserId  int64
-	Default int64
-	Result  *UserQuotaDTO
-}
-
-type GetUserQuotasQuery struct {
-	UserId int64
-	Result []*UserQuotaDTO
-}
-
 type GetGlobalQuotaByTargetQuery struct {
 	Target  string
 	Default int64
@@ -80,45 +61,9 @@ type UpdateOrgQuotaCmd struct {
 	OrgId  int64  `json:"-"`
 }
 
-type UpdateUserQuotaCmd struct {
-	Target string `json:"target"`
-	Limit  int64  `json:"limit"`
-	UserId int64  `json:"-"`
-}
-
 func GetQuotaScopes(target string) ([]QuotaScope, error) {
 	scopes := make([]QuotaScope, 0)
 	switch target {
-	case "user":
-		scopes = append(scopes,
-			QuotaScope{Name: "global", Target: target, DefaultLimit: setting.Quota.Global.User},
-			QuotaScope{Name: "org", Target: "org_user", DefaultLimit: setting.Quota.Org.User},
-		)
-		return scopes, nil
-	case "org":
-		scopes = append(scopes,
-			QuotaScope{Name: "global", Target: target, DefaultLimit: setting.Quota.Global.Org},
-			QuotaScope{Name: "user", Target: "org_user", DefaultLimit: setting.Quota.User.Org},
-		)
-		return scopes, nil
-	case "dashboard":
-		scopes = append(scopes,
-			QuotaScope{Name: "global", Target: target, DefaultLimit: setting.Quota.Global.Dashboard},
-			QuotaScope{Name: "org", Target: target, DefaultLimit: setting.Quota.Org.Dashboard},
-		)
-		return scopes, nil
-	case "data_source":
-		scopes = append(scopes,
-			QuotaScope{Name: "global", Target: target, DefaultLimit: setting.Quota.Global.DataSource},
-			QuotaScope{Name: "org", Target: target, DefaultLimit: setting.Quota.Org.DataSource},
-		)
-		return scopes, nil
-	case "api_key":
-		scopes = append(scopes,
-			QuotaScope{Name: "global", Target: target, DefaultLimit: setting.Quota.Global.ApiKey},
-			QuotaScope{Name: "org", Target: target, DefaultLimit: setting.Quota.Org.ApiKey},
-		)
-		return scopes, nil
 	case "endpoint":
 		scopes = append(scopes,
 			QuotaScope{Name: "global", Target: target, DefaultLimit: setting.Quota.Global.Endpoint},
@@ -129,11 +74,6 @@ func GetQuotaScopes(target string) ([]QuotaScope, error) {
 		scopes = append(scopes,
 			QuotaScope{Name: "global", Target: target, DefaultLimit: setting.Quota.Global.Collector},
 			QuotaScope{Name: "org", Target: target, DefaultLimit: setting.Quota.Org.Collector},
-		)
-		return scopes, nil
-	case "session":
-		scopes = append(scopes,
-			QuotaScope{Name: "global", Target: target, DefaultLimit: setting.Quota.Global.Session},
 		)
 		return scopes, nil
 	default:
