@@ -18,9 +18,11 @@ git tag $TAG
 mkdir -p ${BUILD}/usr/share/${NAME}
 mkdir -p ${BUILD}/etc/init
 mkdir -p ${BUILD}/etc/raintank
-
+mkdir -p ${BUILD}/usr/sbin
 cp -a ${DIR}/artifacts/conf ${BUILD}/usr/share/${NAME}/
 cp -a ${DIR}/artifacts/public ${BUILD}/usr/share/${NAME}/
+cp ${DIR}/artifacts/worldping-api ${BUILD}/usr/sbin/
+
 cp ${DIR}/artifacts/conf/sample.ini ${BUILD}/etc/raintank/worldping-api.ini
 
 fpm -s dir -t deb \
