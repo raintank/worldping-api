@@ -105,7 +105,7 @@ func Publish(metrics []*schema.MetricData) error {
 		if err != nil {
 			log.Fatal(0, "can't publish to nsqd: %s", err)
 		}
-		log.Info("published metrics %d size=%d", id, len(data))
+		log.Debug("published metrics %d size=%d", id, len(data))
 	}
 
 	//globalProducer.Stop()

@@ -485,7 +485,7 @@ func (c *CollectorContext) OnDisconnection() {
 }
 
 func (c *CollectorContext) OnEvent(msg *schema.ProbeEvent) {
-	log.Info(fmt.Sprintf("received event from %s", c.Collector.Name))
+	log.Debug(fmt.Sprintf("received event from %s", c.Collector.Name))
 	if !c.Collector.Public {
 		msg.OrgId = c.OrgId
 	}
@@ -508,7 +508,7 @@ type probeEventOld struct {
 }
 
 func (c *CollectorContext) OnEventOld(msg *probeEventOld) {
-	log.Info(fmt.Sprintf("received event from %s", c.Collector.Name))
+	log.Debug(fmt.Sprintf("received event from %s", c.Collector.Name))
 	if !c.Collector.Public {
 		msg.OrgId = c.OrgId
 	}
