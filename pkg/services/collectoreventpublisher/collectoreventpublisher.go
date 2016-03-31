@@ -54,7 +54,7 @@ func Publish(event *schema.ProbeEvent) error {
 	if err != nil {
 		log.Fatal(4, "can't publish to nsqd: %s", err)
 	}
-	log.Info("event published to NSQ %d", id)
+	log.Debug("event published to NSQ %d", id)
 
 	return nil
 }
