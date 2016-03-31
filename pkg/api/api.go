@@ -85,7 +85,7 @@ func NotFoundHandler(c *middleware.Context) {
 	return
 }
 
-func Heartbeat(c *middleware.Contect) {
+func Heartbeat(c *middleware.Context) {
 	c.Json(200, "OK")
 	return
 }
