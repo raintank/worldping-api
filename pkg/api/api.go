@@ -15,6 +15,9 @@ func Register(r *macaron.Macaron) {
 	quota := middleware.Quota
 	bind := binding.Bind
 
+	// used by LB healthchecks
+	r.Get("/login", Heartbeat)
+
 	// authed api
 	r.Group("/api", func() {
 		// org information available to all users.
@@ -79,5 +82,10 @@ func Register(r *macaron.Macaron) {
 
 func NotFoundHandler(c *middleware.Context) {
 	c.JsonApiErr(404, "Not found", nil)
+	return
+}
+
+func Heartbeat(c *middleware.Contect) {
+	c.Json(200, "OK")
 	return
 }
