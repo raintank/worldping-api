@@ -86,6 +86,6 @@ func NotFoundHandler(c *middleware.Context) {
 }
 
 func Heartbeat(c *middleware.Context) {
-	c.JsonOk("OK")
+	c.JsonOK("OK")
 	return
 }
