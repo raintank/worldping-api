@@ -64,6 +64,15 @@ type grafanaNetApiDetails struct {
 }
 
 func UserFromGrafanaNetApiKey(keyString string) (*m.SignedInUser, error) {
+	if keyString == setting.AdminKey {
+		return &m.SignedInUser{
+			OrgRole:        m.ROLE_ADMIN,
+			OrgId:          1,
+			OrgName:        "Admin",
+			IsGrafanaAdmin: true,
+		}, nil
+	}
+
 	//validate the API key against grafana.net
 	payload := url.Values{}
 	payload.Add("token", keyString)
@@ -99,15 +108,6 @@ func initContextWithGrafanaNetApiKey(ctx *Context) {
 	var keyString string
 	if keyString = getApiKey(ctx); keyString == "" {
 		return
-	}
-	if keyString == setting.AdminKey {
-		ctx.IsSignedIn = true
-		ctx.SignedInUser = &m.SignedInUser{
-			OrgRole:        m.ROLE_ADMIN,
-			OrgId:          1,
-			OrgName:        "Admin",
-			IsGrafanaAdmin: true,
-		}
 	}
 	user, err := UserFromGrafanaNetApiKey(keyString)
 	if err != nil {
