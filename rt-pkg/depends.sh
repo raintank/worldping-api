@@ -21,7 +21,6 @@ cp -a ../conf artifacts/
 cp -a ../public artifacts/
 
 bundle install
-sudo apt-get update
 
 echo "Linking ${GOPATH}/src/${REPO_PATH} to ${CHECKOUT}"
 mkdir -p ${GOPATH}/src/${ORG_PATH}
