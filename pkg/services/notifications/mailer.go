@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/setting"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 var mailQueue chan *Message

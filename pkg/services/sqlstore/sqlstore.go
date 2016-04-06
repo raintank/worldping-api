@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/services/sqlstore/migrations"
-	"github.com/grafana/grafana/pkg/services/sqlstore/migrator"
-	"github.com/grafana/grafana/pkg/setting"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore/migrations"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore/migrator"
+	"github.com/raintank/worldping-api/pkg/setting"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/xorm"

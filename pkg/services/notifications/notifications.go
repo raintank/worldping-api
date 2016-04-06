@@ -8,10 +8,10 @@ import (
 
 	"path/filepath"
 
-	"github.com/grafana/grafana/pkg/bus"
-	m "github.com/grafana/grafana/pkg/models"
-	"github.com/grafana/grafana/pkg/setting"
 	"github.com/grafana/grafana/pkg/util"
+	"github.com/raintank/worldping-api/pkg/bus"
+	m "github.com/raintank/worldping-api/pkg/models"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 var mailTemplates *template.Template

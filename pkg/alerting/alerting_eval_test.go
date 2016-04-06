@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"bosun.org/graphite"
-	m "github.com/grafana/grafana/pkg/models"
 	"github.com/raintank/met/helper"
+	m "github.com/raintank/worldping-api/pkg/models"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

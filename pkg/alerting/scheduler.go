@@ -5,7 +5,7 @@ import (
 
 	"github.com/benbjohnson/clock"
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/setting"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 // this channel decouples the secondly tick from the dispatching (which is mainly database querying)

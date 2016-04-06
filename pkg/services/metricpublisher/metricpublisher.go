@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/setting"
 	"github.com/nsqio/go-nsq"
 	"github.com/raintank/met"
 	msg "github.com/raintank/raintank-metric/msg"
 	"github.com/raintank/raintank-metric/schema"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 const maxMpubSize = 5 * 1024 * 1024 // nsq errors if more. not sure if can be changed

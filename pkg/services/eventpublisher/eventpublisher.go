@@ -7,10 +7,10 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/grafana/grafana/pkg/bus"
-	"github.com/grafana/grafana/pkg/events"
-	"github.com/grafana/grafana/pkg/services/rabbitmq"
-	"github.com/grafana/grafana/pkg/setting"
+	"github.com/raintank/worldping-api/pkg/bus"
+	"github.com/raintank/worldping-api/pkg/events"
+	"github.com/raintank/worldping-api/pkg/services/rabbitmq"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 var (

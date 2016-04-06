@@ -6,9 +6,9 @@ import (
 
 	"github.com/Unknwon/macaron"
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/metrics"
-	"github.com/grafana/grafana/pkg/middleware"
-	"github.com/grafana/grafana/pkg/setting"
+	"github.com/raintank/worldping-api/pkg/metrics"
+	"github.com/raintank/worldping-api/pkg/middleware"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 var (

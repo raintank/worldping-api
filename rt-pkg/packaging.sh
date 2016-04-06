@@ -5,7 +5,7 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd ${DIR}
 
 NAME=worldping-api
-VERSION="0.0.1" # need an automatic way to do this again :-/
+VERSION="0.0.2" # need an automatic way to do this again :-/
 BUILD="${DIR}/${NAME}-${VERSION}"
 ARCH="$(uname -m)"
 PACKAGE_NAME="${DIR}/artifacts/${NAME}-VERSION-ITERATION_ARCH.deb"

@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/grafana/grafana/pkg/bus"
-	"github.com/grafana/grafana/pkg/graphite"
 	"github.com/grafana/grafana/pkg/log"
-	m "github.com/grafana/grafana/pkg/models"
-	"github.com/grafana/grafana/pkg/services/rabbitmq"
-	"github.com/grafana/grafana/pkg/setting"
 	"github.com/hashicorp/golang-lru"
+	"github.com/raintank/worldping-api/pkg/bus"
+	"github.com/raintank/worldping-api/pkg/graphite"
+	m "github.com/raintank/worldping-api/pkg/models"
+	"github.com/raintank/worldping-api/pkg/services/rabbitmq"
+	"github.com/raintank/worldping-api/pkg/setting"
 	"github.com/streadway/amqp"
 
 	bgraphite "bosun.org/graphite"

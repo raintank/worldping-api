@@ -1,10 +1,10 @@
 package api
 
 import (
-	"github.com/grafana/grafana/pkg/bus"
-	"github.com/grafana/grafana/pkg/middleware"
-	m "github.com/grafana/grafana/pkg/models"
-	_ "github.com/grafana/grafana/pkg/services/endpointdiscovery"
+	"github.com/raintank/worldping-api/pkg/bus"
+	"github.com/raintank/worldping-api/pkg/middleware"
+	m "github.com/raintank/worldping-api/pkg/models"
+	_ "github.com/raintank/worldping-api/pkg/services/endpointdiscovery"
 )
 
 func GetEndpointById(c *middleware.Context) Response {

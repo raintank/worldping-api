@@ -1,7 +1,7 @@
 package events
 
 import (
-	m "github.com/grafana/grafana/pkg/models"
+	m "github.com/raintank/worldping-api/pkg/models"
 	"time"
 )
 

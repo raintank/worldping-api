@@ -12,11 +12,11 @@ import (
 	"github.com/Unknwon/macaron"
 	"github.com/macaron-contrib/toolbox"
 
-	"github.com/grafana/grafana/pkg/api"
-	"github.com/grafana/grafana/pkg/api/static"
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/middleware"
-	"github.com/grafana/grafana/pkg/setting"
+	"github.com/raintank/worldping-api/pkg/api"
+	"github.com/raintank/worldping-api/pkg/api/static"
+	"github.com/raintank/worldping-api/pkg/middleware"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 func newMacaron() *macaron.Macaron {

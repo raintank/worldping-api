@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/services/rabbitmq"
+	"github.com/raintank/worldping-api/pkg/services/rabbitmq"
 )
 
 type PreAMQPJobQueue struct {

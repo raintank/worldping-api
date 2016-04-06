@@ -1,7 +1,7 @@
 package migrations
 
 import "github.com/go-xorm/xorm"
-import . "github.com/grafana/grafana/pkg/services/sqlstore/migrator"
+import . "github.com/raintank/worldping-api/pkg/services/sqlstore/migrator"
 import "time"
 
 func addCollectorMigration(mg *Migrator) {

@@ -1,6 +1,6 @@
 package migrations
 
-import . "github.com/grafana/grafana/pkg/services/sqlstore/migrator"
+import . "github.com/raintank/worldping-api/pkg/services/sqlstore/migrator"
 
 func addAlertSchedulerValueMigration(mg *Migrator) {
 

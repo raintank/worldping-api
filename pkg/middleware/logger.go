@@ -22,7 +22,7 @@ import (
 
 	"github.com/Unknwon/macaron"
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/setting"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 func Logger() macaron.Handler {

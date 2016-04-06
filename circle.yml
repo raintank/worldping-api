@@ -3,8 +3,8 @@ machine:
     version: 4.0
   environment:
     GOPATH: "/home/ubuntu/.go_workspace"
-    ORG_PATH: "github.com/grafana"
-    REPO_PATH: "${ORG_PATH}/grafana"
+    ORG_PATH: "github.com/raintank"
+    REPO_PATH: "${ORG_PATH}/worldping-api"
 
 dependencies:
   override:

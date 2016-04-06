@@ -1,17 +1,16 @@
 [run]
 init_cmds = [
-  ["godep", "go", "build", "-o", "./bin/grafana-server"],
+  ["godep", "go", "build", "-o", "./bin/worldping-api"],
 	["./bin/grafana-server"]
 ]
 watch_all = true
 watch_dirs = [
 	"$WORKDIR/pkg",
-	"$WORKDIR/public/views",
 	"$WORKDIR/conf",
 ]
 watch_exts = [".go", ".ini", ".toml", ".html"]
 build_delay = 1500
 cmds = [
-  ["godep", "go", "build", "-o", "./bin/grafana-server"],
-	["./bin/grafana-server"]
+  ["godep", "go", "build", "-o", "./bin/worldping-api"],
+	["./bin/worldping-api"]
 ]
