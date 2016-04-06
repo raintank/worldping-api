@@ -1,3 +1,7 @@
+// Copyright 2015 The Xorm Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package xorm
 
 import (
@@ -15,12 +19,15 @@ const (
 )
 
 type SimpleLogger struct {
-	DEBUG *log.Logger
-	ERR   *log.Logger
-	INFO  *log.Logger
-	WARN  *log.Logger
-	level core.LogLevel
+	DEBUG   *log.Logger
+	ERR     *log.Logger
+	INFO    *log.Logger
+	WARN    *log.Logger
+	level   core.LogLevel
+	showSQL bool
 }
+
+var _ core.ILogger = &SimpleLogger{}
 
 func NewSimpleLogger(out io.Writer) *SimpleLogger {
 	return NewSimpleLogger2(out, DEFAULT_LOG_PREFIX, DEFAULT_LOG_FLAG)
@@ -103,4 +110,16 @@ func (s *SimpleLogger) Level() core.LogLevel {
 func (s *SimpleLogger) SetLevel(l core.LogLevel) (err error) {
 	s.level = l
 	return
+}
+
+func (s *SimpleLogger) ShowSQL(show ...bool) {
+	if len(show) == 0 {
+		s.showSQL = true
+		return
+	}
+	s.showSQL = show[0]
+}
+
+func (s *SimpleLogger) IsShowSQL() bool {
+	return s.showSQL
 }

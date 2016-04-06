@@ -65,14 +65,9 @@ func SetEngine(engine *xorm.Engine, enableLog bool) (err error) {
 		if err != nil {
 			return fmt.Errorf("sqlstore.init(fail to create xorm.log): %v", err)
 		}
-		x.Logger = xorm.NewSimpleLogger(f)
-
+		x.SetLogger(xorm.NewSimpleLogger(f))
 		if setting.Env == setting.DEV {
-			x.ShowSQL = true
-			x.ShowInfo = false
-			x.ShowDebug = false
-			x.ShowErr = true
-			x.ShowWarn = true
+			x.ShowSQL(true)
 		}
 	}
 

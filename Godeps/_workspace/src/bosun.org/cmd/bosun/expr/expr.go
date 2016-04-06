@@ -1,4 +1,4 @@
-package expr // import "bosun.org/cmd/bosun/expr"
+package expr
 
 import (
 	"encoding/json"
