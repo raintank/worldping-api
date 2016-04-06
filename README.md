@@ -1,4 +1,4 @@
-[worldPing](https://worldping.raintank.io) [![Circle CI](https://circleci.com/gh/raintank/worldping-api.svg?style=svg)](https://circleci.com/gh/raintank/worldping-api)
+[worldPing](https://worldping.raintank.io) [![Circle CI](https://circleci.com/gh/raintank/worldping-api.svg?style=shield)](https://circleci.com/gh/raintank/worldping-api)
 ================
 [Website](https://worldping.raintank.io) |
 [Twitter](https://twitter.com/raintankSaaS) |
