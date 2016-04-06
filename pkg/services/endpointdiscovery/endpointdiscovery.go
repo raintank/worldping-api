@@ -3,8 +3,8 @@ package endpointdiscovery
 import (
 	"errors"
 	"fmt"
-	"github.com/grafana/grafana/pkg/bus"
-	m "github.com/grafana/grafana/pkg/models"
+	"github.com/raintank/worldping-api/pkg/bus"
+	m "github.com/raintank/worldping-api/pkg/models"
 	"net"
 	"net/http"
 	"net/url"

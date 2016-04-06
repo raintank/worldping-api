@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	m "github.com/grafana/grafana/pkg/models"
+	m "github.com/raintank/worldping-api/pkg/models"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

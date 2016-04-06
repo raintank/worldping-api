@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/setting"
 	"github.com/nsqio/go-nsq"
 	"github.com/raintank/met"
 	"github.com/raintank/raintank-metric/msg"
 	"github.com/raintank/raintank-metric/schema"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 var (

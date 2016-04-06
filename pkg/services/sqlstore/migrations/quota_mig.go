@@ -1,7 +1,7 @@
 package migrations
 
 import (
-	. "github.com/grafana/grafana/pkg/services/sqlstore/migrator"
+	. "github.com/raintank/worldping-api/pkg/services/sqlstore/migrator"
 )
 
 func addQuotaMigration(mg *Migrator) {

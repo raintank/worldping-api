@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/grafana/grafana/pkg/middleware"
-	"github.com/grafana/grafana/pkg/setting"
 	"github.com/grafana/grafana/pkg/util"
+	"github.com/raintank/worldping-api/pkg/middleware"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 func ElasticsearchProxy(c *middleware.Context) {

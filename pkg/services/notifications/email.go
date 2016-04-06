@@ -1,7 +1,7 @@
 package notifications
 
 import (
-	"github.com/grafana/grafana/pkg/setting"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 type Message struct {

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/grafana/grafana/pkg/bus"
-	"github.com/grafana/grafana/pkg/events"
-	m "github.com/grafana/grafana/pkg/models"
+	"github.com/raintank/worldping-api/pkg/bus"
+	"github.com/raintank/worldping-api/pkg/events"
+	m "github.com/raintank/worldping-api/pkg/models"
 )
 
 func init() {

@@ -2,9 +2,9 @@ package api
 
 import (
 	"github.com/Unknwon/macaron"
-	"github.com/grafana/grafana/pkg/middleware"
-	m "github.com/grafana/grafana/pkg/models"
 	"github.com/macaron-contrib/binding"
+	"github.com/raintank/worldping-api/pkg/middleware"
+	m "github.com/raintank/worldping-api/pkg/models"
 )
 
 // Register adds http routes

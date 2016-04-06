@@ -1,6 +1,6 @@
 package migrations
 
-import . "github.com/grafana/grafana/pkg/services/sqlstore/migrator"
+import . "github.com/raintank/worldping-api/pkg/services/sqlstore/migrator"
 
 // --- Migration Guide line ---
 // 1. Never change a migration that is committed and pushed to master
@@ -9,17 +9,9 @@ import . "github.com/grafana/grafana/pkg/services/sqlstore/migrator"
 
 func AddMigrations(mg *Migrator) {
 	addMigrationLogMigrations(mg)
-	addUserMigrations(mg)
-	addTempUserMigrations(mg)
-	addStarMigrations(mg)
-	addOrgMigrations(mg)
-	addDashboardMigration(mg)
-	addDataSourceMigration(mg)
-	addApiKeyMigrations(mg)
 	addCollectorMigration(mg)
 	addMonitorMigration(mg)
 	addEndpointMigration(mg)
-	addDashboardSnapshotMigrations(mg)
 	addAlertSchedulerValueMigration(mg)
 	addQuotaMigration(mg)
 }

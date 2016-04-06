@@ -2,8 +2,8 @@ package migrations
 
 import (
 	"github.com/go-xorm/xorm"
-	m "github.com/grafana/grafana/pkg/models"
-	. "github.com/grafana/grafana/pkg/services/sqlstore/migrator"
+	m "github.com/raintank/worldping-api/pkg/models"
+	. "github.com/raintank/worldping-api/pkg/services/sqlstore/migrator"
 )
 
 func addEndpointMigration(mg *Migrator) {

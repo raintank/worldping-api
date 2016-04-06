@@ -1,9 +1,9 @@
 package api
 
 import (
-	"github.com/grafana/grafana/pkg/bus"
-	"github.com/grafana/grafana/pkg/middleware"
-	m "github.com/grafana/grafana/pkg/models"
+	"github.com/raintank/worldping-api/pkg/bus"
+	"github.com/raintank/worldping-api/pkg/middleware"
+	m "github.com/raintank/worldping-api/pkg/models"
 )
 
 func GetMonitorById(c *middleware.Context) Response {

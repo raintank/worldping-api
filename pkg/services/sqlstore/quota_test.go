@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/go-xorm/xorm"
-	m "github.com/grafana/grafana/pkg/models"
-	"github.com/grafana/grafana/pkg/services/sqlstore/sqlutil"
-	"github.com/grafana/grafana/pkg/setting"
+	m "github.com/raintank/worldping-api/pkg/models"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore/sqlutil"
+	"github.com/raintank/worldping-api/pkg/setting"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
