@@ -1,3 +1,7 @@
+// Copyright 2015 The Xorm Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package xorm
 
 import (
@@ -13,7 +17,7 @@ import (
 )
 
 const (
-	Version string = "0.4.2.0225"
+	Version string = "0.5.2.0314"
 )
 
 func regDrvsNDialects() bool {
@@ -35,7 +39,7 @@ func regDrvsNDialects() bool {
 	for driverName, v := range providedDrvsNDialects {
 		if driver := core.QueryDriver(driverName); driver == nil {
 			core.RegisterDriver(driverName, v.getDriver())
-			core.RegisterDialect(v.dbType, v.getDialect())
+			core.RegisterDialect(v.dbType, v.getDialect)
 		}
 	}
 	return true
@@ -80,12 +84,12 @@ func NewEngine(driverName string, dataSourceName string) (*Engine, error) {
 		Tables:        make(map[reflect.Type]*core.Table),
 		mutex:         &sync.RWMutex{},
 		TagIdentifier: "xorm",
-		Logger:        NewSimpleLogger(os.Stdout),
 		TZLocation:    time.Local,
 	}
 
-	engine.dialect.SetLogger(engine.Logger)
-
+	logger := NewSimpleLogger(os.Stdout)
+	logger.SetLevel(core.LOG_INFO)
+	engine.SetLogger(logger)
 	engine.SetMapper(core.NewCacheMapper(new(core.SnakeMapper)))
 
 	runtime.SetFinalizer(engine, close)

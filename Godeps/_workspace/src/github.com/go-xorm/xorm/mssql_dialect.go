@@ -1,3 +1,7 @@
+// Copyright 2015 The Xorm Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package xorm
 
 import (
@@ -216,6 +220,11 @@ func (db *mssql) SqlType(c *core.Column) string {
 	switch t := c.SQLType.Name; t {
 	case core.Bool:
 		res = core.TinyInt
+		if c.Default == "true" {
+			c.Default = "1"
+		} else if c.Default == "false" {
+			c.Default = "0"
+		}
 	case core.Serial:
 		c.IsAutoIncrement = true
 		c.IsPrimaryKey = true
@@ -238,7 +247,7 @@ func (db *mssql) SqlType(c *core.Column) string {
 		c.Length = 7
 	case core.MediumInt:
 		res = core.Int
-	case core.MediumText, core.TinyText, core.LongText:
+	case core.MediumText, core.TinyText, core.LongText, core.Json:
 		res = core.Text
 	case core.Double:
 		res = core.Real
@@ -311,10 +320,10 @@ func (db *mssql) IndexCheckSql(tableName, idxName string) (string, []interface{}
 	return sql, args
 }*/
 
-func (db *mssql) IsColumnExist(tableName string, col *core.Column) (bool, error) {
+func (db *mssql) IsColumnExist(tableName, colName string) (bool, error) {
 	query := `SELECT "COLUMN_NAME" FROM "INFORMATION_SCHEMA"."COLUMNS" WHERE "TABLE_NAME" = ? AND "COLUMN_NAME" = ?`
 
-	return db.HasRecords(query, tableName, col.Name)
+	return db.HasRecords(query, tableName, colName)
 }
 
 func (db *mssql) TableCheckSql(tableName string) (string, []interface{}) {
@@ -328,6 +337,7 @@ func (db *mssql) GetColumns(tableName string) ([]string, map[string]*core.Column
 	s := `select a.name as name, b.name as ctype,a.max_length,a.precision,a.scale
 from sys.columns a left join sys.types b on a.user_type_id=b.user_type_id
 where a.object_id=object_id('` + tableName + `')`
+	db.LogSQL(s, args)
 
 	rows, err := db.DB().Query(s, args...)
 	if err != nil {
@@ -385,6 +395,7 @@ where a.object_id=object_id('` + tableName + `')`
 func (db *mssql) GetTables() ([]*core.Table, error) {
 	args := []interface{}{}
 	s := `select name from sysobjects where xtype ='U'`
+	db.LogSQL(s, args)
 
 	rows, err := db.DB().Query(s, args...)
 	if err != nil {
@@ -419,6 +430,7 @@ INNER   JOIN SYS.COLUMNS C  ON IXS.OBJECT_ID=C.OBJECT_ID
 AND IXCS.COLUMN_ID=C.COLUMN_ID
 WHERE IXS.TYPE_DESC='NONCLUSTERED' and OBJECT_NAME(IXS.OBJECT_ID) =?
 `
+	db.LogSQL(s, args)
 
 	rows, err := db.DB().Query(s, args...)
 	if err != nil {
@@ -498,6 +510,10 @@ func (db *mssql) CreateTableSql(table *core.Table, tableName, storeEngine, chars
 	sql = sql[:len(sql)-2] + ")"
 	sql += ";"
 	return sql
+}
+
+func (db *mssql) ForUpdateSql(query string) string {
+	return query
 }
 
 func (db *mssql) Filters() []core.Filter {

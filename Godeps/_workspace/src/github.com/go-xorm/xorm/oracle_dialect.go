@@ -1,3 +1,7 @@
+// Copyright 2015 The Xorm Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package xorm
 
 import (
@@ -518,7 +522,7 @@ func (db *oracle) SqlType(c *core.Column) string {
 		res = "TIMESTAMP WITH TIME ZONE"
 	case core.Float, core.Double, core.Numeric, core.Decimal:
 		res = "NUMBER"
-	case core.Text, core.MediumText, core.LongText:
+	case core.Text, core.MediumText, core.LongText, core.Json:
 		res = "CLOB"
 	case core.Char, core.Varchar, core.TinyText:
 		res = "VARCHAR2"
@@ -633,9 +637,7 @@ func (db *oracle) TableCheckSql(tableName string) (string, []interface{}) {
 
 func (db *oracle) MustDropTable(tableName string) error {
 	sql, args := db.TableCheckSql(tableName)
-	if db.Logger != nil {
-		db.Logger.Info("[sql]", sql, args)
-	}
+	db.LogSQL(sql, args)
 
 	rows, err := db.DB().Query(sql, args...)
 	if err != nil {
@@ -648,9 +650,8 @@ func (db *oracle) MustDropTable(tableName string) error {
 	}
 
 	sql = "Drop Table \"" + tableName + "\""
-	if db.Logger != nil {
-		db.Logger.Info("[sql]", sql)
-	}
+	db.LogSQL(sql, args)
+
 	_, err = db.DB().Exec(sql)
 	return err
 }
@@ -661,14 +662,13 @@ func (db *oracle) MustDropTable(tableName string) error {
 		" AND column_name = ?", args
 }*/
 
-func (db *oracle) IsColumnExist(tableName string, col *core.Column) (bool, error) {
-	args := []interface{}{tableName, col.Name}
+func (db *oracle) IsColumnExist(tableName, colName string) (bool, error) {
+	args := []interface{}{tableName, colName}
 	query := "SELECT column_name FROM USER_TAB_COLUMNS WHERE table_name = :1" +
 		" AND column_name = :2"
+	db.LogSQL(query, args)
+
 	rows, err := db.DB().Query(query, args...)
-	if db.Logger != nil {
-		db.Logger.Info("[sql]", query, args)
-	}
 	if err != nil {
 		return false, err
 	}
@@ -684,11 +684,9 @@ func (db *oracle) GetColumns(tableName string) ([]string, map[string]*core.Colum
 	args := []interface{}{tableName}
 	s := "SELECT column_name,data_default,data_type,data_length,data_precision,data_scale," +
 		"nullable FROM USER_TAB_COLUMNS WHERE table_name = :1"
+	db.LogSQL(s, args)
 
 	rows, err := db.DB().Query(s, args...)
-	if db.Logger != nil {
-		db.Logger.Info("[sql]", s, args)
-	}
 	if err != nil {
 		return nil, nil, err
 	}
@@ -740,6 +738,8 @@ func (db *oracle) GetColumns(tableName string) ([]string, map[string]*core.Colum
 		switch dt {
 		case "VARCHAR2":
 			col.SQLType = core.SQLType{core.Varchar, len1, len2}
+		case "NVARCHAR2":
+			col.SQLType = core.SQLType{core.NVarchar, len1, len2}
 		case "TIMESTAMP WITH TIME ZONE":
 			col.SQLType = core.SQLType{core.TimeStampz, 0, 0}
 		case "NUMBER":
@@ -781,11 +781,9 @@ func (db *oracle) GetColumns(tableName string) ([]string, map[string]*core.Colum
 func (db *oracle) GetTables() ([]*core.Table, error) {
 	args := []interface{}{}
 	s := "SELECT table_name FROM user_tables"
+	db.LogSQL(s, args)
 
 	rows, err := db.DB().Query(s, args...)
-	if db.Logger != nil {
-		db.Logger.Info("[sql]", s, args)
-	}
 	if err != nil {
 		return nil, err
 	}
@@ -808,11 +806,9 @@ func (db *oracle) GetIndexes(tableName string) (map[string]*core.Index, error) {
 	args := []interface{}{tableName}
 	s := "SELECT t.column_name,i.uniqueness,i.index_name FROM user_ind_columns t,user_indexes i " +
 		"WHERE t.index_name = i.index_name and t.table_name = i.table_name and t.table_name =:1"
+	db.LogSQL(s, args)
 
 	rows, err := db.DB().Query(s, args...)
-	if db.Logger != nil {
-		db.Logger.Info("[sql]", s, args)
-	}
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package cache // import "bosun.org/cmd/bosun/cache"
+package cache
 
 import (
 	"sync"
