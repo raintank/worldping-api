@@ -38,7 +38,7 @@ func NewEngine() {
 		log.Fatal(3, "Sqlstore: Fail to connect to database: %v", err)
 	}
 
-	err = SetEngine(x, true)
+	err = SetEngine(x, setting.Env == setting.DEV)
 
 	if err != nil {
 		log.Fatal(3, "fail to initialize orm engine: %v", err)
