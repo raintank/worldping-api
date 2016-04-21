@@ -1,0 +1,708 @@
+FORMAT: 1A
+HOST: http://worldping-api.raintank.io/
+
+# Worldping
+
+Worldping API 
+
+## MonitorTypes [/api/monitor_types]
+List of supported checks that can be performed and the configuration paramaters for each of those checks.
+
+### List MonitorTypes [GET]
+
++ Response 200 (application/json)
+
+        [  
+            {  
+                "id":4,
+                "name":"DNS",
+                "settings":[  
+                    {  
+                        "variable":"name",
+                        "description":"Record Name",
+                        "required":true,
+                        "data_type":"String",
+                        "conditions":{  
+        
+                        },
+                        "default_value":""
+                    },
+                    {  
+                        "variable":"type",
+                        "description":"Record Type",
+                        "required":true,
+                        "data_type":"Enum",
+                        "conditions":{  
+                            "values":[  
+                                "A",
+                                "AAAA",
+                                "CNAME",
+                                "MX",
+                                "NS",
+                                "PTR",
+                                "SOA",
+                                "SRV",
+                                "TXT"
+                            ]
+                        },
+                        "default_value":"A"
+                    },
+                    {  
+                        "variable":"server",
+                        "description":"Server",
+                        "required":false,
+                        "data_type":"String",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"8.8.8.8"
+                    },
+                    {  
+                        "variable":"port",
+                        "description":"Port",
+                        "required":false,
+                        "data_type":"Number",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"53"
+                    },
+                    {  
+                        "variable":"protocol",
+                        "description":"Protocol",
+                        "required":false,
+                        "data_type":"Enum",
+                        "conditions":{  
+                            "values":[  
+                                "tcp",
+                                "udp"
+                            ]
+                        },
+                        "default_value":"udp"
+                    },
+                    {  
+                        "variable":"timeout",
+                        "description":"Timeout",
+                        "required":true,
+                        "data_type":"Number",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"5"
+                    }
+                ]
+            },
+            {  
+                "id":1,
+                "name":"HTTP",
+                "settings":[  
+                    {  
+                        "variable":"host",
+                        "description":"Hostname",
+                        "required":true,
+                        "data_type":"String",
+                        "conditions":{  
+        
+                        },
+                        "default_value":""
+                    },
+                    {  
+                        "variable":"path",
+                        "description":"Path",
+                        "required":true,
+                        "data_type":"String",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"/"
+                    },
+                    {  
+                        "variable":"port",
+                        "description":"Port",
+                        "required":false,
+                        "data_type":"Number",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"80"
+                    },
+                    {  
+                        "variable":"method",
+                        "description":"Method",
+                        "required":false,
+                        "data_type":"Enum",
+                        "conditions":{  
+                            "values":[  
+                                "GET",
+                                "POST",
+                                "PUT",
+                                "DELETE",
+                                "HEAD"
+                            ]
+                        },
+                        "default_value":"GET"
+                    },
+                    {  
+                        "variable":"headers",
+                        "description":"Headers",
+                        "required":false,
+                        "data_type":"Text",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"Accept-Encoding: gzip\nUser-Agent: raintank collector\n"
+                    },
+                    {  
+                        "variable":"expectRegex",
+                        "description":"Content Match",
+                        "required":false,
+                        "data_type":"String",
+                        "conditions":{  
+        
+                        },
+                        "default_value":""
+                    },
+                    {  
+                        "variable":"timeout",
+                        "description":"Timeout",
+                        "required":true,
+                        "data_type":"Number",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"5"
+                    }
+                ]
+            },
+            {  
+                "id":2,
+                "name":"HTTPS",
+                "settings":[  
+                    {  
+                        "variable":"host",
+                        "description":"Hostname",
+                        "required":true,
+                        "data_type":"String",
+                        "conditions":{  
+        
+                        },
+                        "default_value":""
+                    },
+                    {  
+                        "variable":"path",
+                        "description":"Path",
+                        "required":true,
+                        "data_type":"String",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"/"
+                    },
+                    {  
+                        "variable":"validateCert",
+                        "description":"Validate SSL Certificate",
+                        "required":false,
+                        "data_type":"Boolean",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"true"
+                    },
+                    {  
+                        "variable":"port",
+                        "description":"Port",
+                        "required":false,
+                        "data_type":"Number",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"443"
+                    },
+                    {  
+                        "variable":"method",
+                        "description":"Method",
+                        "required":false,
+                        "data_type":"Enum",
+                        "conditions":{  
+                            "values":[  
+                                "GET",
+                                "POST",
+                                "PUT",
+                                "DELETE",
+                                "HEAD"
+                            ]
+                        },
+                        "default_value":"GET"
+                    },
+                    {  
+                        "variable":"headers",
+                        "description":"Headers",
+                        "required":false,
+                        "data_type":"Text",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"Accept-Encoding: gzip\nUser-Agent: raintank collector\n"
+                    },
+                    {  
+                        "variable":"expectRegex",
+                        "description":"Content Match",
+                        "required":false,
+                        "data_type":"String",
+                        "conditions":{  
+        
+                        },
+                        "default_value":""
+                    },
+                    {  
+                        "variable":"timeout",
+                        "description":"Timeout",
+                        "required":true,
+                        "data_type":"Number",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"5"
+                    }
+                ]
+            },
+            {  
+                "id":3,
+                "name":"Ping",
+                "settings":[  
+                    {  
+                        "variable":"hostname",
+                        "description":"Hostname",
+                        "required":true,
+                        "data_type":"String",
+                        "conditions":{  
+        
+                        },
+                        "default_value":""
+                    },
+                    {  
+                        "variable":"timeout",
+                        "description":"Timeout",
+                        "required":true,
+                        "data_type":"Number",
+                        "conditions":{  
+        
+                        },
+                        "default_value":"5"
+                    }
+                ]
+            }
+        ]
+
+## Monitors [/api/monitors]
+
+A check performed on an Endpoint.
+
+### List Monitors [GET /api/monitors{?endpoint_id}]
+
++ Response 200 (application/json)
+
+        [  
+            {  
+                "id":19678,
+                "org_id":1,
+                "endpoint_id":1,
+                "endpoint_slug":"www_raintank_io",
+                "monitor_type_id":1,
+                "monitor_type_name":"HTTP",
+                "collector_ids":[  
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "collector_tags":[  
+        
+                ],
+                "collectors":[  
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "state":0,
+                "state_change":"2016-04-20T14:09:58Z",
+                "state_check":"2016-04-20T14:14:28Z",
+                "settings":[  
+                    {  
+                        "variable":"host",
+                        "value":"www.raintank.io"
+                    },
+                    {  
+                        "variable":"port",
+                        "value":"80"
+                    },
+                    {  
+                        "variable":"path",
+                        "value":"/"
+                    },
+                    {  
+                        "variable":"timeout",
+                        "value":"5"
+                    },
+                    {  
+                        "variable":"method",
+                        "value":"GET"
+                    },
+                    {  
+                        "variable":"expectRegex",
+                        "value":""
+                    },
+                    {  
+                        "variable":"headers",
+                        "value":"Accept-Encoding: gzip\nUser-Agent: raintank collector\n"
+                    }
+                ],
+                "health_settings":{  
+                    "num_collectors":3,
+                    "steps":3,
+                    "notifications":{  
+                        "enabled":false,
+                        "addresses":""
+                    }
+                },
+                "frequency":60,
+                "enabled":true,
+                "offset":58,
+                "updated":"2016-04-20T14:09:48Z"
+            },
+            {  
+                "id":19684,
+                "org_id":1,
+                "endpoint_id":1,
+                "endpoint_slug":"www_raintank_io",
+                "monitor_type_id":3,
+                "monitor_type_name":"Ping",
+                "collector_ids":[  
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "collector_tags":[  
+        
+                ],
+                "collectors":[  
+                    1,
+                    2,
+                    3,
+                    4
+                ],
+                "state":0,
+                "state_change":"2016-04-20T14:09:58Z",
+                "state_check":"2016-04-20T14:15:18Z",
+                "settings":[  
+                    {  
+                        "variable":"hostname",
+                        "value":"www.raintank.io"
+                    },
+                    {  
+                        "variable":"timeout",
+                        "value":"5"
+                    }
+                ],
+                "health_settings":{  
+                    "num_collectors":3,
+                    "steps":3,
+                    "notifications":{  
+                        "enabled":false,
+                        "addresses":""
+                    }
+                },
+                "frequency":10,
+                "enabled":true,
+                "offset":8,
+                "updated":"2016-04-20T14:09:48Z"
+            }
+        ]
+
+### Update Monitor [POST /api/monitors]
+
++ Request (application/json)
+
+        {  
+            "id":19681,
+            "endpoint_id":1,
+            "monitor_type_id":2,
+            "collector_ids":[  
+                1,
+                2,
+                3,
+                4
+            ],
+            "collector_tags":[  
+        
+            ],
+            "settings":[  
+                {  
+                    "variable":"host",
+                    "value":"www.raintank.io"
+                },
+                {  
+                    "variable":"port",
+                    "value":"443"
+                },
+                {  
+                    "variable":"path",
+                    "value":"/about/"
+                },
+                {  
+                    "variable":"timeout",
+                    "value":"5"
+                },
+                {  
+                    "variable":"method",
+                    "value":"GET"
+                },
+                {  
+                    "variable":"expectRegex",
+                    "value":""
+                },
+                {  
+                    "variable":"validateCert",
+                    "value":"true"
+                },
+                {  
+                    "variable":"headers",
+                    "value":"Accept-Encoding: gzip\nUser-Agent: raintank collector\n"
+                }
+            ],
+            "enabled":true,
+            "frequency":60,
+            "health_settings":{  
+                "num_collectors":3,
+                "steps":3,
+                "notifications":{  
+                    "enabled":false,
+                    "addresses":""
+                }
+            }
+        }
+
++ Response 200 (application/json)
+
+        {
+            "message":"Monitor updated"
+        }
+
+## Endpoints [/api/endpoints]
+
+Explain what an endpoint is.
+
+### List All Endpoints [GET /api/endpoints{?tag}]
+
++ Response 200 (application/json)
+
+        [  
+            {  
+                "id":1,
+                "org_id":1,
+                    "name":"www.raintank.io",
+                    "slug":"www_raintank_io",
+                    "tags":[  
+                        "raintank"
+                    ]
+            },
+            {  
+                "id":2,
+                "org_id":1,
+                "name":"www.google.com",
+                "slug":"www_google_com",
+                "tags":[  
+                    "google",
+                    "external"
+                ]
+            }
+        ]
+
+### Update Endpoint [POST /api/endpoints]
+
++ Request (application/json)
+
+        { 
+            "id":1,
+            "org_id":1,
+            "name":"www.raintank.io",
+            "tags":[
+                "raintank",
+                "demo"
+            ]
+        }
+        
++ Response 200 (application/json)
+
+        {
+            "message":"Endpoint updated"
+        }
+
+### Create Endpoint [PUT /api/endpoints]
+
++ Request (application/json)
+
+        {  
+            "name":"www.raintank.io",
+            "tags":[  
+                "raintank"
+            ],
+            "monitors":[  
+                {  
+                    "monitor_type_id":1,
+                    "settings":[  
+                        {  
+                            "variable":"host",
+                            "value":"www.raintank.io"
+                        },
+                        {  
+                            "variable":"port",
+                            "value":"80"
+                        },
+                        {  
+                            "variable":"path",
+                            "value":"/"
+                        },
+                        {  
+                            "variable":"timeout",
+                            "value":"5"
+                        },
+                        {  
+                            "variable":"method",
+                            "value":"GET"
+                        },
+                        {  
+                            "variable":"expectRegex",
+                            "value":""
+                        }
+                    ],
+                    "endpoint_id":-1,
+                    "collector_ids":[  
+                        1,
+                        2,
+                        3,
+                        4
+                    ],
+                    "collector_tags":[  
+        
+                    ],
+                    "enabled":true,
+                    "frequency":60,
+                    "health_settings":{  
+                        "steps":3,
+                        "num_collectors":3,
+                        "notifications":{  
+                            "enabled":false,
+                            "addresses":""
+                        }
+                    }
+                },
+                {  
+                    "monitor_type_id":3,
+                    "settings":[  
+                        {  
+                            "variable":"hostname",
+                            "value":"www.raintank.io"
+                        },
+                        {  
+                            "variable":"timeout",
+                            "value":"5"
+                        }
+                    ],
+                    "endpoint_id":-1,
+                    "collector_ids":[  
+                        1,
+                        2,
+                        3,
+                        4
+                    ],
+                    "collector_tags":[  
+        
+                    ],
+                    "enabled":true,
+                    "frequency":10,
+                    "health_settings":{  
+                        "steps":3,
+                        "num_collectors":3,
+                        "notifications":{  
+                            "enabled":false,
+                            "addresses":""
+                        }
+                    }
+                }
+            ]
+        }
+
++ Response 200 (application/json)
+
+        {  
+            "id":1,
+            "org_id":1,
+            "name":"www.raintank.io",
+            "slug":"www_raintank_io",
+            "tags":[  
+                "raintank"
+            ]
+        }
+
+
+## Probes [/api/collectors]
+
+Explain what a Probe is
+
+### list all Probes [GET]
+
++ Response 200 (application/json)
+    
+        [  
+            {  
+                "id":1,
+                "org_id":1,
+                "slug":"san-francisco",
+                "name":"San Francisco",
+                "tags":[  
+                    "USA"
+                ],
+                "public":true,
+                "latitude":0,
+                "longitude":0,
+                "online":true,
+                "online_change":"2016-04-20T13:09:42Z",
+                "enabled":true,
+                "enabled_change":"2015-07-10T21:39:02Z"
+            },
+            {  
+                "id":2,
+                "org_id":1,
+                "slug":"amsterdam",
+                "name":"Amsterdam",
+                "tags":[  
+        
+                ],
+                "public":true,
+                "latitude":0,
+                "longitude":0,
+                "online":true,
+                "online_change":"2016-04-20T07:03:42Z",
+                "enabled":true,
+                "enabled_change":"2015-07-10T21:39:02Z"
+            },
+            {  
+                "id":3,
+                "org_id":1,
+                "slug":"london",
+                "name":"London",
+                "tags":[  
+                    "EMEA"
+                ],
+                "public":true,
+                "latitude":0,
+                "longitude":0,
+                "online":true,
+                "online_change":"2016-04-20T12:02:26Z",
+                "enabled":true,
+                "enabled_change":"2015-07-10T21:39:02Z"
+            }
+        ]
