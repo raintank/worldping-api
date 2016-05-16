@@ -114,6 +114,16 @@ func initContextWithGrafanaNetApiKey(ctx *Context) {
 		return
 	}
 
+	// allow admin users to impersonate other orgs.
+	if user.IsGrafanaAdmin {
+		header := ctx.Req.Header.Get("X-Worldping-Org")
+		if header != "" {
+			orgId, err := strconv.ParseInt(header, 10, 64)
+			if err == nil && orgId != 0 {
+				user.OrgId = orgId
+			}
+		}
+	}
 	ctx.IsSignedIn = true
 	ctx.SignedInUser = user
 	return
