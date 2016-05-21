@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/fiorix/freegeoip"
 	"github.com/googollee/go-socket.io"
 	"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/met"
@@ -22,12 +24,14 @@ import (
 	"github.com/raintank/worldping-api/pkg/services/metricpublisher"
 	"github.com/raintank/worldping-api/pkg/services/rabbitmq"
 	"github.com/raintank/worldping-api/pkg/setting"
+	"github.com/raintank/worldping-api/pkg/util"
 	"github.com/streadway/amqp"
 )
 
 var server *socketio.Server
 var contextCache *ContextCache
 var metricsRecvd met.Count
+var geoipDB *freegeoip.DB
 
 type ContextCache struct {
 	sync.RWMutex
@@ -373,6 +377,14 @@ func InitCollectorController(metrics met.Backend) {
 		bus.AddEventListener(HandleCollectorDisconnected)
 	}
 	metricsRecvd = metrics.NewCount("collector-ctrl.metrics-recv")
+
+	// init GEOIP DB.
+	var err error
+	geoipDB, err = freegeoip.OpenURL(freegeoip.MaxMindDB, time.Hour, time.Hour*6)
+	if err != nil {
+		log.Error(3, "failed to load GEOIP DB. ", err)
+	}
+
 }
 
 func init() {
@@ -450,6 +462,34 @@ func (c *CollectorContext) Save() error {
 		return err
 	}
 	log.Info("collector_session %s for collector_id: %d saved to DB.", cmd.SocketId, cmd.CollectorId)
+	if c.Collector.Latitude == 0 || c.Collector.Longitude == 0 {
+		remoteIp := net.ParseIP(util.GetRemoteIp(c.Socket.Request()))
+		if remoteIp == nil {
+			log.Error(3, "Unable to lookup remote IP address of collector.")
+			return nil
+		}
+		var location freegeoip.DefaultQuery
+		err := geoipDB.Lookup(remoteIp, &location)
+		if err != nil {
+			log.Error(3, "Unabled to get location from IP.", err)
+			return nil
+		}
+		log.Debug("collector %s is located at lat:%f, long:%f", c.Collector.Name, location.Location.Latitude, location.Location.Longitude)
+		updateCmd := &m.UpdateCollectorCommand{
+			Id:        c.Collector.Id,
+			OrgId:     c.Collector.OrgId,
+			Name:      c.Collector.Name,
+			Tags:      c.Collector.Tags,
+			Public:    c.Collector.Public,
+			Enabled:   c.Collector.Enabled,
+			Latitude:  location.Location.Latitude,
+			Longitude: location.Location.Latitude,
+		}
+		if err := bus.Dispatch(updateCmd); err != nil {
+			log.Info("could not save collector location to DB.", err)
+			return err
+		}
+	}
 	return nil
 }
 
