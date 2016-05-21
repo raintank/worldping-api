@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/raintank/worldping-api",
 	"GoVersion": "go1.5",
-	"GodepVersion": "v60",
+	"GodepVersion": "v70",
 	"Packages": [
 		"./..."
 	],
@@ -99,6 +99,11 @@
 			"Rev": "952abbca900b023c1a80bc522ff4795db50d9d6c"
 		},
 		{
+			"ImportPath": "github.com/fiorix/freegeoip",
+			"Comment": "v3.1.3-8-g8767f2a",
+			"Rev": "8767f2ae8a932eaf5467b6792562cf636e66c27f"
+		},
+		{
 			"ImportPath": "github.com/go-sql-driver/mysql",
 			"Comment": "v1.2-26-g9543750",
 			"Rev": "9543750295406ef070f7de8ae9c43ccddd44e15e"
@@ -161,6 +166,11 @@
 			"Rev": "61b79a797853a3649b5c1261f1a75166e0e4096e"
 		},
 		{
+			"ImportPath": "github.com/howeyc/fsnotify",
+			"Comment": "v0.9.0-16-gf0c08ee",
+			"Rev": "f0c08ee9c60704c1879025f2ae0ff3e000082c13"
+		},
+		{
 			"ImportPath": "github.com/jtolds/gls",
 			"Rev": "9a4a02dbe491bef4bab3c24fd9f3087d6c4c6690"
 		},
@@ -216,6 +226,11 @@
 			"ImportPath": "github.com/nsqio/go-nsq",
 			"Comment": "v1.0.4-16-g04ffac3",
 			"Rev": "04ffac3a59c9cb94c3eed73ec965d87762bcebe9"
+		},
+		{
+			"ImportPath": "github.com/oschwald/maxminddb-golang",
+			"Comment": "v0.2.0-48-g7992a44",
+			"Rev": "7992a44b913686f8e31e6d05b7e18ec18be0535f"
 		},
 		{
 			"ImportPath": "github.com/philhofer/fwd",
@@ -280,6 +295,14 @@
 			"ImportPath": "github.com/tinylib/msgp/msgp",
 			"Comment": "v1.0-alpha-43-gcd4fb15",
 			"Rev": "cd4fb1548c31d88af25205dc021be20935aec720"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/unix",
+			"Rev": "d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03"
+		},
+		{
+			"ImportPath": "golang.org/x/sys/windows",
+			"Rev": "d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03"
 		},
 		{
 			"ImportPath": "gopkg.in/bufio.v1",
