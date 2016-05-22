@@ -16,6 +16,28 @@ func GetCollectors(c *middleware.Context, query m.GetCollectorsQuery) Response {
 	return Json(200, query.Result)
 }
 
+func GetCollectorLocations(c *middleware.Context) Response {
+	query := m.GetCollectorsQuery{
+		OrgId: c.OrgId,
+	}
+
+	if err := bus.Dispatch(&query); err != nil {
+		return ApiError(500, "Failed to query collectors", err)
+	}
+
+	locations := make([]m.CollectorLocationDTO, len(query.Result))
+	for i, c := range query.Result {
+		locations[i] = m.CollectorLocationDTO{
+			Key:       c.Slug,
+			Latitude:  c.Latitude,
+			Longitude: c.Longitude,
+			Name:      c.Name,
+		}
+	}
+
+	return Json(200, locations)
+}
+
 func GetCollectorById(c *middleware.Context) Response {
 	id := c.ParamsInt64(":id")
 
