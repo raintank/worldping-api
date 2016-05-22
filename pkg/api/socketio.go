@@ -483,7 +483,7 @@ func (c *CollectorContext) Save() error {
 			Public:    c.Collector.Public,
 			Enabled:   c.Collector.Enabled,
 			Latitude:  location.Location.Latitude,
-			Longitude: location.Location.Latitude,
+			Longitude: location.Location.Longitude,
 		}
 		if err := bus.Dispatch(updateCmd); err != nil {
 			log.Info("could not save collector location to DB.", err)

@@ -36,6 +36,7 @@ func Register(r *macaron.Macaron) {
 				Get(bind(m.GetCollectorsQuery{}), wrap(GetCollectors)).
 				Put(reqEditorRole, quota("collector"), bind(m.AddCollectorCommand{}), wrap(AddCollector)).
 				Post(reqEditorRole, bind(m.UpdateCollectorCommand{}), wrap(UpdateCollector))
+			r.Get("/locations", wrap(GetCollectorLocations))
 			r.Get("/:id", wrap(GetCollectorById))
 			r.Delete("/:id", reqEditorRole, wrap(DeleteCollector))
 		})

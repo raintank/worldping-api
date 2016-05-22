@@ -62,6 +62,13 @@ type CollectorDTO struct {
 	EnabledChange time.Time `json:"enabled_change"`
 }
 
+type CollectorLocationDTO struct {
+	Key       string  `json:"key"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Name      string  `json:"name"`
+}
+
 // ----------------------
 // COMMANDS
 
