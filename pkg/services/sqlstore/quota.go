@@ -96,6 +96,7 @@ func UpdateOrgQuota(cmd *m.UpdateOrgQuotaCmd) error {
 		quota := m.Quota{
 			Target: cmd.Target,
 			OrgId:  cmd.OrgId,
+			UserId: 0,
 		}
 		has, err := sess.Get(&quota)
 		if err != nil {
