@@ -120,7 +120,7 @@ func GetCollectorByName(query *m.GetCollectorByNameQuery) error {
 	result := results[0]
 
 	tags := make([]string, 0)
-	if result.Tags != "" {
+	if result.Tags != "" {
 		tags = strings.Split(result.Tags, ",")
 	}
 
@@ -241,6 +241,10 @@ func DeleteCollector(cmd *m.DeleteCollectorCommand) error {
 		}
 
 		var rawSql = "DELETE FROM collector_tag WHERE collector_id=?"
+		if _, err := sess.Exec(rawSql, cmd.Id); err != nil {
+			return err
+		}
+		rawSql = "DELETE FROM monitor_collector WHERE collector_id=?"
 		if _, err := sess.Exec(rawSql, cmd.Id); err != nil {
 			return err
 		}
