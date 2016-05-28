@@ -182,14 +182,16 @@ WHERE monitor.enabled=1 AND (? % monitor.frequency) = monitor.offset
 func GetMonitors(query *m.GetMonitorsQuery) error {
 	sess := x.Table("monitor")
 	rawParams := make([]interface{}, 0)
-	rawSql := `
+	colidSql := `
 CREATE TEMPORARY TABLE colids 
     (PRIMARY KEY(monitor_id))
     SELECT 
         GROUP_CONCAT(DISTINCT(monitor_collector.collector_id)) AS collector_ids,
         monitor_id 
     FROM monitor_collector 
-        GROUP BY monitor_id;
+        GROUP BY monitor_id`
+
+	rawSql := `
 SELECT
     colids.collector_ids,
     GROUP_CONCAT(DISTINCT(monitor_collector_tag.tag)) as collector_tags,
@@ -264,7 +266,15 @@ FROM monitor
 	rawSql += " GROUP BY monitor.id"
 
 	result := make([]*MonitorWithCollectorDTO, 0)
-	err := sess.Sql(rawSql, rawParams...).Find(&result)
+	_, err := sess.Exec(colidSql)
+	if err != nil {
+		return err
+	}
+	err = sess.Sql(rawSql, rawParams...).Find(&result)
+	if err != nil {
+		return err
+	}
+	err = sess.DropTable("colids")
 	if err != nil {
 		return err
 	}
