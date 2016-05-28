@@ -183,8 +183,15 @@ func GetMonitors(query *m.GetMonitorsQuery) error {
 	sess := x.Table("monitor")
 	rawParams := make([]interface{}, 0)
 	rawSql := `
+CREATE TEMPORARY TABLE colids 
+    (PRIMARY KEY(monitor_id))
+    SELECT 
+        GROUP_CONCAT(DISTINCT(monitor_collector.collector_id)) AS collector_ids,
+        monitor_id 
+    FROM monitor_collector 
+        GROUP BY monitor_id;
 SELECT
-    GROUP_CONCAT(DISTINCT(monitor_collector.collector_id)) as collector_ids,
+    colids.collector_ids,
     GROUP_CONCAT(DISTINCT(monitor_collector_tag.tag)) as collector_tags,
     GROUP_CONCAT(DISTINCT(collector_tag.collector_id)) as tag_collectors,
     endpoint.slug as endpoint_slug,
