@@ -2,6 +2,7 @@ package sqlstore
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +22,7 @@ func init() {
 	bus.AddHandler("sql", UpdateMonitor)
 	bus.AddHandler("sql", DeleteMonitor)
 	bus.AddHandler("sql", UpdateMonitorState)
+	rand.Seed(time.Now().UnixNano())
 }
 
 type MonitorWithCollectorDTO struct {
@@ -182,18 +184,19 @@ WHERE monitor.enabled=1 AND (? % monitor.frequency) = monitor.offset
 func GetMonitors(query *m.GetMonitorsQuery) error {
 	sess := x.Table("monitor")
 	rawParams := make([]interface{}, 0)
-	colidSql := `
-CREATE TEMPORARY TABLE colids 
+	tmpId := rand.Int63() & 0xFFFFFFFF
+	colidSql := fmt.Printf(`
+CREATE TEMPORARY TABLE colids%d 
     (PRIMARY KEY(monitor_id))
     SELECT 
         GROUP_CONCAT(DISTINCT(monitor_collector.collector_id)) AS collector_ids,
         monitor_id 
     FROM monitor_collector 
-        GROUP BY monitor_id`
+        GROUP BY monitor_id`,tmpId)
 
-	rawSql := `
+	rawSql := fmt.Printf(`
 SELECT
-    colids.collector_ids,
+    colids%d.collector_ids,
     GROUP_CONCAT(DISTINCT(monitor_collector_tag.tag)) as collector_tags,
     GROUP_CONCAT(DISTINCT(collector_tag.collector_id)) as tag_collectors,
     endpoint.slug as endpoint_slug,
@@ -202,10 +205,10 @@ SELECT
 FROM monitor
     INNER JOIN endpoint on endpoint.id = monitor.endpoint_id
     LEFT JOIN monitor_type ON monitor.monitor_type_id = monitor_type.id
-    LEFT JOIN monitor_collector ON monitor.id = monitor_collector.monitor_id
+    LEFT JOIN colids%d ON monitor.id = colids%d.monitor_id
     LEFT JOIN monitor_collector_tag ON monitor.id = monitor_collector_tag.monitor_id
     LEFT JOIN collector_tag on collector_tag.tag = monitor_collector_tag.tag AND collector_tag.org_id = monitor.org_id
-`
+`, tmpId, tmpId, tmpId)
 	whereSql := make([]string, 0)
 	if !query.IsGrafanaAdmin {
 		whereSql = append(whereSql, "monitor.org_id=?")
@@ -274,7 +277,7 @@ FROM monitor
 	if err != nil {
 		return err
 	}
-	err = sess.DropTable("colids")
+	err = sess.DropTable(fmt.Printf("colids%d", tmpId))
 	if err != nil {
 		return err
 	}
