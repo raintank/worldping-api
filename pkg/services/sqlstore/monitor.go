@@ -185,16 +185,16 @@ func GetMonitors(query *m.GetMonitorsQuery) error {
 	sess := x.Table("monitor")
 	rawParams := make([]interface{}, 0)
 	tmpId := rand.Int63() & 0xFFFFFFFF
-	colidSql := fmt.Printf(`
+	colidSql := fmt.Sprintf(`
 CREATE TEMPORARY TABLE colids%d 
     (PRIMARY KEY(monitor_id))
     SELECT 
         GROUP_CONCAT(DISTINCT(monitor_collector.collector_id)) AS collector_ids,
         monitor_id 
     FROM monitor_collector 
-        GROUP BY monitor_id`,tmpId)
+        GROUP BY monitor_id`, tmpId)
 
-	rawSql := fmt.Printf(`
+	rawSql := fmt.Sprintf(`
 SELECT
     colids%d.collector_ids,
     GROUP_CONCAT(DISTINCT(monitor_collector_tag.tag)) as collector_tags,
@@ -277,7 +277,7 @@ FROM monitor
 	if err != nil {
 		return err
 	}
-	err = sess.DropTable(fmt.Printf("colids%d", tmpId))
+	err = sess.DropTable(fmt.Sprintf("colids%d", tmpId))
 	if err != nil {
 		return err
 	}
