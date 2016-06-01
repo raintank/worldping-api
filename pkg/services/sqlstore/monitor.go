@@ -271,7 +271,7 @@ FROM monitor
 	rawSql += " GROUP BY monitor.id"
 
 	result := make([]*MonitorWithCollectorDTO, 0)
-	colidResult := make([]*CollectorIdsDTO)
+	colidResult := make([]*CollectorIdsDTO, 0)
 
 	err := sess.Sql(colidSql).Find(&colidResult)
 	if err != nil {
@@ -294,8 +294,8 @@ FROM monitor
 		var monitorCollectorIds []int64
 		monitorCollectorsMap := make(map[int64]bool)
 		if val, ok := collectorIdList[row.Id]; ok {
-			cols := strings.Split(val.CollectorIds)
-			monitorCollectorIds = make(map[]int64, 0, len(cols))
+			cols := strings.Split(val, ",")
+			monitorCollectorIds = make([]int64, 0, len(cols))
 			for _, l := range cols {
 				i, err := strconv.ParseInt(l, 10, 64)
 				if err != nil {
