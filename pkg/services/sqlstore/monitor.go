@@ -183,6 +183,9 @@ WHERE monitor.enabled=1 AND (? % monitor.frequency) = monitor.offset
 
 func GetMonitors(query *m.GetMonitorsQuery) error {
 	sess := x.Table("monitor")
+	sess.IsAutoClose = false
+	defer sess.Close()
+
 	rawParams := make([]interface{}, 0)
 	tmpId := rand.Int63() & 0xFFFFFFFF
 	colidSql := fmt.Sprintf(`
