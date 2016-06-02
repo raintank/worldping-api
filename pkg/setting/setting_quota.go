@@ -5,13 +5,13 @@ import (
 )
 
 type OrgQuota struct {
-	Endpoint  int64 `target:"endpoint"`
-	Collector int64 `target:"collector"`
+	Endpoint int64 `target:"endpoint"`
+	Probe    int64 `target:"probe"`
 }
 
 type GlobalQuota struct {
-	Endpoint  int64 `target:"endpoint"`
-	Collector int64 `target:"collector"`
+	Endpoint int64 `target:"endpoint"`
+	Probe    int64 `target:"probe"`
 }
 
 func (q *OrgQuota) ToMap() map[string]int64 {
@@ -55,14 +55,14 @@ func readQuotaSettings() {
 
 	// per ORG Limits
 	Quota.Org = &OrgQuota{
-		Endpoint:  quota.Key("org_endpoint").MustInt64(10),
-		Collector: quota.Key("org_collector").MustInt64(10),
+		Endpoint: quota.Key("org_endpoint").MustInt64(10),
+		Probe:    quota.Key("org_probe").MustInt64(10),
 	}
 
 	// Global Limits
 	Quota.Global = &GlobalQuota{
-		Endpoint:  quota.Key("global_endpoint").MustInt64(10),
-		Collector: quota.Key("global_collector").MustInt64(10),
+		Endpoint: quota.Key("global_endpoint").MustInt64(10),
+		Probe:    quota.Key("global_probe").MustInt64(10),
 	}
 
 }

@@ -37,30 +37,6 @@ type GlobalQuotaDTO struct {
 	Used   int64  `json:"used"`
 }
 
-type GetOrgQuotaByTargetQuery struct {
-	Target  string
-	OrgId   int64
-	Default int64
-	Result  *OrgQuotaDTO
-}
-
-type GetOrgQuotasQuery struct {
-	OrgId  int64
-	Result []*OrgQuotaDTO
-}
-
-type GetGlobalQuotaByTargetQuery struct {
-	Target  string
-	Default int64
-	Result  *GlobalQuotaDTO
-}
-
-type UpdateOrgQuotaCmd struct {
-	Target string `json:"target"`
-	Limit  int64  `json:"limit"`
-	OrgId  int64  `json:"-"`
-}
-
 func GetQuotaScopes(target string) ([]QuotaScope, error) {
 	scopes := make([]QuotaScope, 0)
 	switch target {
@@ -70,10 +46,10 @@ func GetQuotaScopes(target string) ([]QuotaScope, error) {
 			QuotaScope{Name: "org", Target: target, DefaultLimit: setting.Quota.Org.Endpoint},
 		)
 		return scopes, nil
-	case "collector":
+	case "probe":
 		scopes = append(scopes,
-			QuotaScope{Name: "global", Target: target, DefaultLimit: setting.Quota.Global.Collector},
-			QuotaScope{Name: "org", Target: target, DefaultLimit: setting.Quota.Org.Collector},
+			QuotaScope{Name: "global", Target: target, DefaultLimit: setting.Quota.Global.Probe},
+			QuotaScope{Name: "org", Target: target, DefaultLimit: setting.Quota.Org.Probe},
 		)
 		return scopes, nil
 	default:

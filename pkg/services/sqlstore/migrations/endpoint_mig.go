@@ -35,7 +35,7 @@ func addEndpointMigration(mg *Migrator) {
 			return err
 		}
 		for _, e := range endpoints {
-			e.UpdateEndpointSlug()
+			e.UpdateSlug()
 			if _, err := sess.Id(e.Id).Update(e); err != nil {
 				return err
 			}
@@ -62,5 +62,9 @@ func addEndpointMigration(mg *Migrator) {
 
 	//-------  indexes ------------------
 	addTableIndicesMigrations(mg, "v1", endpointTagV1)
+
+	mg.AddMigration("endpoint_tag add created v1", NewAddColumnMigration(endpointTagV1, &Column{
+		Name: "created", Type: DB_DateTime, Nullable: true,
+	}))
 
 }

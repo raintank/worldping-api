@@ -1,91 +1,133 @@
 package events
 
 import (
-	"reflect"
+	"encoding/json"
+	"os"
+	"sync"
 	"time"
+
+	"github.com/grafana/grafana/pkg/log"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
-// Events can be passed to external systems via for example AMQP
-// Treat these events as basically DTOs so changes has to be backward compatible
-
-type Priority string
-
-const (
-	PRIO_DEBUG Priority = "DEBUG"
-	PRIO_INFO  Priority = "INFO"
-	PRIO_ERROR Priority = "ERROR"
-)
-
-type Event struct {
-	Timestamp time.Time `json:"timestamp"`
+type Event interface {
+	Type() string
+	Timestamp() time.Time
+	Body() ([]byte, error)
 }
 
-type OnTheWireEvent struct {
-	EventType string      `json:"event_type"`
-	Priority  Priority    `json:"priority"`
-	Timestamp time.Time   `json:"timestamp"`
-	Payload   interface{} `json:"payload"`
+type RawEvent struct {
+	Type      string          `json:"type"`
+	Timestamp time.Time       `json:"timestamp"`
+	Body      json.RawMessage `json:"payload"`
+	Source    string          `json:"source"`
+	Attempts  int             `json:"attempts"`
 }
 
-type EventBase interface {
-	ToOnWriteEvent() *OnTheWireEvent
-}
-
-func ToOnWriteEvent(event interface{}) (*OnTheWireEvent, error) {
-	eventType := reflect.TypeOf(event).Elem()
-
-	wireEvent := OnTheWireEvent{
-		Priority:  PRIO_INFO,
-		EventType: eventType.Name(),
-		Payload:   event,
+func NewRawEventFromEvent(e Event) (*RawEvent, error) {
+	payload, err := e.Body()
+	if err != nil {
+		return nil, err
 	}
+	hostname, _ := os.Hostname()
+	raw := &RawEvent{
+		Type:      e.Type(),
+		Timestamp: e.Timestamp(),
+		Source:    hostname,
+		Body:      payload,
+	}
+	return raw, nil
+}
 
-	baseField := reflect.Indirect(reflect.ValueOf(event)).FieldByName("Timestamp")
-	if baseField.IsValid() {
-		wireEvent.Timestamp = baseField.Interface().(time.Time)
+type Handlers struct {
+	sync.Mutex
+	Listeners map[string][]chan<- RawEvent
+}
+
+func (h *Handlers) Add(key string, ch chan<- RawEvent) {
+	h.Lock()
+	if l, ok := h.Listeners[key]; !ok {
+		l = make([]chan<- RawEvent, 0)
+		h.Listeners[key] = l
+	}
+	h.Listeners[key] = append(h.Listeners[key], ch)
+	h.Unlock()
+}
+
+func (h *Handlers) GetListeners(key string) []chan<- RawEvent {
+	listeners := make([]chan<- RawEvent, 0)
+	h.Lock()
+	for rk, l := range h.Listeners {
+		if rk == "*" || rk == key {
+			listeners = append(listeners, l...)
+		}
+	}
+	h.Unlock()
+	return listeners
+}
+
+var (
+	handlers *Handlers
+	pubChan  chan Message
+	subChan  chan Message
+)
+
+func Init() {
+	handlers = &Handlers{
+		Listeners: make(map[string][]chan<- RawEvent),
+	}
+	pubChan = make(chan Message, 100)
+
+	if setting.Rabbitmq.Enabled {
+		// use rabbitmq for message distribution.
+		subChan = make(chan Message, 10)
+		go Run(setting.Rabbitmq.Url, setting.Rabbitmq.EventsExchange, pubChan, subChan)
+		go handleMessages(subChan)
 	} else {
-		wireEvent.Timestamp = time.Now()
+		// handle all message written to the publish chan.
+		go handleMessages(pubChan)
 	}
-
-	return &wireEvent, nil
+	return
 }
 
-type OrgCreated struct {
-	Timestamp time.Time `json:"timestamp"`
-	Id        int64     `json:"id"`
-	Name      string    `json:"name"`
+func Subscribe(t string, channel chan<- RawEvent) {
+	handlers.Add(t, channel)
 }
 
-type OrgUpdated struct {
-	Timestamp time.Time `json:"timestamp"`
-	Id        int64     `json:"id"`
-	Name      string    `json:"name"`
+func Publish(e Event, attempts int) error {
+	raw, err := NewRawEventFromEvent(e)
+	if err != nil {
+		return err
+	}
+	raw.Attempts = attempts + 1
+
+	body, err := json.Marshal(raw)
+	if err != nil {
+		return err
+	}
+	msg := Message{
+		RoutingKey: e.Type(),
+		Payload:    body,
+	}
+	pubChan <- msg
+	return nil
 }
 
-type UserCreated struct {
-	Timestamp time.Time `json:"timestamp"`
-	Id        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Login     string    `json:"login"`
-	Email     string    `json:"email"`
-}
+func handleMessages(c chan Message) {
+	for m := range c {
+		go func(msg Message) {
+			e := RawEvent{}
+			err := json.Unmarshal(msg.Payload, &e)
+			if err != nil {
+				log.Error(3, "unable to unmarshal event Message. %s", err)
+				return
+			}
 
-type SignUpStarted struct {
-	Timestamp time.Time `json:"timestamp"`
-	Email     string    `json:"email"`
-	Code      string    `json:"code"`
-}
-
-type SignUpCompleted struct {
-	Timestamp time.Time `json:"timestamp"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-}
-
-type UserUpdated struct {
-	Timestamp time.Time `json:"timestamp"`
-	Id        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Login     string    `json:"login"`
-	Email     string    `json:"email"`
+			log.Debug("processing event of type %s", e.Type)
+			//broadcast the event to listeners.
+			for _, ch := range handlers.GetListeners(e.Type) {
+				ch <- e
+			}
+		}(m)
+	}
 }

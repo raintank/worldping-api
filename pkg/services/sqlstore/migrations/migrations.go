@@ -10,7 +10,7 @@ import . "github.com/raintank/worldping-api/pkg/services/sqlstore/migrator"
 func AddMigrations(mg *Migrator) {
 	addMigrationLogMigrations(mg)
 	addCollectorMigration(mg)
-	addMonitorMigration(mg)
+	addCheckMigration(mg)
 	addEndpointMigration(mg)
 	addAlertSchedulerValueMigration(mg)
 	addQuotaMigration(mg)

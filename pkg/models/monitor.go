@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -46,6 +45,21 @@ type MonitorType struct {
 	Updated time.Time
 }
 
+var (
+	MonitorTypeToCheckTypeMap = []CheckType{
+		HTTP_CHECK,
+		HTTPS_CHECK,
+		PING_CHECK,
+		DNS_CHECK,
+	}
+	CheckTypeToMonitorTypeMap = map[CheckType]int64{
+		HTTP_CHECK:  1,
+		HTTPS_CHECK: 2,
+		PING_CHECK:  3,
+		DNS_CHECK:   4,
+	}
+)
+
 type MonitorTypeSetting struct {
 	Id            int64
 	MonitorTypeId int64
@@ -68,50 +82,14 @@ type Monitor struct {
 	State          CheckEvalResult
 	StateChange    time.Time
 	StateCheck     time.Time
-	Settings       []*MonitorSettingDTO
-	HealthSettings *MonitorHealthSettingDTO
+	Settings       []MonitorSettingDTO
+	HealthSettings *CheckHealthSettings
 	Created        time.Time
 	Updated        time.Time
 }
 
-type MonitorCollector struct {
-	Id          int64
-	MonitorId   int64
-	CollectorId int64
-}
-type MonitorCollectorTag struct {
-	Id        int64
-	MonitorId int64
-	Tag       string
-}
-
 // ---------------
 // DTOs
-
-type MonitorSettingDTO struct {
-	Variable string `json:"variable" binding:"Required"`
-	Value    string `json:"value"`
-}
-
-type MonitorHealthSettingDTO struct {
-	NumCollectors int                        `json:"num_collectors" binding:"Required"`
-	Steps         int                        `json:"steps" binding:"Required"`
-	Notifications MonitorNotificationSetting `json:"notifications"`
-}
-
-type MonitorNotificationSetting struct {
-	Enabled   bool   `json:"enabled"`
-	Addresses string `json:"addresses"`
-}
-
-// implement the go-xorm/core.Conversion interface
-func (e *MonitorHealthSettingDTO) FromDB(data []byte) error {
-	return json.Unmarshal(data, e)
-}
-
-func (e *MonitorHealthSettingDTO) ToDB() ([]byte, error) {
-	return json.Marshal(e)
-}
 
 type MonitorForAlertDTO struct {
 	Id              int64
@@ -126,8 +104,8 @@ type MonitorForAlertDTO struct {
 	Enabled         bool
 	StateChange     time.Time
 	StateCheck      time.Time
-	Settings        []*MonitorSettingDTO
-	HealthSettings  *MonitorHealthSettingDTO
+	Settings        []MonitorSettingDTO
+	HealthSettings  *CheckHealthSettings
 	Created         time.Time
 	Updated         time.Time
 }
@@ -141,24 +119,58 @@ func (m *MonitorForAlertDTO) SettingsMap() map[string]string {
 }
 
 type MonitorDTO struct {
-	Id              int64                    `json:"id"`
-	OrgId           int64                    `json:"org_id"`
-	EndpointId      int64                    `json:"endpoint_id" `
-	EndpointSlug    string                   `json:"endpoint_slug"`
-	MonitorTypeId   int64                    `json:"monitor_type_id"`
-	MonitorTypeName string                   `json:"monitor_type_name"`
-	CollectorIds    []int64                  `json:"collector_ids"`
-	CollectorTags   []string                 `json:"collector_tags"`
-	Collectors      []int64                  `json:"collectors"`
-	State           CheckEvalResult          `json:"state"`
-	StateChange     time.Time                `json:"state_change"`
-	StateCheck      time.Time                `json:"state_check"`
-	Settings        []*MonitorSettingDTO     `json:"settings"`
-	HealthSettings  *MonitorHealthSettingDTO `json:"health_settings"`
-	Frequency       int64                    `json:"frequency"`
-	Enabled         bool                     `json:"enabled"`
-	Offset          int64                    `json:"offset"`
-	Updated         time.Time                `json:"updated"`
+	Id              int64                `json:"id"`
+	OrgId           int64                `json:"org_id"`
+	EndpointId      int64                `json:"endpoint_id" `
+	EndpointSlug    string               `json:"endpoint_slug"`
+	MonitorTypeId   int64                `json:"monitor_type_id"`
+	MonitorTypeName string               `json:"monitor_type_name"`
+	CollectorIds    []int64              `json:"collector_ids"`
+	CollectorTags   []string             `json:"collector_tags"`
+	Collectors      []int64              `json:"collectors"`
+	State           CheckEvalResult      `json:"state"`
+	StateChange     time.Time            `json:"state_change"`
+	StateCheck      time.Time            `json:"state_check"`
+	Settings        []MonitorSettingDTO  `json:"settings"`
+	HealthSettings  *CheckHealthSettings `json:"health_settings"`
+	Frequency       int64                `json:"frequency"`
+	Enabled         bool                 `json:"enabled"`
+	Offset          int64                `json:"offset"`
+	Updated         time.Time            `json:"updated"`
+}
+
+func MonitorDTOFromCheck(c Check, endpointSlug string) MonitorDTO {
+	settings := make([]MonitorSettingDTO, 0)
+	for k, v := range c.Settings {
+		settings = append(settings, MonitorSettingDTO{
+			Variable: k,
+			Value:    fmt.Sprintf("%v", v),
+		})
+	}
+
+	m := MonitorDTO{
+		Id:              c.Id,
+		OrgId:           c.OrgId,
+		EndpointId:      c.EndpointId,
+		EndpointSlug:    endpointSlug,
+		MonitorTypeId:   CheckTypeToMonitorTypeMap[c.Type],
+		MonitorTypeName: string(c.Type),
+		State:           c.State,
+		StateChange:     c.StateChange,
+		StateCheck:      c.StateCheck,
+		HealthSettings:  c.HealthSettings,
+		Settings:        settings,
+		Frequency:       c.Frequency,
+		Offset:          c.Offset,
+		Enabled:         c.Enabled,
+		Updated:         c.Updated,
+	}
+	if c.Route.Type == RouteByIds {
+		m.CollectorIds = c.Route.Config["ids"].([]int64)
+	} else if c.Route.Type == RouteByTags {
+		m.CollectorTags = c.Route.Config["tags"].([]string)
+	}
+	return m
 }
 
 type MonitorTypeSettingDTO struct {
@@ -171,40 +183,40 @@ type MonitorTypeSettingDTO struct {
 }
 
 type MonitorTypeDTO struct {
-	Id       int64                    `json:"id"`
-	Name     string                   `json:"name"`
-	Settings []*MonitorTypeSettingDTO `json:"settings"`
+	Id       int64                   `json:"id"`
+	Name     string                  `json:"name"`
+	Settings []MonitorTypeSettingDTO `json:"settings"`
 }
 
 // ----------------------
 // COMMANDS
 
 type AddMonitorCommand struct {
-	OrgId          int64                    `json:"-"`
-	EndpointId     int64                    `json:"endpoint_id" binding:"Required"`
-	MonitorTypeId  int64                    `json:"monitor_type_id" binding:"Required"`
-	CollectorIds   []int64                  `json:"collector_ids"`
-	CollectorTags  []string                 `json:"collector_tags"`
-	Settings       []*MonitorSettingDTO     `json:"settings"`
-	HealthSettings *MonitorHealthSettingDTO `json:"health_settings"`
-	Frequency      int64                    `json:"frequency" binding:"Required;Range(10,600)"`
-	Enabled        bool                     `json:"enabled"`
-	Offset         int64                    `json:"-"`
-	Result         *MonitorDTO              `json:"-"`
+	OrgId          int64                `json:"-"`
+	EndpointId     int64                `json:"endpoint_id" binding:"Required"`
+	MonitorTypeId  int64                `json:"monitor_type_id" binding:"Required"`
+	CollectorIds   []int64              `json:"collector_ids"`
+	CollectorTags  []string             `json:"collector_tags"`
+	Settings       []MonitorSettingDTO  `json:"settings"`
+	HealthSettings *CheckHealthSettings `json:"health_settings"`
+	Frequency      int64                `json:"frequency" binding:"Required;Range(10,600)"`
+	Enabled        bool                 `json:"enabled"`
+	Offset         int64                `json:"-"`
+	Result         *MonitorDTO          `json:"-"`
 }
 
 type UpdateMonitorCommand struct {
-	Id             int64                    `json:"id" binding:"Required"`
-	EndpointId     int64                    `json:"endpoint_id" binding:"Required"`
-	OrgId          int64                    `json:"-"`
-	MonitorTypeId  int64                    `json:"monitor_type_id" binding:"Required"`
-	CollectorIds   []int64                  `json:"collector_ids"`
-	CollectorTags  []string                 `json:"collector_tags"`
-	Settings       []*MonitorSettingDTO     `json:"settings"`
-	HealthSettings *MonitorHealthSettingDTO `json:"health_settings"`
-	Frequency      int64                    `json:"frequency" binding:"Required;Range(10,600)"`
-	Enabled        bool                     `json:"enabled"`
-	Offset         int64                    `json:"-"`
+	Id             int64                `json:"id" binding:"Required"`
+	EndpointId     int64                `json:"endpoint_id" binding:"Required"`
+	OrgId          int64                `json:"-"`
+	MonitorTypeId  int64                `json:"monitor_type_id" binding:"Required"`
+	CollectorIds   []int64              `json:"collector_ids"`
+	CollectorTags  []string             `json:"collector_tags"`
+	Settings       []MonitorSettingDTO  `json:"settings"`
+	HealthSettings *CheckHealthSettings `json:"health_settings"`
+	Frequency      int64                `json:"frequency" binding:"Required;Range(10,600)"`
+	Enabled        bool                 `json:"enabled"`
+	Offset         int64                `json:"-"`
 }
 
 type DeleteMonitorCommand struct {
@@ -224,37 +236,5 @@ type UpdateMonitorStateCommand struct {
 // QUERIES
 
 type GetMonitorsQuery struct {
-	MonitorId      []int64         `form:"id"`
-	EndpointId     []int64         `form:"endpoint_id"`
-	MonitorTypeId  []int64         `form:"monitor_type_id"`
-	CollectorId    []int64         `form:"collector_id"`
-	Frequency      []int64         `form:"frequency"`
-	Enabled        string          `form:"enabled"`
-	Modulo         int64           `form:"modulo"`
-	ModuloOffset   int64           `form:"modulo_offset"`
-	State          CheckEvalResult `form:"state"`
-	OrgId          int64
-	IsGrafanaAdmin bool
-	Result         []*MonitorDTO
-}
-
-type GetMonitorByIdQuery struct {
-	Id             int64
-	OrgId          int64
-	IsGrafanaAdmin bool
-	Result         *MonitorDTO
-}
-
-type GetMonitorsForAlertsQuery struct {
-	Timestamp int64
-	Result    []*MonitorForAlertDTO
-}
-
-type GetMonitorTypesQuery struct {
-	Result []*MonitorTypeDTO
-}
-
-type GetMonitorTypeByIdQuery struct {
-	Id     int64
-	Result *MonitorTypeDTO
+	EndpointId int64 `form:"endpoint_id"`
 }
