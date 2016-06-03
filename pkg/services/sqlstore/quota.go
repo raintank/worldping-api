@@ -48,7 +48,7 @@ func getOrgQuotaByTarget(sess *session, orgId int64, target string, def int64) (
 }
 
 func GetOrgQuotas(orgId int64) ([]m.OrgQuotaDTO, error) {
-	sess, err := newSession(false, "endpoint")
+	sess, err := newSession(false, "quota")
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func GetOrgQuotas(orgId int64) ([]m.OrgQuotaDTO, error) {
 
 func getOrgQuotas(sess *session, orgId int64) ([]m.OrgQuotaDTO, error) {
 	quotas := make([]*m.Quota, 0)
-	if err := sess.Where("org_id=? AND user_id=0", orgId).Find(&quotas); err != nil {
+	if err := sess.Where("org_id=?", orgId).Find(&quotas); err != nil {
 		return nil, err
 	}
 
@@ -117,7 +117,6 @@ func updateOrgQuota(sess *session, q *m.OrgQuotaDTO) error {
 	quota := m.Quota{
 		Target: q.Target,
 		OrgId:  q.OrgId,
-		UserId: 0,
 	}
 	has, err := sess.Get(&quota)
 	if err != nil {

@@ -11,7 +11,6 @@ var ErrInvalidQuotaTarget = errors.New("Invalid quota target")
 type Quota struct {
 	Id      int64
 	OrgId   int64
-	UserId  int64
 	Target  string
 	Limit   int64
 	Created time.Time
