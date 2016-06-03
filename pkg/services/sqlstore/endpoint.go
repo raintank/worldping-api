@@ -779,16 +779,16 @@ func UpdateCheckState(cState *m.CheckState) (int64, error) {
 
 func updateCheckState(sess *session, cState *m.CheckState) (int64, error) {
 	sess.Table("check")
-	rawSql := "UPDATE check SET state=?, state_change=? WHERE id=? AND state != ? AND state_change < ?"
+	rawSql := "UPDATE `check` SET state=?, state_change=? WHERE id=? AND state != ? AND state_change < ?"
 
-	res, err := sess.Exec(rawSql, cState.State, cState.Updated, cState.Id, cState.State, cState.Updated)
+	res, err := sess.Exec(rawSql, int(cState.State), cState.Updated, cState.Id, int(cState.State), cState.Updated)
 	if err != nil {
 		return 0, err
 	}
 
 	aff, _ := res.RowsAffected()
 
-	rawSql = "UPDATE monitor SET state_check=? WHERE id=?"
+	rawSql = "UPDATE `check` SET state_check=? WHERE id=?"
 	res, err = sess.Exec(rawSql, cState.Checked, cState.Id)
 	if err != nil {
 		return aff, err
