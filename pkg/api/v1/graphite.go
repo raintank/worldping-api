@@ -1,4 +1,4 @@
-package api
+package v1
 
 import (
 	"fmt"
@@ -78,7 +78,6 @@ func executeRaintankDbQuery(query string, orgId int64) (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
-
 			for _, collector := range probes {
 				values = append(values, util.DynMap{"text": collector.Slug, "expandable": false})
 			}
