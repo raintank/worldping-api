@@ -26,6 +26,6 @@ echo "Linking ${GOPATH}/src/${REPO_PATH} to ${CHECKOUT}"
 mkdir -p ${GOPATH}/src/${ORG_PATH}
 ln -s ${CHECKOUT} ${GOPATH}/src/${REPO_PATH}
 
-cd ${CHECKOUT}
+cd ${GOPATH}/src/${REPO_PATH}
 go get ./...
 
