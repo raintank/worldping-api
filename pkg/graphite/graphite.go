@@ -143,6 +143,9 @@ func (gc *GraphiteContext) Query(r *bgraphite.Request) (bgraphite.Response, erro
 	if err != nil {
 		return res, err
 	}
+	// one Context might run multiple queries, we want to add all times
+	gc.Dur += time.Since(pre)
+
 	errors := make([]string, 0)
 	// currently I believe bosun doesn't do concurrent queries, but we should just be safe.
 	gc.lock.Lock()
@@ -172,9 +175,6 @@ func (gc *GraphiteContext) Query(r *bgraphite.Request) (bgraphite.Response, erro
 			}
 		}
 	}
-
-	// one Context might run multiple queries, we want to add all times
-	gc.Dur += time.Since(pre)
 
 	if gc.BadStart > 0 {
 		errors = append(errors, fmt.Sprintf("%d bad start ts", gc.BadStart))
