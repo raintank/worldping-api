@@ -15,8 +15,8 @@ var tickQueue = make(chan time.Time, setting.TickQueueSize)
 // Dispatcher dispatches, every second, all jobs that should run for that second
 // every job has an id so that you can run multiple dispatchers (for HA) while still only processing each job once.
 // (provided jobs get consistently routed to executors)
-func Dispatcher(jobQueue JobQueue) {
-	go dispatchJobs(jobQueue)
+func Dispatcher() {
+	go dispatchJobs()
 	offset := time.Duration(LoadOrSetOffset()) * time.Second
 	// no need to try resuming where we left off in the past.
 	// see https://github.com/raintank/grafana/issues/266
@@ -52,7 +52,7 @@ func Dispatcher(jobQueue JobQueue) {
 	}
 }
 
-func dispatchJobs(jobQueue JobQueue) {
+func dispatchJobs() {
 	for lastPointAt := range tickQueue {
 		tickQueueItems.Value(int64(len(tickQueue)))
 		tickQueueSize.Value(int64(setting.TickQueueSize))
@@ -73,7 +73,7 @@ func dispatchJobs(jobQueue JobQueue) {
 			job.LastPointTs = lastPointAt
 			job.assertStart()
 
-			jobQueue.Put(job)
+			PublishJob(job)
 
 			dispatcherJobsScheduled.Inc(1)
 		}

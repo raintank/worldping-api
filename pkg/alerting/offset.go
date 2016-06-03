@@ -5,36 +5,28 @@ import (
 	"strconv"
 
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/raintank/worldping-api/pkg/bus"
-	m "github.com/raintank/worldping-api/pkg/models"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 )
 
 func LoadOrSetOffset() int {
-	query := m.GetAlertSchedulerValueQuery{
-		Id: "offset",
-	}
-	err := bus.Dispatch(&query)
+	offset, err := sqlstore.GetAlertSchedulerValue("offset")
 	if err != nil {
 		panic(fmt.Sprintf("failure querying for current offset: %q", err))
 	}
-	if query.Result == "" {
+	if offset == "" {
 		log.Debug("initializing offset to default value of 30 seconds.")
 		setOffset(30)
 		return 30
 	}
-	i, err := strconv.Atoi(query.Result)
+	i, err := strconv.Atoi(offset)
 	if err != nil {
-		panic(fmt.Sprintf("failure reading in offset: %q. input value was: %q", err, query.Result))
+		panic(fmt.Sprintf("failure reading in offset: %q. input value was: %q", err, offset))
 	}
 	return i
 }
 
 func setOffset(offset int) {
-	update := m.UpdateAlertSchedulerValueCommand{
-		Id:    "offset",
-		Value: fmt.Sprintf("%d", offset),
-	}
-	err := bus.Dispatch(&update)
+	err := sqlstore.UpdateAlertSchedulerValue("offset", fmt.Sprintf("%d", offset))
 	if err != nil {
 		log.Error(0, "Could not persist offset: %q", err)
 	}

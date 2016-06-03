@@ -7,7 +7,6 @@ import (
 	"github.com/grafana/grafana/pkg/log"
 	"github.com/hashicorp/golang-lru"
 	"github.com/raintank/met"
-	"github.com/raintank/worldping-api/pkg/services/rabbitmq"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
@@ -15,6 +14,7 @@ var jobQueueInternalItems met.Gauge
 var jobQueueInternalSize met.Gauge
 var jobQueuePreAMQPItems met.Gauge
 var jobQueuePreAMQPSize met.Gauge
+
 var tickQueueItems met.Meter
 var tickQueueSize met.Gauge
 var dispatcherJobsSkippedDueToSlowJobQueueInternal met.Count
@@ -56,6 +56,7 @@ func Init(metrics met.Backend) {
 	jobQueueInternalSize = metrics.NewGauge("alert-jobqueue-internal.size", int64(setting.InternalJobQueueSize))
 	jobQueuePreAMQPItems = metrics.NewGauge("alert-jobqueue-preamqp.items", 0)
 	jobQueuePreAMQPSize = metrics.NewGauge("alert-jobqueue-preamqp.size", int64(setting.PreAMQPJobQueueSize))
+
 	tickQueueItems = metrics.NewMeter("alert-tickqueue.items", 0)
 	tickQueueSize = metrics.NewGauge("alert-tickqueue.size", int64(setting.TickQueueSize))
 	dispatcherJobsSkippedDueToSlowJobQueueInternal = metrics.NewCount("alert-dispatcher.jobs-skipped-due-to-slow-internal-jobqueue")
@@ -97,80 +98,22 @@ func Construct() {
 		panic(fmt.Sprintf("Can't create LRU: %s", err.Error()))
 	}
 
-	if setting.AlertingHandler != "amqp" && setting.AlertingHandler != "builtin" {
-		log.Fatal(0, "alerting handler must be either 'builtin' or 'amqp'")
+	if !setting.Rabbitmq.Enabled && !setting.EnableScheduler {
+		log.Fatal(3, "Alerting in standalone mode requires a scheduler (enable_scheduler = true)")
 	}
-	if setting.AlertingHandler == "amqp" {
-		sec := setting.Cfg.Section("event_publisher")
-		if !sec.Key("enabled").MustBool(false) {
-			log.Fatal(0, "alerting handler 'amqp' requires the event_publisher to be enabled")
-		}
-		url := sec.Key("rabbitmq_url").String()
-		if err := distributed(url, cache); err != nil {
-			log.Fatal(0, "failed to start amqp consumer.", err)
-		}
-		return
-	} else {
-		if !setting.EnableScheduler {
-			log.Fatal(0, "Alerting in standalone mode requires a scheduler (enable_scheduler = true)")
-		}
-		if setting.Executors == 0 {
-			log.Fatal(0, "Alerting in standalone mode requires at least 1 executor (try: executors = 10)")
-		}
 
-		standalone(cache)
-	}
-}
+	recvJobQueue := make(chan *Job, setting.InternalJobQueueSize)
 
-func standalone(cache *lru.Cache) {
-	jobQueue := newInternalJobQueue(setting.InternalJobQueueSize)
+	InitJobQueue(recvJobQueue)
 
 	// create jobs
-	go Dispatcher(jobQueue)
+	if setting.EnableScheduler {
+		go Dispatcher()
+	}
 
 	//start group of workers to execute the checks.
 	for i := 0; i < setting.Executors; i++ {
-		go ChanExecutor(GraphiteAuthContextReturner, jobQueue, cache)
-	}
-}
-
-func distributed(url string, cache *lru.Cache) error {
-	exchange := "alertingJobs"
-	exch := rabbitmq.Exchange{
-		Name:         exchange,
-		ExchangeType: "x-consistent-hash",
-		Durable:      true,
+		go ChanExecutor(GraphiteAuthContextReturner, recvJobQueue, cache)
 	}
 
-	if setting.EnableScheduler {
-		publisher := &rabbitmq.Publisher{Url: url, Exchange: &exch}
-		err := publisher.Connect()
-		if err != nil {
-			return err
-		}
-
-		jobQueue := newPreAMQPJobQueue(setting.PreAMQPJobQueueSize, publisher)
-
-		go Dispatcher(jobQueue)
-	}
-
-	q := rabbitmq.Queue{
-		Name:       "",
-		Durable:    false,
-		AutoDelete: true,
-		Exclusive:  true,
-	}
-	for i := 0; i < setting.Executors; i++ {
-		consumer := rabbitmq.Consumer{
-			Url:        url,
-			Exchange:   &exch,
-			Queue:      &q,
-			BindingKey: []string{"10"}, //consistant hashing weight.
-		}
-		if err := consumer.Connect(); err != nil {
-			log.Fatal(0, "failed to start event.consumer.", err)
-		}
-		AmqpExecutor(GraphiteAuthContextReturner, consumer, cache)
-	}
-	return nil
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/Dieterbe/profiletrigger/heap"
 	"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/met/helper"
-	//"github.com/raintank/worldping-api/pkg/alerting"
+	"github.com/raintank/worldping-api/pkg/alerting"
 	"github.com/raintank/worldping-api/pkg/api"
 	"github.com/raintank/worldping-api/pkg/cmd"
 	"github.com/raintank/worldping-api/pkg/events"
@@ -74,10 +74,10 @@ func main() {
 	collectoreventpublisher.Init(metricsBackend)
 
 	api.InitCollectorController(metricsBackend)
-	//if setting.AlertingEnabled {
-	//	alerting.Init(metricsBackend)
-	//	alerting.Construct()
-	//}
+	if setting.AlertingEnabled {
+		alerting.Init(metricsBackend)
+		alerting.Construct()
+	}
 
 	if err := notifications.Init(); err != nil {
 		log.Fatal(3, "Notification service failed to initialize", err)

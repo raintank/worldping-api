@@ -77,12 +77,12 @@ type Check struct {
 }
 
 type CheckHealthSettings struct {
-	NumProbes     int                        `json:"num_collectors" binding:"Required"`
-	Steps         int                        `json:"steps" binding:"Required"`
-	Notifications MonitorNotificationSetting `json:"notifications"`
+	NumProbes     int                      `json:"num_collectors" binding:"Required"`
+	Steps         int                      `json:"steps" binding:"Required"`
+	Notifications CheckNotificationSetting `json:"notifications"`
 }
 
-type MonitorNotificationSetting struct {
+type CheckNotificationSetting struct {
 	Enabled   bool   `json:"enabled"`
 	Addresses string `json:"addresses"`
 }
@@ -198,4 +198,31 @@ type GetEndpointsQuery struct {
 	OrderBy string `form:"orderBy", binding:"In(name,slug,created,updated,)"`
 	Limit   int    `form:"limit", binding:"Range(0,100)"`
 	Page    int    `form:"page"`
+}
+
+//Alerting
+
+type CheckState struct {
+	Id      int64
+	State   CheckEvalResult
+	Updated time.Time // this protects against jobs running out of order.
+	Checked time.Time
+}
+
+type CheckForAlertDTO struct {
+	Id             int64
+	OrgId          int64
+	EndpointId     int64
+	Slug           string
+	Name           string
+	Type           string
+	Offset         int64
+	Frequency      int64
+	Enabled        bool
+	StateChange    time.Time
+	StateCheck     time.Time
+	Settings       map[string]interface{} `xorm:"JSON"`
+	HealthSettings *CheckHealthSettings   `xorm:"JSON"`
+	Created        time.Time
+	Updated        time.Time
 }

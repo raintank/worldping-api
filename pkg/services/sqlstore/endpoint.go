@@ -22,6 +22,20 @@ func (endpointRows) TableName() string {
 	return "endpoint"
 }
 
+// scrutinizeState fixes the state.  We can't just trust what the database says, we have to verify that the value actually has been updated recently.
+// we can simply do this by requiring that the value has been updated since 2*frequency ago.
+func scrutinizeState(now time.Time, monitor *m.Check) {
+	if monitor.State == m.EvalResultUnknown {
+		return
+	}
+	freq := time.Duration(monitor.Frequency) * time.Second
+	oldest := now.Add(-3 * freq)
+	if monitor.StateCheck.Before(oldest) {
+		monitor.State = m.EvalResultUnknown
+		monitor.StateChange = monitor.StateCheck
+	}
+}
+
 func (rows endpointRows) ToDTO() []m.EndpointDTO {
 	endpointsById := make(map[int64]m.EndpointDTO)
 	endpointChecksById := make(map[int64]map[int64]m.Check)
@@ -67,6 +81,7 @@ func (rows endpointRows) ToDTO() []m.EndpointDTO {
 	i := 0
 	for _, e := range endpointsById {
 		for _, c := range endpointChecksById[e.Id] {
+			scrutinizeState(time.Now(), &c)
 			e.Checks = append(e.Checks, c)
 		}
 
@@ -745,5 +760,72 @@ func getProbeChecksWithEndpointSlug(sess *session, probe *m.ProbeDTO) ([]CheckWi
 	sess.In("`check`.id", cid)
 	sess.Cols("`check`.*", "endpoint.slug")
 	err = sess.Find(&checks)
+	return checks, err
+}
+
+func UpdateCheckState(cState *m.CheckState) (int64, error) {
+	sess, err := newSession(true, "check")
+	if err != nil {
+		return 0, err
+	}
+	defer sess.Cleanup()
+	var affected int64
+	if affected, err = updateCheckState(sess, cState); err != nil {
+		return 0, err
+	}
+	sess.Complete()
+	return affected, nil
+}
+
+func updateCheckState(sess *session, cState *m.CheckState) (int64, error) {
+	sess.Table("check")
+	rawSql := "UPDATE check SET state=?, state_change=? WHERE id=? AND state != ? AND state_change < ?"
+
+	res, err := sess.Exec(rawSql, cState.State, cState.Updated, cState.Id, cState.State, cState.Updated)
+	if err != nil {
+		return 0, err
+	}
+
+	aff, _ := res.RowsAffected()
+
+	rawSql = "UPDATE monitor SET state_check=? WHERE id=?"
+	res, err = sess.Exec(rawSql, cState.Checked, cState.Id)
+	if err != nil {
+		return aff, err
+	}
+
+	return aff, nil
+}
+
+func GetChecksForAlerts(ts int64) ([]m.CheckForAlertDTO, error) {
+	sess, err := newSession(false, "check")
+	if err != nil {
+		return nil, err
+	}
+	return getChecksForAlerts(sess, ts)
+}
+
+func getChecksForAlerts(sess *session, ts int64) ([]m.CheckForAlertDTO, error) {
+	sess.Join("INNER", "endpoint", "check.endpoint_id=endpoint.id")
+	sess.Where("`check`.enabled=1 AND (? % `check`.frequency) = `check`.offset", ts)
+	sess.Cols(
+		"`check`.id",
+		"`check`.org_id",
+		"`check`.endpoint_id",
+		"endpoint.slug",
+		"endpoint.name",
+		"`check`.type",
+		"`check`.offset",
+		"`check`.frequency",
+		"`check`.enabled",
+		"`check`.state_change",
+		"`check`.state_check",
+		"`check`.settings",
+		"`check`.health_settings",
+		"`check`.created",
+		"`check`.updated",
+	)
+	checks := make([]m.CheckForAlertDTO, 10)
+	err := sess.Find(&checks)
 	return checks, err
 }
