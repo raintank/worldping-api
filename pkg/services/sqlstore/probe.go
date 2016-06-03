@@ -275,11 +275,14 @@ func UpdateProbe(p *m.ProbeDTO) error {
 }
 
 func updateProbe(sess *session, p *m.ProbeDTO) error {
-	existing, err := getProbeById(sess, p.Id, p.OrgId)
+	existing, err := getProbeById(sess, p.Id, 0)
 	if err != nil {
 		return err
 	}
 	if existing == nil {
+		return m.ErrProbeNotFound
+	}
+	if !existing.Public && p.OrgId != existing.OrgId {
 		return m.ErrProbeNotFound
 	}
 	// If the OrgId is different, the only changes that can be made is to Tags.
