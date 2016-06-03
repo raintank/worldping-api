@@ -24,17 +24,15 @@ func (probeWithTags) TableName() string {
 
 func (rows probeWithTags) ToProbeDTO() []m.ProbeDTO {
 	probesById := make(map[int64]m.ProbeDTO)
+	probeTagsById := make(map[int64]map[string]struct{})
 	for _, r := range rows {
-		a, ok := probesById[r.Probe.Id]
+		_, ok := probesById[r.Probe.Id]
 		if !ok {
-			tags := make([]string, 0)
-			if r.ProbeTag.Tag != "" {
-				tags = append(tags, r.ProbeTag.Tag)
-			}
 			probesById[r.Probe.Id] = m.ProbeDTO{
 				Id:            r.Probe.Id,
 				Name:          r.Probe.Name,
 				Slug:          r.Probe.Slug,
+				Tags:          make([]string, 0),
 				Enabled:       r.Probe.Enabled,
 				EnabledChange: r.Probe.EnabledChange,
 				OrgId:         r.Probe.OrgId,
@@ -43,16 +41,22 @@ func (rows probeWithTags) ToProbeDTO() []m.ProbeDTO {
 				OnlineChange:  r.Probe.OnlineChange,
 				Created:       r.Probe.Created,
 				Updated:       r.Probe.Updated,
-				Tags:          tags,
 			}
-		} else if r.Tag != "" {
-			a.Tags = append(a.Tags, r.Tag)
+			probeTagsById[r.Probe.Id] = make(map[string]struct{})
+			if r.ProbeTag.Tag != "" {
+				probeTagsById[r.Probe.Id][r.ProbeTag.Tag] = struct{}{}
+			}
+		} else if r.ProbeTag.Tag != "" {
+			probeTagsById[r.Probe.Id][r.ProbeTag.Tag] = struct{}{}
 		}
 	}
 	probes := make([]m.ProbeDTO, len(probesById))
 	i := 0
-	for _, a := range probesById {
-		probes[i] = a
+	for _, p := range probesById {
+		for t := range probeTagsById[p.Id] {
+			p.Tags = append(p.Tags, t)
+		}
+		probes[i] = p
 		i++
 	}
 	return probes
@@ -67,6 +71,9 @@ func GetProbes(query *m.GetProbesQuery) ([]m.ProbeDTO, error) {
 }
 
 func getProbes(sess *session, query *m.GetProbesQuery) ([]m.ProbeDTO, error) {
+	if query.OrgId == 0 {
+		return nil, fmt.Errorf("GetProbesQuery requires OrgId to be set.")
+	}
 	var a probeWithTags
 	var rawSQL bytes.Buffer
 	args := make([]interface{}, 0)
@@ -75,7 +82,8 @@ func getProbes(sess *session, query *m.GetProbesQuery) ([]m.ProbeDTO, error) {
 	whereArgs := make([]interface{}, 0)
 	prefix := "WHERE"
 
-	fmt.Fprint(&rawSQL, "SELECT probe.*, probe_tag.* FROM probe LEFT JOIN probe_tag ON  probe.id = probe_tag.probe_id ")
+	fmt.Fprint(&rawSQL, "SELECT probe.*, probe_tag.* FROM probe LEFT JOIN probe_tag ON  probe.id = probe_tag.probe_id AND probe_tag.org_id=? ")
+	args = append(args, query.OrgId)
 	if query.Tag != "" {
 		fmt.Fprint(&rawSQL, "INNER JOIN probe_tag as pt ON probe.id = pt.probe_id ")
 		fmt.Fprintf(&where, "%s pt.tag = ? ", prefix)
@@ -163,11 +171,11 @@ func GetProbeById(id int64, orgId int64) (*m.ProbeDTO, error) {
 
 func getProbeById(sess *session, id int64, orgId int64) (*m.ProbeDTO, error) {
 	var a probeWithTags
+	sess.Join("LEFT", "probe_tag", "probe.id = probe_tag.probe_id AND probe_tag.org_id=?", orgId)
 	sess.Where("probe.id=?", id)
-	if orgId != 0 {
-		sess.And("probe.org_id=?", orgId)
-	}
-	err := sess.Join("LEFT", "probe_tag", "probe.id = probe_tag.probe_id").Find(&a)
+	sess.And("probe.org_id=? OR probe.public=1", orgId)
+
+	err := sess.Find(&a)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +197,7 @@ func getProbeByName(sess *session, name string, orgId int64) (*m.ProbeDTO, error
 	var a probeWithTags
 	sess.Where("probe.name=? AND probe.org_id=?", name, orgId)
 
-	err := sess.Join("LEFT", "probe_tag", "probe.id = probe_tag.probe_id").Find(&a)
+	err := sess.Join("LEFT", "probe_tag", "probe.id = probe_tag.probe_id AND probe_tag.org_id=?", orgId).Find(&a)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +283,7 @@ func UpdateProbe(p *m.ProbeDTO) error {
 }
 
 func updateProbe(sess *session, p *m.ProbeDTO) error {
-	existing, err := getProbeById(sess, p.Id, 0)
+	existing, err := getProbeById(sess, p.Id, p.OrgId)
 	if err != nil {
 		return err
 	}
@@ -403,8 +411,7 @@ func getProbesForCheck(sess *session, c *m.Check) ([]int64, error) {
 		for i, tag := range c.Route.Config["tags"].([]string) {
 			tags[i] = tag
 		}
-		sess.Join("LEFT", "probe_tag", "probe.id = probe_tag.probe_id")
-		sess.Where("probe_tag.org_id = ?", c.OrgId)
+		sess.Join("LEFT", "probe_tag", "probe.id = probe_tag.probe_id AND probe_tag.org_id=?", c.OrgId)
 		sess.In("probe_tag.tag", tags)
 		sess.Cols("probe.id")
 		err := sess.Find(&probes)
