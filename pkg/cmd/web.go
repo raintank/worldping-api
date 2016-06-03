@@ -26,8 +26,6 @@ func newMacaron() *macaron.Macaron {
 		}
 	})
 
-	m.Use(macaron.Renderer())
-
 	return m
 }
 
