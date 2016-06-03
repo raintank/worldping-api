@@ -49,7 +49,7 @@ type MonitorWithCollectorDTO struct {
 
 type CollectorIdsDTO struct {
 	CollectorIds string
-	MonitorId int64
+	MonitorId    int64
 }
 
 // scrutinizeState fixes the state.  We can't just trust what the database says, we have to verify that the value actually has been updated recently.
