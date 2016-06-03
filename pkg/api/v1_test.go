@@ -299,3 +299,104 @@ func TestMonitorTypesV1Api(t *testing.T) {
 		})
 	})
 }
+
+func populateCollectors(t *testing.T) {
+	for _, i := range []int{1, 2, 3} {
+		err := sqlstore.AddProbe(&m.ProbeDTO{
+			Name:      fmt.Sprintf("test%d", i),
+			OrgId:     1,
+			Tags:      []string{"test", fmt.Sprintf("dev%d", i%2)},
+			Public:    false,
+			Latitude:  1.0,
+			Longitude: 1.0,
+			Online:    false,
+			Enabled:   true,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, i := range []int{1, 2} {
+		pubProbe := &m.ProbeDTO{
+			Name:      fmt.Sprintf("public%d", i),
+			OrgId:     2,
+			Tags:      []string{"public"},
+			Public:    true,
+			Latitude:  1.0,
+			Longitude: 1.0,
+			Online:    false,
+			Enabled:   true,
+		}
+		err := sqlstore.AddProbe(pubProbe)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// add tags for orgid 1 for pub probes owned by orgId2
+		pubProbe.OrgId = 1
+		pubProbe.Tags = []string{"pTest", "test", "foo"}
+		err = sqlstore.UpdateProbe(pubProbe)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestProbesV1Api(t *testing.T) {
+	InitTestDB(t)
+	r := macaron.Classic()
+	setting.AdminKey = "test"
+	Register(r)
+	populateCollectors(t)
+
+	Convey("Given GET request for /api/collectors", t, func() {
+		resp := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/api/collectors", nil)
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("should return 200", func() {
+			So(resp.Code, ShouldEqual, 200)
+			Convey("collectors response should be valid", func() {
+				probes := make([]m.ProbeDTO, 0)
+				err := json.Unmarshal(resp.Body.Bytes(), &probes)
+				So(err, ShouldBeNil)
+				So(len(probes), ShouldEqual, 5)
+				for _, probe := range probes {
+					if probe.Public {
+						So(len(probe.Tags), ShouldEqual, 3)
+						So(probe.OrgId, ShouldEqual, 2)
+						So(probe.Name, ShouldStartWith, "public")
+					} else {
+						t.Log(fmt.Sprintf("tags for %s: %v", probe.Name, probe.Tags))
+						So(len(probe.Tags), ShouldEqual, 2)
+						So(probe.OrgId, ShouldEqual, 1)
+						So(probe.Name, ShouldStartWith, "test")
+					}
+				}
+			})
+		})
+	})
+	Convey("Given GET request for /api/collectors/1", t, func() {
+		resp := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/api/collectors/1", nil)
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("should return 200", func() {
+			So(resp.Code, ShouldEqual, 200)
+			Convey("collectors response should be valid", func() {
+				probe := m.ProbeDTO{}
+				err := json.Unmarshal(resp.Body.Bytes(), &probe)
+				So(err, ShouldBeNil)
+				So(probe.Name, ShouldEqual, "test1")
+				So(probe.Public, ShouldEqual, false)
+				So(len(probe.Tags), ShouldEqual, 2)
+				So(probe.Tags, ShouldContain, "test")
+				So(probe.Tags, ShouldContain, "dev1")
+			})
+		})
+	})
+}
