@@ -3,6 +3,16 @@ package rbody
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/Unknwon/macaron"
+	"github.com/grafana/grafana/pkg/log"
+	"github.com/raintank/worldping-api/pkg/middleware"
+)
+
+var (
+	NotFound         = ErrResp(404, fmt.Errorf("Not found"))
+	PermissionDenied = ErrResp(403, fmt.Errorf("Permission Denied"))
+	ServerError      = ErrResp(500, fmt.Errorf("Server error"))
 )
 
 type ApiError struct {
@@ -58,4 +68,22 @@ func ErrResp(code int, err error) *ApiResponse {
 		Body: json.RawMessage([]byte("null")),
 	}
 	return resp
+}
+
+func Wrap(action interface{}) macaron.Handler {
+	return func(c *middleware.Context) {
+		var res *ApiResponse
+		val, err := c.Invoke(action)
+		if err == nil && val != nil && len(val) > 0 {
+			res = val[0].Interface().(*ApiResponse)
+		} else {
+			res = ServerError
+		}
+
+		if res.Meta.Code == 500 {
+			log.Error(3, "server error: %s", res.Meta.Message)
+		}
+
+		c.JSON(200, res)
+	}
 }
