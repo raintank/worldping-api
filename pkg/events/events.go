@@ -95,6 +95,10 @@ func Subscribe(t string, channel chan<- RawEvent) {
 }
 
 func Publish(e Event, attempts int) error {
+	if handlers == nil {
+		// not initialized.
+		return nil
+	}
 	raw, err := NewRawEventFromEvent(e)
 	if err != nil {
 		return err
