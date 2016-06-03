@@ -76,16 +76,10 @@ func getProbes(sess *session, query *m.GetProbesQuery) ([]m.ProbeDTO, error) {
 	prefix := "WHERE"
 
 	fmt.Fprint(&rawSQL, "SELECT probe.*, probe_tag.* FROM probe LEFT JOIN probe_tag ON  probe.id = probe_tag.probe_id ")
-	if len(query.Tag) > 0 {
+	if query.Tag != "" {
 		fmt.Fprint(&rawSQL, "INNER JOIN probe_tag as pt ON probe.id = pt.probe_id ")
-		p := make([]string, len(query.Tag))
-		for i, tag := range query.Tag {
-			p[i] = "?"
-			whereArgs = append(whereArgs, tag)
-		}
-		filter := fmt.Sprintf("pt.tag IN (%s)", strings.Join(p, ","))
-
-		fmt.Fprintf(&where, "%s %s ", prefix, filter)
+		fmt.Fprintf(&where, "%s pt.tag = ? ", prefix)
+		whereArgs = append(whereArgs, query.Tag)
 		prefix = "AND"
 	}
 
