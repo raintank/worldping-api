@@ -5,7 +5,6 @@ import (
 	"github.com/macaron-contrib/binding"
 	"github.com/raintank/raintank-apps/pkg/auth"
 	"github.com/raintank/worldping-api/pkg/api/rbody"
-	"github.com/raintank/worldping-api/pkg/api/v1"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
@@ -38,44 +37,44 @@ func Register(r *macaron.Macaron) {
 	r.Group("/api", func() {
 		// org information available to all users.
 		r.Group("/org", func() {
-			r.Get("/quotas", v1.GetOrgQuotas)
+			r.Get("/quotas", V1GetOrgQuotas)
 		})
 
 		r.Group("/collectors", func() {
 			r.Combo("/").
-				Get(bind(m.GetProbesQuery{}), v1.GetCollectors).
-				Put(reqEditorRole, quota("probe"), bind(m.ProbeDTO{}), v1.AddCollector).
-				Post(reqEditorRole, bind(m.ProbeDTO{}), v1.UpdateCollector)
-			r.Get("/locations", v1.GetCollectorLocations)
-			r.Get("/:id", v1.GetCollectorById)
-			r.Delete("/:id", reqEditorRole, v1.DeleteCollector)
+				Get(bind(m.GetProbesQuery{}), V1GetCollectors).
+				Put(reqEditorRole, quota("probe"), bind(m.ProbeDTO{}), V1AddCollector).
+				Post(reqEditorRole, bind(m.ProbeDTO{}), V1UpdateCollector)
+			r.Get("/locations", V1GetCollectorLocations)
+			r.Get("/:id", V1GetCollectorById)
+			r.Delete("/:id", reqEditorRole, V1DeleteCollector)
 		})
 
 		// Monitors
 		r.Group("/monitors", func() {
 			r.Combo("/").
-				Get(bind(m.GetMonitorsQuery{}), v1.GetMonitors).
-				Put(reqEditorRole, bind(m.AddMonitorCommand{}), v1.AddMonitor).
-				Post(reqEditorRole, bind(m.UpdateMonitorCommand{}), v1.UpdateMonitor)
-			r.Delete("/:id", reqEditorRole, v1.DeleteMonitor)
+				Get(bind(m.GetMonitorsQuery{}), V1GetMonitors).
+				Put(reqEditorRole, bind(m.AddMonitorCommand{}), V1AddMonitor).
+				Post(reqEditorRole, bind(m.UpdateMonitorCommand{}), V1UpdateMonitor)
+			r.Delete("/:id", reqEditorRole, V1DeleteMonitor)
 		})
 		// endpoints
 		r.Group("/endpoints", func() {
-			r.Combo("/").Get(bind(m.GetEndpointsQuery{}), v1.GetEndpoints).
-				Put(reqEditorRole, quota("endpoint"), bind(m.AddEndpointCommand{}), v1.AddEndpoint).
-				Post(reqEditorRole, bind(m.UpdateEndpointCommand{}), v1.UpdateEndpoint)
-			r.Get("/:id", v1.GetEndpointById)
-			r.Delete("/:id", reqEditorRole, v1.DeleteEndpoint)
-			r.Get("/discover", reqEditorRole, bind(m.DiscoverEndpointCmd{}), v1.DiscoverEndpoint)
+			r.Combo("/").Get(bind(m.GetEndpointsQuery{}), V1GetEndpoints).
+				Put(reqEditorRole, quota("endpoint"), bind(m.AddEndpointCommand{}), V1AddEndpoint).
+				Post(reqEditorRole, bind(m.UpdateEndpointCommand{}), V1UpdateEndpoint)
+			r.Get("/:id", V1GetEndpointById)
+			r.Delete("/:id", reqEditorRole, V1DeleteEndpoint)
+			r.Get("/discover", reqEditorRole, bind(m.DiscoverEndpointCmd{}), V1DiscoverEndpoint)
 		})
 
-		r.Get("/monitor_types", v1.GetMonitorTypes)
+		r.Get("/monitor_types", V1GetMonitorTypes)
 
 		//Get Graph data from Graphite.
-		r.Any("/graphite/*", v1.GraphiteProxy)
+		r.Any("/graphite/*", V1GraphiteProxy)
 
 		//Elasticsearch proxy
-		r.Any("/elasticsearch/*", v1.ElasticsearchProxy)
+		r.Any("/elasticsearch/*", V1ElasticsearchProxy)
 
 	}, middleware.Auth(setting.AdminKey))
 

@@ -1,4 +1,4 @@
-package v1
+package api
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 )
 
-func GetMonitors(c *middleware.Context, query m.GetMonitorsQuery) {
+func V1GetMonitors(c *middleware.Context, query m.GetMonitorsQuery) {
 	endpoint, err := sqlstore.GetEndpointById(c.OrgId, query.EndpointId)
 	if err != nil {
 		c.JSON(500, fmt.Sprintf("Failed to list monitors. %s", err))
@@ -33,11 +33,11 @@ func GetMonitors(c *middleware.Context, query m.GetMonitorsQuery) {
 	c.JSON(200, monitors)
 }
 
-func GetMonitorTypes(c *middleware.Context) {
+func V1GetMonitorTypes(c *middleware.Context) {
 	c.JSON(200, m.MonitorTypes)
 }
 
-func DeleteMonitor(c *middleware.Context) {
+func V1DeleteMonitor(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
 	check, err := sqlstore.GetCheckById(c.OrgId, id)
@@ -73,7 +73,7 @@ func DeleteMonitor(c *middleware.Context) {
 	c.JSON(200, "monitor deleted")
 }
 
-func AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
+func V1AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 	cmd.OrgId = c.OrgId
 	if cmd.EndpointId == 0 {
 		c.JSON(400, "EndpointId not set.")
@@ -156,7 +156,7 @@ func AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 	return
 }
 
-func UpdateMonitor(c *middleware.Context, cmd m.UpdateMonitorCommand) {
+func V1UpdateMonitor(c *middleware.Context, cmd m.UpdateMonitorCommand) {
 	cmd.OrgId = c.OrgId
 	if cmd.EndpointId == 0 {
 		c.JSON(400, "EndpointId not set.")

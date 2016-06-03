@@ -1,4 +1,4 @@
-package v1
+package api
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 )
 
-func GetEndpointById(c *middleware.Context) {
+func V1GetEndpointById(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
 	endpoint, err := sqlstore.GetEndpointById(c.OrgId, id)
@@ -24,7 +24,7 @@ func GetEndpointById(c *middleware.Context) {
 	return
 }
 
-func GetEndpoints(c *middleware.Context, query m.GetEndpointsQuery) {
+func V1GetEndpoints(c *middleware.Context, query m.GetEndpointsQuery) {
 	query.OrgId = c.OrgId
 
 	endpoints, err := sqlstore.GetEndpoints(&query)
@@ -35,7 +35,7 @@ func GetEndpoints(c *middleware.Context, query m.GetEndpointsQuery) {
 	c.JSON(200, endpoints)
 }
 
-func DeleteEndpoint(c *middleware.Context) {
+func V1DeleteEndpoint(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
 	err := sqlstore.DeleteEndpoint(c.OrgId, id)
@@ -48,7 +48,7 @@ func DeleteEndpoint(c *middleware.Context) {
 	return
 }
 
-func AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) {
+func V1AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) {
 	cmd.OrgId = c.OrgId
 	if cmd.Name == "" {
 		c.JSON(400, fmt.Sprintf("Endpoint name not set.", nil))
@@ -92,7 +92,7 @@ func AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) {
 	c.JSON(200, endpoint)
 }
 
-func UpdateEndpoint(c *middleware.Context, cmd m.UpdateEndpointCommand) {
+func V1UpdateEndpoint(c *middleware.Context, cmd m.UpdateEndpointCommand) {
 	cmd.OrgId = c.OrgId
 	if cmd.Name == "" {
 		c.JSON(400, fmt.Sprintf("Endpoint name not set.", nil))
@@ -121,7 +121,7 @@ func UpdateEndpoint(c *middleware.Context, cmd m.UpdateEndpointCommand) {
 	c.JSON(200, "Endpoint updated")
 }
 
-func DiscoverEndpoint(c *middleware.Context, cmd m.DiscoverEndpointCmd) {
+func V1DiscoverEndpoint(c *middleware.Context, cmd m.DiscoverEndpointCmd) {
 	checks, err := endpointdiscovery.Discover(cmd.Name)
 	if err != nil {
 		c.JSON(500, fmt.Sprintf("Failed to discover endpoint. %s", err))

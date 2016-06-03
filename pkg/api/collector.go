@@ -1,4 +1,4 @@
-package v1
+package api
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 )
 
-func GetCollectors(c *middleware.Context, query m.GetProbesQuery) {
+func V1GetCollectors(c *middleware.Context, query m.GetProbesQuery) {
 	query.OrgId = c.OrgId
 	probes, err := sqlstore.GetProbes(&query)
 	if err != nil {
@@ -20,7 +20,7 @@ func GetCollectors(c *middleware.Context, query m.GetProbesQuery) {
 	return
 }
 
-func GetCollectorLocations(c *middleware.Context) {
+func V1GetCollectorLocations(c *middleware.Context) {
 	query := m.GetProbesQuery{
 		OrgId: c.OrgId,
 	}
@@ -45,7 +45,7 @@ func GetCollectorLocations(c *middleware.Context) {
 	return
 }
 
-func GetCollectorById(c *middleware.Context) {
+func V1GetCollectorById(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
 	probe, err := sqlstore.GetProbeById(id, c.OrgId)
@@ -58,7 +58,7 @@ func GetCollectorById(c *middleware.Context) {
 	return
 }
 
-func DeleteCollector(c *middleware.Context) {
+func V1DeleteCollector(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
 	err := sqlstore.DeleteProbe(id, c.OrgId)
@@ -71,7 +71,7 @@ func DeleteCollector(c *middleware.Context) {
 	return
 }
 
-func AddCollector(c *middleware.Context, probe m.ProbeDTO) {
+func V1AddCollector(c *middleware.Context, probe m.ProbeDTO) {
 	probe.OrgId = c.OrgId
 	if probe.Id != 0 {
 		c.JSON(400, "Id already set. Try update instead of create.")
@@ -91,7 +91,7 @@ func AddCollector(c *middleware.Context, probe m.ProbeDTO) {
 	return
 }
 
-func UpdateCollector(c *middleware.Context, probe m.ProbeDTO) {
+func V1UpdateCollector(c *middleware.Context, probe m.ProbeDTO) {
 	probe.OrgId = c.OrgId
 	if probe.Name == "" {
 		c.JSON(400, "Collector Name not set.")

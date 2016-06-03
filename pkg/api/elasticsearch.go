@@ -1,4 +1,4 @@
-package v1
+package api
 
 import (
 	"bytes"
@@ -19,7 +19,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
-func ElasticsearchProxy(c *middleware.Context) {
+func V1ElasticsearchProxy(c *middleware.Context) {
 	proxyPath := c.Params("*")
 	target, _ := url.Parse(setting.ElasticsearchUrl)
 

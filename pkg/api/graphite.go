@@ -1,4 +1,4 @@
-package v1
+package api
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
-func GraphiteProxy(c *middleware.Context) {
+func V1GraphiteProxy(c *middleware.Context) {
 	proxyPath := c.Params("*")
 	target, _ := url.Parse(setting.GraphiteUrl)
 
