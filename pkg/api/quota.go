@@ -1,7 +1,6 @@
 package api
 
 import (
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/worldping-api/pkg/api/rbody"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
@@ -9,15 +8,13 @@ import (
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
-func GetQuotas(c *middleware.Context) {
+func GetQuotas(c *middleware.Context) *rbody.ApiResponse {
 	var quotas []m.OrgQuotaDTO
 	var err error
 	if setting.Quota.Enabled {
 		quotas, err = sqlstore.GetOrgQuotas(c.OrgId)
 		if err != nil {
-			log.Error(3, err.Error())
-			c.JSON(200, rbody.ErrResp(500, err))
-			return
+			return rbody.ErrResp(500, err)
 		}
 	} else {
 		quotas = []m.OrgQuotaDTO{
@@ -36,19 +33,17 @@ func GetQuotas(c *middleware.Context) {
 		}
 	}
 
-	c.JSON(200, rbody.OkResp("quotas", quotas))
+	return rbody.OkResp("quotas", quotas)
 }
 
-func GetOrgQuotas(c *middleware.Context) {
+func GetOrgQuotas(c *middleware.Context) *rbody.ApiResponse {
 	var quotas []m.OrgQuotaDTO
 	var err error
 	org := c.ParamsInt64("orgId")
 	if setting.Quota.Enabled {
 		quotas, err = sqlstore.GetOrgQuotas(org)
 		if err != nil {
-			log.Error(3, err.Error())
-			c.JSON(200, rbody.ErrResp(500, err))
-			return
+			return rbody.ErrResp(500, err)
 		}
 	} else {
 		quotas = []m.OrgQuotaDTO{
@@ -67,17 +62,16 @@ func GetOrgQuotas(c *middleware.Context) {
 		}
 	}
 
-	c.JSON(200, rbody.OkResp("quotas", quotas))
+	return rbody.OkResp("quotas", quotas)
 }
 
-func UpdateOrgQuota(c *middleware.Context) {
+func UpdateOrgQuota(c *middleware.Context) *rbody.ApiResponse {
 	orgId := c.ParamsInt64(":orgId")
 	target := c.Params(":target")
 	limit := c.ParamsInt64(":limit")
 
 	if _, ok := setting.Quota.Org.ToMap()[target]; !ok {
-		c.JSON(404, "target not found")
-		return
+		return rbody.NotFound
 	}
 
 	quota := m.OrgQuotaDTO{
@@ -87,9 +81,7 @@ func UpdateOrgQuota(c *middleware.Context) {
 	}
 	err := sqlstore.UpdateOrgQuota(&quota)
 	if err != nil {
-		log.Error(3, err.Error())
-		c.JSON(200, rbody.ErrResp(500, err))
-		return
+		return rbody.ErrResp(500, err)
 	}
-	c.JSON(200, rbody.OkResp("quota", quota))
+	return rbody.OkResp("quota", quota)
 }

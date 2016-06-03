@@ -4,7 +4,8 @@ import (
 	"github.com/Unknwon/macaron"
 	"github.com/macaron-contrib/binding"
 	"github.com/raintank/raintank-apps/pkg/auth"
-	v1 "github.com/raintank/worldping-api/pkg/api/v1"
+	"github.com/raintank/worldping-api/pkg/api/rbody"
+	"github.com/raintank/worldping-api/pkg/api/v1"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
@@ -12,20 +13,22 @@ import (
 
 // Register adds http routes
 func Register(r *macaron.Macaron) {
+	r.Use(macaron.Renderer())
 	r.Use(middleware.GetContextHandler())
 	reqEditorRole := middleware.RoleAuth(auth.ROLE_EDITOR, auth.ROLE_ADMIN)
 	quota := middleware.Quota
 	bind := binding.Bind
+	wrap := rbody.Wrap
 
 	// used by LB healthchecks
 	r.Get("/login", Heartbeat)
 
 	r.Group("/api/v2", func() {
-		r.Get("/quotas", GetQuotas)
+		r.Get("/quotas", wrap(GetQuotas))
 		r.Group("/admin", func() {
 			r.Group("/quotas", func() {
-				r.Get("/:orgId", GetOrgQuotas)
-				r.Put("/:orgId/:target/:limit", UpdateOrgQuota)
+				r.Get("/:orgId", wrap(GetOrgQuotas))
+				r.Put("/:orgId/:target/:limit", wrap(UpdateOrgQuota))
 			})
 		}, middleware.RequireAdmin())
 
