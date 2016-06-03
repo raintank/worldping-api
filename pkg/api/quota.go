@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 
+	"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/worldping-api/pkg/api/rbody"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
@@ -16,6 +17,7 @@ func V1GetOrgQuotas(c *middleware.Context) {
 	if setting.Quota.Enabled {
 		quotas, err = sqlstore.GetOrgQuotas(c.OrgId)
 		if err != nil {
+			log.Error(3, "failed to get quotas. %s", err)
 			c.JSON(500, fmt.Sprintf("failed to get quotas. %s", err))
 			return
 		}
