@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
@@ -94,7 +95,8 @@ func AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 	// get the endpoint that the check belongs too.
 	endpoint, err := sqlstore.GetEndpointById(c.OrgId, cmd.EndpointId)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf(". %s", err))
+		log.Error(3, "failed to add get endpoint for check. %s", err)
+		c.JSON(500, fmt.Sprintf("failed to add get endpoint for check %s", err))
 		return
 	}
 	if endpoint == nil {
@@ -138,6 +140,7 @@ func AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 	//Update endpoint
 	err = sqlstore.UpdateEndpoint(endpoint)
 	if err != nil {
+		log.Error(3, "failed to add check to endpoint. %s", err)
 		c.JSON(500, fmt.Sprintf("failed to add check to endpoint. %s", err))
 	}
 
@@ -175,11 +178,12 @@ func UpdateMonitor(c *middleware.Context, cmd m.UpdateMonitorCommand) {
 	// get the endpoint that the check belongs too.
 	endpoint, err := sqlstore.GetEndpointById(c.OrgId, cmd.EndpointId)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf(". %s", err))
+		log.Error(3, "failed to get endpoint for check. %s", err)
+		c.JSON(500, fmt.Sprintf("failed to get endpoint for check %s", err))
 		return
 	}
 	if endpoint == nil {
-		c.JSON(400, "endpoing does not exist.")
+		c.JSON(400, "endpoint does not exist.")
 		return
 	}
 	route := &m.CheckRoute{}
@@ -194,25 +198,36 @@ func UpdateMonitor(c *middleware.Context, cmd m.UpdateMonitorCommand) {
 			"ids": cmd.CollectorIds,
 		}
 	}
-	for _, check := range endpoint.Checks {
+	checkPos := 0
+	found := false
+	for pos, check := range endpoint.Checks {
 		if check.Id == cmd.Id {
+			checkPos = pos
+			found = true
+			log.Debug("updating check %d of endpoint %s", check.Id, endpoint.Slug)
 			if check.Type != m.MonitorTypeToCheckTypeMap[cmd.MonitorTypeId-1] {
 				c.JSON(400, "monitor Type cant be changed.")
 				return
 			}
-			check.Frequency = cmd.Frequency
-			check.Enabled = cmd.Enabled
-			check.HealthSettings = cmd.HealthSettings
-			check.Updated = time.Now()
-			check.Route = route
-			check.Settings = m.MonitorSettingsDTO(cmd.Settings).ToV2Setting(m.MonitorTypeToCheckTypeMap[cmd.MonitorTypeId-1])
 			break
 		}
 	}
+	if !found {
+		c.JSON(400, "check does not exist in endpoint.")
+		return
+	}
+	endpoint.Checks[checkPos].Frequency = cmd.Frequency
+	endpoint.Checks[checkPos].Enabled = cmd.Enabled
+	endpoint.Checks[checkPos].HealthSettings = cmd.HealthSettings
+	endpoint.Checks[checkPos].Updated = time.Now()
+	endpoint.Checks[checkPos].Route = route
+	endpoint.Checks[checkPos].Settings = m.MonitorSettingsDTO(cmd.Settings).ToV2Setting(m.MonitorTypeToCheckTypeMap[cmd.MonitorTypeId-1])
 
 	err = sqlstore.UpdateEndpoint(endpoint)
 	if err != nil {
+		log.Error(3, "Failed to update monitor. %s", err)
 		c.JSON(500, fmt.Sprintf("Failed to update monitor. %s", err))
+		return
 	}
 
 	c.JSON(200, "Monitor updated")
