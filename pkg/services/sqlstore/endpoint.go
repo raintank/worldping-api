@@ -122,7 +122,7 @@ func getEndpoints(sess *session, query *m.GetEndpointsQuery) ([]m.EndpointDTO, e
 
 	sess.Join("LEFT", "check", "endpoint.id = `check`.endpoint_id")
 	sess.Join("LEFT", "endpoint_tag", "endpoint.id = endpoint_tag.endpoint_id")
-	sess.Cols("`endpoint`.*", "`endpoint_tag`.*", "`check`.*")
+	sess.Cols("`endpoint`.*", "`check`.*", "`endpoint_tag`.*")
 	err := sess.Find(&e)
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func getEndpointById(sess *session, orgId, id int64) (*m.EndpointDTO, error) {
 	sess.Where("endpoint.id=? AND endpoint.org_id=?", id, orgId)
 	sess.Join("LEFT", "check", "endpoint.id = `check`.endpoint_id")
 	sess.Join("LEFT", "endpoint_tag", "endpoint.id = endpoint_tag.endpoint_id")
-	sess.Cols("`endpoint`.*", "`endpoint_tag`.*", "`check`.*")
+	sess.Cols("`endpoint`.*", "`check`.*", "`endpoint_tag`.*")
 	err := sess.Find(&e)
 	if err != nil {
 		return nil, err
