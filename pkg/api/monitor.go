@@ -147,7 +147,13 @@ func V1AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 	var monitor m.MonitorDTO
 	for _, check := range endpoint.Checks {
 		if check.Type == m.MonitorTypeToCheckTypeMap[cmd.MonitorTypeId-1] {
+			probeList, err := sqlstore.GetProbesForCheck(&check)
+			if err != nil {
+				c.JSON(500, fmt.Sprintf("Failed to list probes for check. %s", err))
+				return
+			}
 			monitor = m.MonitorDTOFromCheck(check, endpoint.Slug)
+			monitor.Collectors = probeList
 			break
 		}
 	}
