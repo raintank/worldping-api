@@ -41,6 +41,8 @@ func (rows probeWithTags) ToProbeDTO() []m.ProbeDTO {
 				OnlineChange:  r.Probe.OnlineChange,
 				Created:       r.Probe.Created,
 				Updated:       r.Probe.Updated,
+				Longitude:     r.Probe.Longitude,
+				Latitude:      r.Probe.Latitude,
 			}
 			probeTagsById[r.Probe.Id] = make(map[string]struct{})
 			if r.ProbeTag.Tag != "" {
@@ -228,6 +230,8 @@ func addProbe(sess *session, p *m.ProbeDTO) error {
 		EnabledChange: time.Now(),
 		OrgId:         p.OrgId,
 		Public:        p.Public,
+		Latitude:      p.Latitude,
+		Longitude:     p.Longitude,
 		Online:        false,
 		OnlineChange:  time.Now(),
 		Created:       time.Now(),
