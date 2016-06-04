@@ -293,7 +293,7 @@ func updateEndpoint(sess *session, e *m.EndpointDTO) error {
 		sess.Table("endpoint_tag")
 		sess.Where("endpoint_id=? AND org_id=?", e.Id, e.OrgId)
 		sess.In("tag", tagsToDelete)
-		if _, err := sess.Delete(nil); err != nil {
+		if _, err := sess.Delete(&m.EndpointTag{}); err != nil {
 			return err
 		}
 	}
