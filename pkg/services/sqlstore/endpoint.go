@@ -447,6 +447,7 @@ func addCheckRoutes(sess *session, c *m.Check) error {
 				CheckId: c.Id,
 				Tag:     tag,
 				Created: time.Now(),
+				OrgId:   c.OrgId,
 			}
 		}
 		if _, err := sess.Insert(&tagRoutes); err != nil {

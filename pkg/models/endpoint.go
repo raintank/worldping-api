@@ -102,6 +102,7 @@ type RouteByIdIndex struct {
 }
 type RouteByTagIndex struct {
 	Id      int64
+	OrgId   int64
 	CheckId int64
 	Tag     string
 	Created time.Time
