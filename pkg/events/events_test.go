@@ -6,12 +6,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/raintank/worldping-api/pkg/setting"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 type TestEvent struct {
-	timestamp time.Time
-	body      map[string]string
+	Ts      time.Time
+	Payload map[string]string
 }
 
 func (t *TestEvent) Type() string {
@@ -19,22 +20,24 @@ func (t *TestEvent) Type() string {
 }
 
 func (t *TestEvent) Body() ([]byte, error) {
-	return json.Marshal(t.body)
+	return json.Marshal(t.Payload)
 }
 
 func (t *TestEvent) Timestamp() time.Time {
-	return t.timestamp
+	return t.Ts
 }
 
 func TestEventPublish(t *testing.T) {
 	pubChan = make(chan Message, 1)
-	enabled = true
 	hostname, _ := os.Hostname()
+	handlers = &Handlers{
+		Listeners: make(map[string][]chan<- RawEvent),
+	}
 
 	Convey("When publishing event", t, func() {
 		e := &TestEvent{
-			timestamp: time.Unix(1231421123, 223),
-			body:      map[string]string{"data": "test"},
+			Ts:      time.Unix(1231421123, 0),
+			Payload: map[string]string{"data": "test"},
 		}
 
 		err := Publish(e, 0)
@@ -48,22 +51,22 @@ func TestEventPublish(t *testing.T) {
 
 		So(msg, ShouldHaveSameTypeAs, Message{})
 		So(msg.RoutingKey, ShouldEqual, e.Type())
-
+		t.Log(string(msg.Payload))
 		// make sure the message sent to the Publish channel is
 		// correct.
 		raw := RawEvent{}
 		err = json.Unmarshal(msg.Payload, &raw)
 		So(err, ShouldBeNil)
 		So(raw.Type, ShouldEqual, e.Type())
-		So(raw.Timestamp, ShouldEqual, e.Timestamp())
+		So(raw.Timestamp.Unix(), ShouldEqual, e.Timestamp().Unix())
 		So(raw.Attempts, ShouldEqual, 1)
 		So(raw.Source, ShouldEqual, hostname)
 
 		// make sure we can unmashal to the original event.
-		resultE := &TestEvent{}
-		err = json.Unmarshal(raw.Body, resultE)
+		resultE := make(map[string]string)
+		err = json.Unmarshal(raw.Body, &resultE)
 		So(err, ShouldBeNil)
-		So(*resultE, ShouldEqual, *e)
+		So(resultE, ShouldResemble, e.Payload)
 	})
 }
 
@@ -73,18 +76,18 @@ func TestEventHandler(t *testing.T) {
 	}
 	Convey("When no handlers registered", t, func() {
 		l := handlers.GetListeners("foo")
-		So(l, ShouldHaveSameTypeAs, make([]chan<- RawEvent))
+		So(l, ShouldHaveSameTypeAs, make([]chan<- RawEvent, 0))
 		So(len(l), ShouldEqual, 0)
 
 		// add a handler for the "foo" event
 		c := make(chan RawEvent, 1)
 		handlers.Add("foo", c)
 
-		Convey("When 1 handler registered", t, func() {
+		Convey("When 1 handler registered", func() {
 			l = handlers.GetListeners("foo")
 			So(len(l), ShouldEqual, 1)
 
-			Convey("When fetching non-existing handler key", t, func() {
+			Convey("When fetching non-existing handler key", func() {
 				l = handlers.GetListeners("bar")
 				So(len(l), ShouldEqual, 0)
 			})
@@ -93,41 +96,45 @@ func TestEventHandler(t *testing.T) {
 }
 
 func TestEventSubcribe(t *testing.T) {
-	Init("", "")
+	setting.Rabbitmq = setting.RabbitmqSettings{
+		Enabled: false,
+	}
+	Init()
 	hostname, _ := os.Hostname()
 
 	// add a handler for the "foo" event
 	c := make(chan RawEvent, 1)
 	Subscribe("test.event", c)
 	e := &TestEvent{
-		timestamp: time.Unix(1231421123, 223),
-		body:      map[string]string{"data": "test"},
+		Ts:      time.Unix(1231421123, 0),
+		Payload: map[string]string{"data": "test"},
 	}
 
 	Convey("when Publishing event", t, func() {
 		err := Publish(e, 0)
 		So(err, ShouldBeNil)
-		Convey("after publishing Event", t, func() {
+		Convey("after publishing Event", func() {
 			timer := time.NewTimer(time.Second)
 			var raw RawEvent
+		LOOP:
 			for {
 				select {
 				case <-timer.C:
 					panic("timed out waiting for event on channel")
-				case raw <- c:
+				case raw = <-c:
 					timer.Stop()
-					break
+					break LOOP
 				}
 			}
 			So(raw.Type, ShouldEqual, e.Type())
-			So(raw.Timestamp, ShouldEqual, e.Timestamp())
+			So(raw.Timestamp.Unix(), ShouldEqual, e.Timestamp().Unix())
 			So(raw.Source, ShouldEqual, hostname)
 
-			Convey("When marshiling rawEvent to event", t, func() {
-				evnt := TestEvent{}
-				err := json.Unmarshal(raw.Body, &evnt)
+			Convey("When marshiling rawEvent to event", func() {
+				data := make(map[string]string)
+				err := json.Unmarshal(raw.Body, &data)
 				So(err, ShouldBeNil)
-				So(evnt, ShouldEqual, *e)
+				So(data, ShouldResemble, e.Payload)
 			})
 		})
 	})
