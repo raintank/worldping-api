@@ -249,6 +249,9 @@ func addProbe(sess *session, p *m.ProbeDTO) error {
 	p.Created = probe.Created
 	p.Updated = probe.Updated
 
+	p.OnlineChange = probe.OnlineChange
+	p.EnabledChange = probe.EnabledChange
+
 	probeTags := make([]m.ProbeTag, 0, len(p.Tags))
 	for _, tag := range p.Tags {
 		probeTags = append(probeTags, m.ProbeTag{
