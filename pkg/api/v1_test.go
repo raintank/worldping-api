@@ -399,4 +399,22 @@ func TestProbesV1Api(t *testing.T) {
 			})
 		})
 	})
+	Convey("Given GET request for /api/collectors/locations", t, func() {
+		resp := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/api/collectors/locations", nil)
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("should return 200", func() {
+			So(resp.Code, ShouldEqual, 200)
+			Convey("collector locations response should be valid", func() {
+				locations := make([]m.ProbeLocationDTO, 0)
+				err := json.Unmarshal(resp.Body.Bytes(), &locations)
+				So(err, ShouldBeNil)
+				So(len(locations), ShouldEqual, 5)
+				So(locations[0].Latitude, ShouldEqual, 1.0)
+			})
+		})
+	})
 }
