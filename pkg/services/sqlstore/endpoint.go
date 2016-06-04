@@ -105,8 +105,11 @@ func GetEndpoints(query *m.GetEndpointsQuery) ([]m.EndpointDTO, error) {
 
 func getEndpoints(sess *session, query *m.GetEndpointsQuery) ([]m.EndpointDTO, error) {
 	var e endpointRows
+	if query.OrgId != 0 {
+		sess.Where("endpoint.org_id=?", query.OrgId)
+	}
 	if query.Name != "" {
-		sess.Where("endpoint.name like ?", query.Name)
+		sess.And("endpoint.name like ?", query.Name)
 	}
 	if query.Tag != "" {
 		sess.Join("INNER", []string{"endpoint_tag", "et"}, "endpoint.id = et.endpoint_id").Where("et.tag=?", query.Tag)
