@@ -117,13 +117,8 @@ func getEndpoints(sess *session, query *m.GetEndpointsQuery) ([]m.EndpointDTO, e
 	if query.OrderBy == "" {
 		query.OrderBy = "name"
 	}
-	if query.Limit == 0 {
-		query.Limit = 20
-	}
-	if query.Page == 0 {
-		query.Page = 1
-	}
-	sess.Asc(query.OrderBy).Limit(query.Limit, (query.Page-1)*query.Limit)
+
+	sess.Asc(query.OrderBy)
 
 	sess.Join("LEFT", "check", "endpoint.id = `check`.endpoint_id")
 	sess.Join("LEFT", "endpoint_tag", "endpoint.id = endpoint_tag.endpoint_id")

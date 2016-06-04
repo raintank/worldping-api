@@ -129,16 +129,10 @@ func getProbes(sess *session, query *m.GetProbesQuery) ([]m.ProbeDTO, error) {
 	if query.OrderBy == "" {
 		query.OrderBy = "name"
 	}
-	if query.Limit == 0 {
-		query.Limit = 50
-	}
-	if query.Page == 0 {
-		query.Page = 1
-	}
 
 	fmt.Fprint(&rawSQL, where.String())
 	args = append(args, whereArgs...)
-	fmt.Fprintf(&rawSQL, "ORDER BY `%s` ASC LIMIT %d, %d", query.OrderBy, (query.Page-1)*query.Limit, query.Limit)
+	fmt.Fprintf(&rawSQL, "ORDER BY `%s` ASC", query.OrderBy)
 
 	err := sess.Sql(rawSQL.String(), args...).Find(&a)
 

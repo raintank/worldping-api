@@ -85,8 +85,6 @@ type GetProbesQuery struct {
 	Slug    string `form:"slug"`
 	Tag     string `form:"tag"`
 	OrderBy string `form:"orderBy", binding:"In(name,slug,created,updated,)"`
-	Limit   int    `form:"limit", binding:"Range(0,100)"`
-	Page    int    `form:"page"`
 }
 
 func (collector *Probe) UpdateSlug() {
