@@ -1,11 +1,13 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Unknwon/macaron"
 	"github.com/go-xorm/xorm"
@@ -36,6 +38,10 @@ func InitTestDB(t *testing.T) {
 
 func addAuthHeader(req *http.Request) {
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", setting.AdminKey))
+}
+
+func addContentTypeHeader(req *http.Request) {
+	req.Header.Add("Content-Type", "application/json")
 }
 
 func TestQuotasV1Api(t *testing.T) {
@@ -346,6 +352,17 @@ func TestProbesV1Api(t *testing.T) {
 	InitTestDB(t)
 	r := macaron.Classic()
 	setting.AdminKey = "test"
+	setting.Quota = setting.QuotaSettings{
+		Enabled: true,
+		Org: &setting.OrgQuota{
+			Endpoint: 4,
+			Probe:    4,
+		},
+		Global: &setting.GlobalQuota{
+			Endpoint: -1,
+			Probe:    -1,
+		},
+	}
 	Register(r)
 	populateCollectors(t)
 
@@ -369,7 +386,6 @@ func TestProbesV1Api(t *testing.T) {
 						So(probe.OrgId, ShouldEqual, 2)
 						So(probe.Name, ShouldStartWith, "public")
 					} else {
-						t.Log(fmt.Sprintf("tags for %s: %v", probe.Name, probe.Tags))
 						So(len(probe.Tags), ShouldEqual, 2)
 						So(probe.OrgId, ShouldEqual, 1)
 						So(probe.Name, ShouldStartWith, "test")
@@ -415,6 +431,445 @@ func TestProbesV1Api(t *testing.T) {
 				So(len(locations), ShouldEqual, 5)
 				So(locations[0].Latitude, ShouldEqual, 1.0)
 			})
+		})
+	})
+	Convey("Given POST request to update private collector", t, func() {
+		resp := httptest.NewRecorder()
+		payload, err := json.Marshal(&m.ProbeDTO{
+			Id:        1,
+			Name:      "nameChange1",
+			OrgId:     1,
+			Tags:      []string{"test", "foo", "bar"},
+			Public:    false,
+			Latitude:  1.0,
+			Longitude: 1.0,
+			Online:    false,
+			Enabled:   false,
+		})
+		So(err, ShouldBeNil)
+		req, err := http.NewRequest("POST", "/api/collectors", bytes.NewReader(payload))
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+		addContentTypeHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("should return 200", func() {
+			So(resp.Code, ShouldEqual, 200)
+			Convey("entry in the DB should be updated", func() {
+				probe, err := sqlstore.GetProbeById(1, 1)
+				So(err, ShouldBeNil)
+
+				So(probe.Name, ShouldEqual, "nameChange1")
+				So(probe.Public, ShouldEqual, false)
+				So(len(probe.Tags), ShouldEqual, 3)
+				So(probe.Tags, ShouldContain, "test")
+				So(probe.Tags, ShouldContain, "foo")
+				So(probe.Tags, ShouldContain, "bar")
+				So(probe.Enabled, ShouldEqual, false)
+			})
+		})
+	})
+	Convey("Given PUT request to create private collector", t, func() {
+		resp := httptest.NewRecorder()
+		pre := time.Now()
+		payload, err := json.Marshal(&m.ProbeDTO{
+			Name:      "test4",
+			OrgId:     1,
+			Tags:      []string{"test", "foo", "bar"},
+			Public:    false,
+			Latitude:  1.0,
+			Longitude: 1.0,
+			Online:    false,
+			Enabled:   false,
+		})
+		So(err, ShouldBeNil)
+		req, err := http.NewRequest("PUT", "/api/collectors", bytes.NewReader(payload))
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+		addContentTypeHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("response should be 200 with probeDTO", func() {
+			So(resp.Code, ShouldEqual, 200)
+			Convey("entry in the DB should be created", func() {
+				probe, err := sqlstore.GetProbeByName("test4", 1)
+				So(err, ShouldBeNil)
+				So(probe.OrgId, ShouldEqual, 1)
+				So(probe.Name, ShouldEqual, "test4")
+				So(probe.Public, ShouldEqual, false)
+				So(len(probe.Tags), ShouldEqual, 3)
+				So(probe.Tags, ShouldContain, "test")
+				So(probe.Tags, ShouldContain, "foo")
+				So(probe.Tags, ShouldContain, "bar")
+				So(probe.Enabled, ShouldEqual, false)
+				So(probe.Created.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+				So(probe.Created.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+				So(probe.Updated.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+				So(probe.Updated.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+				So(probe.OnlineChange.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+				So(probe.OnlineChange.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+				So(probe.EnabledChange.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+				So(probe.EnabledChange.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+				Convey("resp should match what is in the db", func() {
+					probeResp := m.ProbeDTO{}
+					err := json.Unmarshal(resp.Body.Bytes(), &probeResp)
+
+					So(err, ShouldBeNil)
+					So(probeResp.Id, ShouldEqual, probe.Id)
+					So(probeResp.Name, ShouldEqual, "test4")
+					So(probeResp.Slug, ShouldEqual, "test4")
+					So(probeResp.Public, ShouldEqual, false)
+					So(len(probeResp.Tags), ShouldEqual, 3)
+					So(probeResp.Tags, ShouldContain, "test")
+					So(probeResp.Tags, ShouldContain, "foo")
+					So(probeResp.Tags, ShouldContain, "bar")
+					So(probeResp.Created.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+					So(probeResp.Created.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+					So(probeResp.Updated.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+					So(probeResp.Updated.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+					So(probeResp.OnlineChange.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+					So(probeResp.OnlineChange.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+					So(probeResp.EnabledChange.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+					So(probeResp.EnabledChange.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+				})
+			})
+		})
+		Convey("response should fail due to quota", func() {
+			So(resp.Code, ShouldEqual, 403)
+		})
+	})
+}
+
+func populateEndpoints(t *testing.T) {
+	for _, i := range []int{1, 2, 3} {
+		err := sqlstore.AddEndpoint(&m.EndpointDTO{
+			Name:  fmt.Sprintf("www%d.google.com", i),
+			OrgId: 1,
+			Tags:  []string{"test", fmt.Sprintf("dev%d", i%2)},
+			Checks: []m.Check{
+				m.Check{
+					Route: &m.CheckRoute{
+						Type: m.RouteByTags,
+						Config: map[string]interface{}{
+							"tags": []string{"test"},
+						},
+					},
+					Frequency: 60,
+					Type:      m.HTTP_CHECK,
+					Enabled:   true,
+					Settings: map[string]interface{}{
+						"host":    fmt.Sprintf("www%d.google.com", i),
+						"path":    "/",
+						"port":    80,
+						"method":  "GET",
+						"timeout": 5,
+					},
+					HealthSettings: &m.CheckHealthSettings{
+						NumProbes: 1,
+						Steps:     3,
+					},
+				},
+				m.Check{
+					Route: &m.CheckRoute{
+						Type: m.RouteByIds,
+						Config: map[string]interface{}{
+							"ids": []int64{1, 2, 4},
+						},
+					},
+					Frequency: 60,
+					Type:      m.PING_CHECK,
+					Enabled:   true,
+					Settings: map[string]interface{}{
+						"hostname": fmt.Sprintf("www%d.google.com", i),
+						"timeout":  5,
+					},
+					HealthSettings: &m.CheckHealthSettings{
+						NumProbes: 1,
+						Steps:     3,
+					},
+				},
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, i := range []int{1, 2, 3} {
+		err := sqlstore.AddEndpoint(&m.EndpointDTO{
+			Name:  fmt.Sprintf("www%d.google.com", i),
+			OrgId: 2,
+			Tags:  []string{"test2", fmt.Sprintf("2dev%d", i%2)},
+			Checks: []m.Check{
+				m.Check{
+					Route: &m.CheckRoute{
+						Type: m.RouteByTags,
+						Config: map[string]interface{}{
+							"tags": []string{"test"},
+						},
+					},
+					Frequency: 60,
+					Type:      m.HTTP_CHECK,
+					Enabled:   true,
+					Settings: map[string]interface{}{
+						"host":    fmt.Sprintf("www%d.google.com", i),
+						"path":    "/",
+						"port":    80,
+						"method":  "GET",
+						"timeout": 5,
+					},
+					HealthSettings: &m.CheckHealthSettings{
+						NumProbes: 1,
+						Steps:     3,
+					},
+				},
+				m.Check{
+					Route: &m.CheckRoute{
+						Type: m.RouteByIds,
+						Config: map[string]interface{}{
+							"ids": []int64{1, 2, 4},
+						},
+					},
+					Frequency: 60,
+					Type:      m.PING_CHECK,
+					Enabled:   true,
+					Settings: map[string]interface{}{
+						"hostname": fmt.Sprintf("www%d.google.com", i),
+						"timeout":  5,
+					},
+					HealthSettings: &m.CheckHealthSettings{
+						NumProbes: 1,
+						Steps:     3,
+					},
+				},
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestEndpointV1Api(t *testing.T) {
+	InitTestDB(t)
+	r := macaron.Classic()
+	setting.AdminKey = "test"
+	setting.Quota = setting.QuotaSettings{
+		Enabled: true,
+		Org: &setting.OrgQuota{
+			Endpoint: 4,
+			Probe:    4,
+		},
+		Global: &setting.GlobalQuota{
+			Endpoint: -1,
+			Probe:    -1,
+		},
+	}
+	Register(r)
+	populateCollectors(t)
+	populateEndpoints(t)
+
+	Convey("Given GET request for /api/endpoints", t, func() {
+		resp := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/api/endpoints", nil)
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("should return 200", func() {
+			So(resp.Code, ShouldEqual, 200)
+			Convey("endpoints response should be valid", func() {
+				endpoints := make([]m.EndpointDTO, 0)
+				err := json.Unmarshal(resp.Body.Bytes(), &endpoints)
+				So(err, ShouldBeNil)
+				So(len(endpoints), ShouldEqual, 3)
+				for _, endpoint := range endpoints {
+					So(len(endpoint.Tags), ShouldEqual, 2)
+					So(endpoint.OrgId, ShouldEqual, 1)
+					So(endpoint.Name, ShouldEndWith, "google.com")
+					So(endpoint.Slug, ShouldEndWith, "google_com")
+				}
+			})
+		})
+	})
+	Convey("Given GET request for /api/endpoints/1", t, func() {
+		resp := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/api/endpoints/1", nil)
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("should return 200", func() {
+			So(resp.Code, ShouldEqual, 200)
+			Convey("endpoints response should be valid", func() {
+				endpoint := m.EndpointDTO{}
+				err := json.Unmarshal(resp.Body.Bytes(), &endpoint)
+				So(err, ShouldBeNil)
+				So(endpoint.Name, ShouldEqual, "www1.google.com")
+				So(endpoint.Slug, ShouldEqual, "www1_google_com")
+				So(endpoint.OrgId, ShouldEqual, 1)
+				So(len(endpoint.Tags), ShouldEqual, 2)
+				So(endpoint.Tags, ShouldContain, "test")
+				So(endpoint.Tags, ShouldContain, "dev1")
+			})
+		})
+	})
+
+	Convey("Given POST request to update endpoint", t, func() {
+		resp := httptest.NewRecorder()
+		payload, err := json.Marshal(&m.UpdateEndpointCommand{
+			Id:   1,
+			Name: "www1.google.com",
+			Tags: []string{"test", "foo", "bar"},
+		})
+		So(err, ShouldBeNil)
+		req, err := http.NewRequest("POST", "/api/endpoints", bytes.NewReader(payload))
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+		addContentTypeHeader(req)
+
+		r.ServeHTTP(resp, req)
+		t.Log(resp.Body.String())
+		Convey("should return 200", func() {
+			So(resp.Code, ShouldEqual, 200)
+			Convey("entry in the DB should be updated", func() {
+				endpoint, err := sqlstore.GetEndpointById(1, 1)
+				So(err, ShouldBeNil)
+
+				So(endpoint.Name, ShouldEqual, "www1.google.com")
+				So(endpoint.Slug, ShouldEqual, "www1_google_com")
+				So(endpoint.OrgId, ShouldEqual, 1)
+				So(len(endpoint.Tags), ShouldEqual, 3)
+				So(endpoint.Tags, ShouldContain, "test")
+				So(endpoint.Tags, ShouldContain, "foo")
+				So(endpoint.Tags, ShouldContain, "bar")
+
+				// for V1 api, endpoint updates can only update name and tags.
+				// checks should be ignored in this request.
+				So(len(endpoint.Checks), ShouldEqual, 2)
+			})
+		})
+	})
+	Convey("Given PUT request to create endpoint", t, func() {
+		resp := httptest.NewRecorder()
+		pre := time.Now()
+		payload, err := json.Marshal(&m.AddEndpointCommand{
+			Name:  "www6.google.com",
+			OrgId: 1,
+			Tags:  []string{"test", "foo", "bar"},
+			Monitors: []*m.AddMonitorCommand{
+				&m.AddMonitorCommand{
+					EndpointId:    -1,
+					Frequency:     60,
+					MonitorTypeId: 1,
+					Enabled:       true,
+					CollectorTags: []string{"test"},
+					Settings: []m.MonitorSettingDTO{
+						{Variable: "host", Value: "www6.google.com"},
+						{"path", "/foo"},
+						{"port", "80"},
+						{"method", "GET"},
+						{"timeout", "5"},
+					},
+					HealthSettings: &m.CheckHealthSettings{
+						NumProbes: 1,
+						Steps:     3,
+					},
+				},
+				&m.AddMonitorCommand{
+					EndpointId:    -1,
+					Frequency:     60,
+					MonitorTypeId: 3,
+					Enabled:       true,
+					CollectorIds:  []int64{1, 2, 4},
+					Settings: []m.MonitorSettingDTO{
+						{"hostname", "www6.google.com"},
+						{"timeout", "5"},
+					},
+					HealthSettings: &m.CheckHealthSettings{
+						NumProbes: 1,
+						Steps:     3,
+					},
+				},
+			},
+		})
+
+		So(err, ShouldBeNil)
+		req, err := http.NewRequest("PUT", "/api/endpoints", bytes.NewReader(payload))
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+		addContentTypeHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("response should be 200 with endpointDTO", func() {
+			So(resp.Code, ShouldEqual, 200)
+			Convey("resp should match what is in the db", func() {
+				endpointResp := m.EndpointDTO{}
+				err := json.Unmarshal(resp.Body.Bytes(), &endpointResp)
+
+				So(err, ShouldBeNil)
+				So(endpointResp.Id, ShouldNotEqual, 0)
+				So(endpointResp.Name, ShouldEqual, "www6.google.com")
+				So(endpointResp.Slug, ShouldEqual, "www6_google_com")
+				So(len(endpointResp.Tags), ShouldEqual, 3)
+				So(endpointResp.Tags, ShouldContain, "test")
+				So(endpointResp.Tags, ShouldContain, "foo")
+				So(endpointResp.Tags, ShouldContain, "bar")
+				So(endpointResp.Created.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+				So(endpointResp.Created.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+				So(endpointResp.Updated.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+				So(endpointResp.Updated.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+				Convey("entry in the DB should be created", func() {
+					endpoint, err := sqlstore.GetEndpointById(1, endpointResp.Id)
+					So(err, ShouldBeNil)
+					So(endpoint, ShouldNotBeNil)
+					So(endpoint.OrgId, ShouldEqual, 1)
+					So(endpoint.Name, ShouldEqual, "www6.google.com")
+					So(endpoint.Slug, ShouldEqual, "www6_google_com")
+					So(len(endpoint.Tags), ShouldEqual, 3)
+					So(endpoint.Tags, ShouldContain, "test")
+					So(endpoint.Tags, ShouldContain, "foo")
+					So(endpoint.Tags, ShouldContain, "bar")
+					So(endpoint.Created.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+					So(endpoint.Created.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+					So(endpoint.Updated.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+					So(endpoint.Updated.Unix(), ShouldBeLessThanOrEqualTo, time.Now().Unix())
+
+					So(len(endpoint.Checks), ShouldEqual, 2)
+					Convey("Checks should be valid", func() {
+						for _, c := range endpoint.Checks {
+							So(c.Type, ShouldBeIn, m.HTTP_CHECK, m.PING_CHECK)
+							So(c.Frequency, ShouldEqual, 60)
+							So(c.Enabled, ShouldEqual, true)
+							So(c.EndpointId, ShouldEqual, endpoint.Id)
+							So(c.OrgId, ShouldEqual, endpoint.OrgId)
+							switch c.Type {
+							case m.HTTP_CHECK:
+								So(c.Route.Type, ShouldEqual, m.RouteByTags)
+								So(len(c.Route.Config["tags"].([]string)), ShouldEqual, 1)
+								So(len(c.Settings), ShouldEqual, 5)
+								probes, err := sqlstore.GetProbesForCheck(&c)
+								So(err, ShouldBeNil)
+								So(len(probes), ShouldEqual, 5)
+
+							case m.PING_CHECK:
+								So(c.Route.Type, ShouldEqual, m.RouteByIds)
+								So(len(c.Route.Config["ids"].([]int64)), ShouldEqual, 3)
+								So(len(c.Settings), ShouldEqual, 2)
+
+								probes, err := sqlstore.GetProbesForCheck(&c)
+								So(err, ShouldBeNil)
+								So(len(probes), ShouldEqual, 3)
+
+							}
+						}
+					})
+
+				})
+			})
+
+		})
+		Convey("response should fail due to quota", func() {
+			So(resp.Code, ShouldEqual, 403)
 		})
 	})
 }
