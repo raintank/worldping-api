@@ -201,10 +201,11 @@ func addEndpoint(sess *session, e *m.EndpointDTO) error {
 	}
 
 	//perform each insert on its own so that the ID field gets assigned and task created
-	for _, c := range e.Checks {
+	for i, _ := range e.Checks {
+		c := &e.Checks[i]
 		c.OrgId = e.OrgId
 		c.EndpointId = e.Id
-		if err := addCheck(sess, &c); err != nil {
+		if err := addCheck(sess, c); err != nil {
 			return err
 		}
 	}
@@ -313,16 +314,18 @@ func updateEndpoint(sess *session, e *m.EndpointDTO) error {
 
 	/***** Update Checks **********/
 
-	checkUpdates := make([]m.Check, 0)
-	checkAdds := make([]m.Check, 0)
-	checkDeletes := make([]m.Check, 0)
+	checkUpdates := make([]*m.Check, 0)
+	checkAdds := make([]*m.Check, 0)
+	checkDeletes := make([]*m.Check, 0)
 
-	checkMap := make(map[m.CheckType]m.Check)
+	checkMap := make(map[m.CheckType]*m.Check)
 	seenChecks := make(map[m.CheckType]bool)
-	for _, c := range existing.Checks {
+	for i, _ := range existing.Checks {
+		c := &existing.Checks[i]
 		checkMap[c.Type] = c
 	}
-	for _, c := range e.Checks {
+	for i, _ := range e.Checks {
+		c := &e.Checks[i]
 		c.EndpointId = e.Id
 		c.OrgId = e.OrgId
 		seenChecks[c.Type] = true
@@ -350,19 +353,19 @@ func updateEndpoint(sess *session, e *m.EndpointDTO) error {
 	}
 
 	for _, c := range checkDeletes {
-		if err := deleteCheck(sess, &c); err != nil {
+		if err := deleteCheck(sess, c); err != nil {
 			return err
 		}
 	}
 
 	for _, c := range checkAdds {
-		if err := addCheck(sess, &c); err != nil {
+		if err := addCheck(sess, c); err != nil {
 			return err
 		}
 	}
 
 	for _, c := range checkUpdates {
-		if err := updateCheck(sess, &c); err != nil {
+		if err := updateCheck(sess, c); err != nil {
 			return err
 		}
 	}
