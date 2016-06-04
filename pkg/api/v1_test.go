@@ -728,7 +728,6 @@ func TestEndpointV1Api(t *testing.T) {
 		addContentTypeHeader(req)
 
 		r.ServeHTTP(resp, req)
-		t.Log(resp.Body.String())
 		Convey("should return 200", func() {
 			So(resp.Code, ShouldEqual, 200)
 			Convey("entry in the DB should be updated", func() {
@@ -870,6 +869,162 @@ func TestEndpointV1Api(t *testing.T) {
 		})
 		Convey("response should fail due to quota", func() {
 			So(resp.Code, ShouldEqual, 403)
+		})
+	})
+}
+
+func TestMonitorV1Api(t *testing.T) {
+	InitTestDB(t)
+	r := macaron.Classic()
+	setting.AdminKey = "test"
+	setting.Quota = setting.QuotaSettings{
+		Enabled: true,
+		Org: &setting.OrgQuota{
+			Endpoint: 4,
+			Probe:    4,
+		},
+		Global: &setting.GlobalQuota{
+			Endpoint: -1,
+			Probe:    -1,
+		},
+	}
+	Register(r)
+	populateCollectors(t)
+	populateEndpoints(t)
+
+	Convey("Given GET request for /api/monitors?endpoint_id=1", t, func() {
+		resp := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/api/monitors?endpoint_id=1", nil)
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("should return 200", func() {
+			So(resp.Code, ShouldEqual, 200)
+			Convey("endpoints response should be valid", func() {
+				monitors := make([]m.MonitorDTO, 0)
+				err := json.Unmarshal(resp.Body.Bytes(), &monitors)
+				So(err, ShouldBeNil)
+				So(len(monitors), ShouldEqual, 2)
+				for _, monitor := range monitors {
+					So(monitor.OrgId, ShouldEqual, 1)
+					So(monitor.EndpointId, ShouldEqual, 1)
+					So(monitor.EndpointSlug, ShouldEqual, "www1_google_com")
+					So(monitor.MonitorTypeName, ShouldBeIn, "http", "ping")
+					switch monitor.MonitorTypeName {
+					case "http":
+						So(len(monitor.Collectors), ShouldEqual, 5)
+						So(monitor.MonitorTypeId, ShouldEqual, 1)
+						So(len(monitor.CollectorTags), ShouldEqual, 1)
+						So(len(monitor.CollectorIds), ShouldEqual, 0)
+						So(len(monitor.Settings), ShouldEqual, 5)
+					case "ping":
+						So(len(monitor.Collectors), ShouldEqual, 3)
+						So(len(monitor.CollectorIds), ShouldEqual, 3)
+						So(len(monitor.CollectorTags), ShouldEqual, 0)
+						So(monitor.MonitorTypeId, ShouldEqual, 3)
+						So(len(monitor.Settings), ShouldEqual, 2)
+					}
+				}
+			})
+		})
+	})
+	Convey("Given POST request to update monitor", t, func() {
+		resp := httptest.NewRecorder()
+		pre := time.Now()
+		payload, err := json.Marshal(&m.UpdateMonitorCommand{
+			EndpointId:    1,
+			Id:            1,
+			Frequency:     60,
+			MonitorTypeId: 1,
+			Enabled:       true,
+			CollectorTags: []string{},
+			CollectorIds:  []int64{1, 5},
+			Settings: []m.MonitorSettingDTO{
+				{Variable: "host", Value: "www1.google.com"},
+				{"path", "/foo"},
+				{"port", "8080"},
+				{"method", "GET"},
+				{"timeout", "5"},
+			},
+			HealthSettings: &m.CheckHealthSettings{
+				NumProbes: 1,
+				Steps:     3,
+			},
+		})
+		So(err, ShouldBeNil)
+		req, err := http.NewRequest("POST", "/api/monitors", bytes.NewReader(payload))
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+		addContentTypeHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("should return 200", func() {
+			So(resp.Code, ShouldEqual, 200)
+			Convey("entry in the DB should be updated", func() {
+				check, err := sqlstore.GetCheckById(1, 1)
+				So(err, ShouldBeNil)
+
+				So(check.EndpointId, ShouldEqual, 1)
+				So(check.Updated.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+				So(check.Route.Type, ShouldEqual, m.RouteByIds)
+				So(len(check.Settings), ShouldEqual, 5)
+				So(check.Settings, ShouldContainKey, "port")
+				So(check.Settings["port"], ShouldEqual, 8080)
+			})
+		})
+	})
+	Convey("Given PUT request to create monitor", t, func() {
+		resp := httptest.NewRecorder()
+		pre := time.Now()
+		payload, err := json.Marshal(&m.AddMonitorCommand{
+			EndpointId:    1,
+			Frequency:     60,
+			MonitorTypeId: 2,
+			Enabled:       true,
+			CollectorTags: []string{},
+			CollectorIds:  []int64{1, 5},
+			Settings: []m.MonitorSettingDTO{
+				{Variable: "host", Value: "www7.google.com"},
+				{"path", "/foo"},
+				{"port", "8080"},
+				{"method", "GET"},
+				{"timeout", "5"},
+			},
+			HealthSettings: &m.CheckHealthSettings{
+				NumProbes: 1,
+				Steps:     3,
+			},
+		})
+		So(err, ShouldBeNil)
+		req, err := http.NewRequest("PUT", "/api/monitors", bytes.NewReader(payload))
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+		addContentTypeHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("should return 200 with MonitorDTO", func() {
+			So(resp.Code, ShouldEqual, 200)
+			monResp := m.MonitorDTO{}
+			err := json.Unmarshal(resp.Body.Bytes(), &monResp)
+			So(err, ShouldBeNil)
+
+			So(monResp.Id, ShouldNotEqual, 0)
+			So(len(monResp.Collectors), ShouldEqual, 2)
+
+			Convey("entry in the DB should be updated", func() {
+				check, err := sqlstore.GetCheckById(1, monResp.Id)
+				So(err, ShouldBeNil)
+
+				So(check.Id, ShouldEqual, monResp.Id)
+				So(check.EndpointId, ShouldEqual, 1)
+				So(check.Created.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+				So(check.Updated.Unix(), ShouldBeGreaterThanOrEqualTo, pre.Unix())
+				So(check.Route.Type, ShouldEqual, m.RouteByIds)
+				So(len(check.Settings), ShouldEqual, 5)
+				So(check.Settings, ShouldContainKey, "port")
+				So(check.Settings["port"], ShouldEqual, 8080)
+			})
 		})
 	})
 }
