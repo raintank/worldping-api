@@ -8,6 +8,7 @@ import (
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/graphite"
+	"github.com/influxdata/influxdb/client"
 	m "github.com/raintank/worldping-api/pkg/models"
 )
 
@@ -74,7 +75,7 @@ func (ce *GraphiteCheckEvaluator) Eval(ts time.Time) (m.CheckEvalResult, error) 
 	// cache is unbounded so that we are guaranteed consistent results
 	cacheObj := cache.New(0)
 	eval := func(e *expr.Expr, code m.CheckEvalResult) (m.CheckEvalResult, error) {
-		results, _, err := e.Execute(nil, ce.Context, nil, cacheObj, nil, ts, 0, true, nil, nil, nil)
+		results, _, err := e.Execute(nil, ce.Context, nil, nil, client.Config{}, cacheObj, nil, ts, 0, true, nil, nil, nil)
 		if err != nil {
 			// graphite errors are probably transient and non-fatal.
 			if strings.Contains(err.Error(), "graphite") {
