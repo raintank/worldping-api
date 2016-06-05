@@ -28,4 +28,3 @@ ln -s ${CHECKOUT} ${GOPATH}/src/${REPO_PATH}
 
 cd ${GOPATH}/src/${REPO_PATH}
 go get ./...
-
