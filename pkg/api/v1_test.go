@@ -31,7 +31,7 @@ func InitTestDB(t *testing.T) {
 
 	sqlutil.CleanDB(x)
 
-	if err := sqlstore.SetEngine(x, true); err != nil {
+	if err := sqlstore.SetEngine(x, false); err != nil {
 		t.Fatal(err)
 	}
 }
