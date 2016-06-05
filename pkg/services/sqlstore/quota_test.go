@@ -29,110 +29,122 @@ func InitTestDB(t *testing.T) {
 }
 
 func TestQuotaCommandsAndQueries(t *testing.T) {
+	InitTestDB(t)
+	setting.Quota = setting.QuotaSettings{
+		Enabled: true,
+		Org: &setting.OrgQuota{
+			Endpoint: 5,
+			Probe:    5,
+		},
+		Global: &setting.GlobalQuota{
+			Endpoint: 5,
+			Probe:    5,
+		},
+	}
 
-	Convey("Testing Qutoa commands & queries", t, func() {
-		InitTestDB(t)
-		orgId := int64(4)
+	err := AddEndpoint(&m.EndpointDTO{
+		Name:  "test1",
+		OrgId: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		setting.Quota = setting.QuotaSettings{
-			Enabled: true,
-			Org: &setting.OrgQuota{
-				Endpoint:  5,
-				Collector: 5,
-			},
-			Global: &setting.GlobalQuota{
-				Endpoint:  5,
-				Collector: 5,
-			},
+	err = AddProbe(&m.ProbeDTO{
+		Name:  "test1",
+		OrgId: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = AddEndpoint(&m.EndpointDTO{
+		Name:  "test1",
+		OrgId: 2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = AddProbe(&m.ProbeDTO{
+		Name:  "test1",
+		OrgId: 2,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	Convey("when org Quota for probes set to 10", t, func() {
+		newQuota := m.OrgQuotaDTO{
+			OrgId:  1,
+			Target: "probe",
+			Limit:  10,
 		}
-
-		// create a new org and add user_id 1 as admin.
-		// we will then have an org with 1 user. and a user
-		// with 1 org.
-		collectorCmd := m.AddCollectorCommand{
-			OrgId: orgId,
-			Name:  "test1",
-		}
-
-		err := AddCollector(&collectorCmd)
+		err := UpdateOrgQuota(&newQuota)
 		So(err, ShouldBeNil)
 
-		Convey("Given saved org quota for users", func() {
-			orgCmd := m.UpdateOrgQuotaCmd{
-				OrgId:  orgId,
-				Target: "collector",
-				Limit:  10,
-			}
-			err := UpdateOrgQuota(&orgCmd)
+		newQuota.OrgId = 4
+		err = UpdateOrgQuota(&newQuota)
+		So(err, ShouldBeNil)
+
+		Convey("When geting probe quota for org with 1 probe", func() {
+			q, err := GetOrgQuotaByTarget(1, "probe", 1)
 			So(err, ShouldBeNil)
-
-			Convey("Should be able to get saved quota by org id and target", func() {
-				query := m.GetOrgQuotaByTargetQuery{OrgId: orgId, Target: "collector", Default: 1}
-				err = GetOrgQuotaByTarget(&query)
-
-				So(err, ShouldBeNil)
-				So(query.Result.Limit, ShouldEqual, 10)
-			})
-			Convey("Should be able to get default quota by org id and target", func() {
-				query := m.GetOrgQuotaByTargetQuery{OrgId: 123, Target: "collector", Default: 11}
-				err = GetOrgQuotaByTarget(&query)
-
-				So(err, ShouldBeNil)
-				So(query.Result.Limit, ShouldEqual, 11)
-			})
-			Convey("Should be able to get used org quota when rows exist", func() {
-				query := m.GetOrgQuotaByTargetQuery{OrgId: orgId, Target: "collector", Default: 11}
-				err = GetOrgQuotaByTarget(&query)
-
-				So(err, ShouldBeNil)
-				So(query.Result.Used, ShouldEqual, 1)
-			})
-			Convey("Should be able to get used org quota when no rows exist", func() {
-				query := m.GetOrgQuotaByTargetQuery{OrgId: 2, Target: "collector", Default: 11}
-				err = GetOrgQuotaByTarget(&query)
-
-				So(err, ShouldBeNil)
-				So(query.Result.Used, ShouldEqual, 0)
-			})
-			Convey("Should be able to quota list for org", func() {
-				query := m.GetOrgQuotasQuery{OrgId: orgId}
-				err = GetOrgQuotas(&query)
-
-				So(err, ShouldBeNil)
-				So(len(query.Result), ShouldEqual, 2)
-				for _, res := range query.Result {
-					limit := 5 //default quota limit
-					used := 0
-					if res.Target == "collector" {
-						limit = 10 //customized quota limit.
-						used = 1
-					}
-					if res.Target == "endpoint" {
-						used = 0
-					}
-
-					So(res.Limit, ShouldEqual, limit)
-					So(res.Used, ShouldEqual, used)
+			So(q.Limit, ShouldEqual, 10)
+			So(q.Used, ShouldEqual, 1)
+		})
+		Convey("When geting probe quota for org with 0 probe", func() {
+			q, err := GetOrgQuotaByTarget(4, "probe", 1)
+			So(err, ShouldBeNil)
+			So(q.Limit, ShouldEqual, 10)
+			So(q.Used, ShouldEqual, 0)
+		})
+		Convey("When getting quota list for org", func() {
+			quotas, err := GetOrgQuotas(1)
+			So(err, ShouldBeNil)
+			So(len(quotas), ShouldEqual, 2)
+			for _, res := range quotas {
+				limit := 5 //default quota limit
+				used := 1
+				if res.Target == "probe" {
+					limit = 10 //customized quota limit.
 
 				}
-			})
-		})
 
-		Convey("Should be able to global endpoint quota", func() {
-			query := m.GetGlobalQuotaByTargetQuery{Target: "endpoint", Default: 5}
-			err = GetGlobalQuotaByTarget(&query)
-			So(err, ShouldBeNil)
+				So(res.Limit, ShouldEqual, limit)
+				So(res.Used, ShouldEqual, used)
 
-			So(query.Result.Limit, ShouldEqual, 5)
-			So(query.Result.Used, ShouldEqual, 0)
-		})
-		Convey("Should be able to global collector quota", func() {
-			query := m.GetGlobalQuotaByTargetQuery{Target: "collector", Default: 5}
-			err = GetGlobalQuotaByTarget(&query)
-			So(err, ShouldBeNil)
-
-			So(query.Result.Limit, ShouldEqual, 5)
-			So(query.Result.Used, ShouldEqual, 1)
+			}
 		})
 	})
+	Convey("when org Quota for probes set to default", t, func() {
+		Convey("When geting probe quota for org with 1 probe", func() {
+			q, err := GetOrgQuotaByTarget(2, "probe", 3)
+			So(err, ShouldBeNil)
+			So(q.Limit, ShouldEqual, 3)
+			So(q.Used, ShouldEqual, 1)
+		})
+		Convey("When geting probe quota for org with 0 probe", func() {
+			q, err := GetOrgQuotaByTarget(5, "probe", 3)
+			So(err, ShouldBeNil)
+			So(q.Limit, ShouldEqual, 3)
+			So(q.Used, ShouldEqual, 0)
+		})
+	})
+
+	Convey("When getting global endpoint quota", t, func() {
+		q, err := GetGlobalQuotaByTarget("endpoint")
+		So(err, ShouldBeNil)
+
+		So(q.Limit, ShouldEqual, 5)
+		So(q.Used, ShouldEqual, 2)
+	})
+	Convey("Should be able to global probe quota", t, func() {
+		q, err := GetGlobalQuotaByTarget("probe")
+		So(err, ShouldBeNil)
+
+		So(q.Limit, ShouldEqual, 5)
+		So(q.Used, ShouldEqual, 2)
+	})
+
 }
