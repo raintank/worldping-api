@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -137,5 +138,105 @@ func TestEventSubcribe(t *testing.T) {
 				So(data, ShouldResemble, e.Payload)
 			})
 		})
+	})
+}
+
+func TestEventTypes(t *testing.T) {
+	Convey("When converting EndpointCreated event to RawEvent", t, func() {
+		r, err := NewRawEventFromEvent(&EndpointCreated{
+			Ts:      time.Now(),
+			Payload: &m.EndpointDTO{Name: "test"},
+		})
+		So(err, ShouldBeNil)
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "Endpoint.created")
+	})
+	Convey("When converting EndpointUpdated event to RawEvent", t, func() {
+		e := &EndpointUpdated{
+			Ts: time.Now(),
+		}
+		e.Payload.Current = &m.EndpointDTO{Name: "test"}
+		e.Payload.Last = &m.EndpointDTO{Name: "test2"}
+		r, err := NewRawEventFromEvent(e)
+		So(err, ShouldBeNil)
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "Endpoint.updated")
+	})
+	Convey("When converting EndpointDeleted event to RawEvent", t, func() {
+		r, err := NewRawEventFromEvent(&EndpointDeleted{
+			Ts:      time.Now(),
+			Payload: &m.EndpointDTO{Name: "test"},
+		})
+		So(err, ShouldBeNil)
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "Endpoint.deleted")
+	})
+
+	Convey("When converting ProbeCreated event to RawEvent", t, func() {
+		r, err := NewRawEventFromEvent(&ProbeCreated{
+			Ts:      time.Now(),
+			Payload: &m.ProbeDTO{Name: "test"},
+		})
+		So(err, ShouldBeNil)
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "Probe.created")
+	})
+	Convey("When converting ProbeUpdated event to RawEvent", t, func() {
+		e := &ProbeUpdated{
+			Ts: time.Now(),
+		}
+		e.Payload.Current = &m.ProbeDTO{Name: "test"}
+		e.Payload.Last = &m.ProbeDTO{Name: "test2"}
+		r, err := NewRawEventFromEvent(e)
+		So(err, ShouldBeNil)
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "Probe.updated")
+	})
+	Convey("When converting ProbeDeleted event to RawEvent", t, func() {
+		r, err := NewRawEventFromEvent(&ProbeDeleted{
+			Ts:      time.Now(),
+			Payload: &m.ProbeDTO{Name: "test"},
+		})
+		So(err, ShouldBeNil)
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "Probe.deleted")
+	})
+	Convey("When converting ProbeOnline event to RawEvent", t, func() {
+		r, err := NewRawEventFromEvent(&ProbeOnline{
+			Ts:      time.Now(),
+			Payload: &m.ProbeDTO{Name: "test"},
+		})
+		So(err, ShouldBeNil)
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "Probe.online")
+	})
+	Convey("When converting ProbeOffline event to RawEvent", t, func() {
+		r, err := NewRawEventFromEvent(&ProbeOffline{
+			Ts:      time.Now(),
+			Payload: &m.ProbeDTO{Name: "test"},
+		})
+		So(err, ShouldBeNil)
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "Probe.offline")
+	})
+
+	Convey("When converting ProbeSessionCreated event to RawEvent", t, func() {
+		r, err := NewRawEventFromEvent(&ProbeSessionCreated{
+			Ts:      time.Now(),
+			Payload: &m.ProbeSession{SocketId: "test"},
+		})
+		So(err, ShouldBeNil)
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "ProbeSession.created")
+	})
+
+	Convey("When converting ProbeSessionDeleted event to RawEvent", t, func() {
+		r, err := NewRawEventFromEvent(&ProbeSessionDeleted{
+			Ts:      time.Now(),
+			Payload: &m.ProbeSession{SocketId: "test"},
+		})
+		So(err, ShouldBeNil)
+		So(r, ShouldNotBeNil)
+		So(r.Type, ShouldEqual, "ProbeSession.deleted")
 	})
 }
