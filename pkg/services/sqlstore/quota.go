@@ -138,7 +138,7 @@ func updateOrgQuota(sess *session, q *m.OrgQuotaDTO) error {
 }
 
 func GetGlobalQuotaByTarget(target string) (*m.GlobalQuotaDTO, error) {
-	sess, err := newSession(false, "endpoint")
+	sess, err := newSession(false, "quota")
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +149,7 @@ func getGlobalQuotaByTarget(sess *session, target string) (*m.GlobalQuotaDTO, er
 	//get quota used.
 	rawSql := fmt.Sprintf("SELECT COUNT(*) as count from %s", dialect.Quote(target))
 	var resp targetCount
-	if err := sess.Sql(rawSql).Find(&resp); err != nil {
+	if _, err := sess.Sql(rawSql).Get(&resp); err != nil {
 		return nil, err
 	}
 
