@@ -83,7 +83,7 @@ func V1AddCollector(c *middleware.Context, probe m.ProbeDTO) {
 	}
 
 	if err := sqlstore.AddProbe(&probe); err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to add collector", err))
+		c.JSON(500, fmt.Sprintf("Failed to add collector. %s", err))
 		return
 	}
 
@@ -106,7 +106,7 @@ func V1UpdateCollector(c *middleware.Context, probe m.ProbeDTO) {
 	}
 
 	if err := sqlstore.UpdateProbe(&probe); err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to add collector", err))
+		c.JSON(500, fmt.Sprintf("Failed to add collector. %s", err))
 		return
 	}
 

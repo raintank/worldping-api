@@ -109,7 +109,7 @@ func TestQuotasV1Api(t *testing.T) {
 
 					So(len(quota), ShouldEqual, 2)
 
-					for i, _ := range []int{1, 2, 3} {
+					for i := range []int{1, 2, 3} {
 						Convey(fmt.Sprintf("when %d endpoints", i), func() {
 							err := sqlstore.AddEndpoint(&m.EndpointDTO{
 								Name:  fmt.Sprintf("test%d", i),
@@ -127,7 +127,7 @@ func TestQuotasV1Api(t *testing.T) {
 							}
 						})
 					}
-					for i, _ := range []int{1, 2, 3} {
+					for i := range []int{1, 2, 3} {
 						Convey(fmt.Sprintf("when %d probes", i), func() {
 							err := sqlstore.AddProbe(&m.ProbeDTO{
 								Name:  fmt.Sprintf("test%d", i),
@@ -227,7 +227,7 @@ func TestQuotasV2Api(t *testing.T) {
 
 					So(len(quota), ShouldEqual, 2)
 
-					for i, _ := range []int{1, 2, 3} {
+					for i := range []int{1, 2, 3} {
 						Convey(fmt.Sprintf("when %d endpoints", i), func() {
 							err := sqlstore.AddEndpoint(&m.EndpointDTO{
 								Name:  fmt.Sprintf("test%d", i),
@@ -245,7 +245,7 @@ func TestQuotasV2Api(t *testing.T) {
 							}
 						})
 					}
-					for i, _ := range []int{1, 2, 3} {
+					for i := range []int{1, 2, 3} {
 						Convey(fmt.Sprintf("when %d probes", i), func() {
 							err := sqlstore.AddProbe(&m.ProbeDTO{
 								Name:  fmt.Sprintf("test%d", i),
@@ -547,7 +547,7 @@ func populateEndpoints(t *testing.T) {
 			OrgId: 1,
 			Tags:  []string{"test", fmt.Sprintf("dev%d", i%2)},
 			Checks: []m.Check{
-				m.Check{
+				{
 					Route: &m.CheckRoute{
 						Type: m.RouteByTags,
 						Config: map[string]interface{}{
@@ -569,7 +569,7 @@ func populateEndpoints(t *testing.T) {
 						Steps:     3,
 					},
 				},
-				m.Check{
+				{
 					Route: &m.CheckRoute{
 						Type: m.RouteByIds,
 						Config: map[string]interface{}{
@@ -600,7 +600,7 @@ func populateEndpoints(t *testing.T) {
 			OrgId: 2,
 			Tags:  []string{"test2", fmt.Sprintf("2dev%d", i%2)},
 			Checks: []m.Check{
-				m.Check{
+				{
 					Route: &m.CheckRoute{
 						Type: m.RouteByTags,
 						Config: map[string]interface{}{
@@ -622,7 +622,7 @@ func populateEndpoints(t *testing.T) {
 						Steps:     3,
 					},
 				},
-				m.Check{
+				{
 					Route: &m.CheckRoute{
 						Type: m.RouteByIds,
 						Config: map[string]interface{}{
@@ -756,7 +756,7 @@ func TestEndpointV1Api(t *testing.T) {
 			OrgId: 1,
 			Tags:  []string{"test", "foo", "bar"},
 			Monitors: []*m.AddMonitorCommand{
-				&m.AddMonitorCommand{
+				{
 					EndpointId:    -1,
 					Frequency:     60,
 					MonitorTypeId: 1,
@@ -774,7 +774,7 @@ func TestEndpointV1Api(t *testing.T) {
 						Steps:     3,
 					},
 				},
-				&m.AddMonitorCommand{
+				{
 					EndpointId:    -1,
 					Frequency:     60,
 					MonitorTypeId: 3,

@@ -196,7 +196,7 @@ type GetEndpointsQuery struct {
 	OrgId   int64  `form:"-"`
 	Name    string `form:"name"`
 	Tag     string `form:"tag"`
-	OrderBy string `form:"orderBy", binding:"In(name,slug,created,updated,)"`
+	OrderBy string `form:"orderBy" binding:"In(name,slug,created,updated,)"`
 }
 
 //Alerting

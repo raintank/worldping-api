@@ -51,7 +51,7 @@ func V1DeleteEndpoint(c *middleware.Context) {
 func V1AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) {
 	cmd.OrgId = c.OrgId
 	if cmd.Name == "" {
-		c.JSON(400, fmt.Sprintf("Endpoint name not set.", nil))
+		c.JSON(400, "Endpoint name not set.")
 		return
 	}
 	checks := make([]m.Check, len(cmd.Monitors))
@@ -95,7 +95,7 @@ func V1AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) {
 func V1UpdateEndpoint(c *middleware.Context, cmd m.UpdateEndpointCommand) {
 	cmd.OrgId = c.OrgId
 	if cmd.Name == "" {
-		c.JSON(400, fmt.Sprintf("Endpoint name not set.", nil))
+		c.JSON(400, "Endpoint name not set.")
 		return
 	}
 	// get existing endpoint.

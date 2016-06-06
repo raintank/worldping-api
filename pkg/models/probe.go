@@ -84,7 +84,7 @@ type GetProbesQuery struct {
 	Name    string `form:"name"`
 	Slug    string `form:"slug"`
 	Tag     string `form:"tag"`
-	OrderBy string `form:"orderBy", binding:"In(name,slug,created,updated,)"`
+	OrderBy string `form:"orderBy" binding:"In(name,slug,created,updated,)"`
 }
 
 func (collector *Probe) UpdateSlug() {

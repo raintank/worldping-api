@@ -62,7 +62,7 @@ func TestEndpoints(t *testing.T) {
 			OrgId: 1,
 			Tags:  []string{"test", "dev"},
 			Checks: []m.Check{
-				m.Check{
+				{
 					Route: &m.CheckRoute{
 						Type: m.RouteByTags,
 						Config: map[string]interface{}{
@@ -84,7 +84,7 @@ func TestEndpoints(t *testing.T) {
 						Steps:     3,
 					},
 				},
-				m.Check{
+				{
 					Route: &m.CheckRoute{
 						Type: m.RouteByIds,
 						Config: map[string]interface{}{
@@ -182,7 +182,6 @@ func TestEndpoints(t *testing.T) {
 			Convey("Tags should be updated in DB", func() {
 				updated, err := GetEndpointById(e.OrgId, e.Id)
 				So(err, ShouldBeNil)
-				t.Log("%v", updated.Tags)
 				So(len(updated.Tags), ShouldEqual, 3)
 				So(updated.Tags, ShouldContain, "foo")
 				So(updated.Tags, ShouldContain, "dev")

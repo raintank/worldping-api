@@ -100,10 +100,23 @@ type CollectorContext struct {
 	Session *m.ProbeSession
 }
 
+func authenticate(keyString string) (*auth.SignedInUser, error) {
+	if keyString != "" {
+		return auth.Auth(setting.AdminKey, keyString)
+	}
+	return nil, auth.ErrInvalidApiKey
+}
+
 func register(so socketio.Socket) (*CollectorContext, error) {
 	req := so.Request()
 	req.ParseForm()
 	keyString := req.Form.Get("apiKey")
+
+	user, err := authenticate(keyString)
+	if err != nil {
+		return nil, err
+	}
+
 	name := req.Form.Get("name")
 	if name == "" {
 		return nil, errors.New("probe name not provided.")
@@ -136,82 +149,75 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	//
 	//--------- set required version of collector.------------//
 	log.Info("probe %s with version %s connected", name, versionStr)
-	if keyString != "" {
-		user, err := auth.Auth(setting.AdminKey, keyString)
+
+	// lookup collector
+	probe, err := sqlstore.GetProbeByName(name, user.OrgId)
+	if err == m.ErrProbeNotFound {
+		//collector not found, so lets create a new one.
+		probe = &m.ProbeDTO{
+			OrgId:   user.OrgId,
+			Name:    name,
+			Enabled: true,
+		}
+
+		err = sqlstore.AddProbe(probe)
 		if err != nil {
 			return nil, err
 		}
-
-		// lookup collector
-		probe, err := sqlstore.GetProbeByName(name, user.OrgId)
-		if err == m.ErrProbeNotFound {
-			//collector not found, so lets create a new one.
-			probe = &m.ProbeDTO{
-				OrgId:   user.OrgId,
-				Name:    name,
-				Enabled: true,
-			}
-
-			err = sqlstore.AddProbe(probe)
-			if err != nil {
-				return nil, err
-			}
-		} else if err != nil {
-			return nil, err
-		}
-		remoteIp := net.ParseIP(util.GetRemoteIp(so.Request()))
-		if remoteIp == nil {
-			log.Error(3, "Unable to lookup remote IP address of probe.")
-			remoteIp = net.ParseIP("0.0.0.0")
-		} else if probe.Latitude == 0 || probe.Longitude == 0 {
-			var location freegeoip.DefaultQuery
-			err := geoipDB.Lookup(remoteIp, &location)
-			if err != nil {
-				log.Error(3, "Unabled to get location from IP.", err)
-				return nil, err
-			}
-			probe.Latitude = location.Location.Latitude
-			probe.Longitude = location.Location.Longitude
-			log.Debug("probe %s is located at lat:%f, long:%f", probe.Name, location.Location.Latitude, location.Location.Longitude)
-
-			if err := sqlstore.UpdateProbe(probe); err != nil {
-				log.Error(3, "could not save Probe location to DB.", err)
-				return nil, err
-			}
-		}
-
-		sess := &CollectorContext{
-			SignedInUser: user,
-			Probe:        probe,
-			Socket:       so,
-			Session: &m.ProbeSession{
-				OrgId:      user.OrgId,
-				ProbeId:    probe.Id,
-				SocketId:   so.Id(),
-				Version:    versionStr,
-				InstanceId: setting.InstanceId,
-				RemoteIp:   remoteIp.String(),
-			},
-		}
-		err = sqlstore.AddProbeSession(sess.Session)
-		if err != nil {
-			return nil, err
-		}
-		log.Info("probe %s with id %d owned by %d authenticated successfully from %s.", name, probe.Id, user.OrgId, remoteIp.String())
-		if lastSocketId != "" {
-			log.Info("removing socket with Id %s", lastSocketId)
-			if err := sqlstore.DeleteProbeSession(&m.ProbeSession{OrgId: sess.OrgId, SocketId: lastSocketId, ProbeId: sess.Probe.Id}); err != nil {
-				log.Error(3, "failed to remove probes lastSocketId", err)
-				return nil, err
-			}
-		}
-
-		log.Info("saving session to contextCache")
-		contextCache.Set(sess.Session.SocketId, sess)
-		log.Info("session saved to contextCache")
-		return sess, nil
+	} else if err != nil {
+		return nil, err
 	}
-	return nil, auth.ErrInvalidApiKey
+	remoteIp := net.ParseIP(util.GetRemoteIp(so.Request()))
+	if remoteIp == nil {
+		log.Error(3, "Unable to lookup remote IP address of probe.")
+		remoteIp = net.ParseIP("0.0.0.0")
+	} else if probe.Latitude == 0 || probe.Longitude == 0 {
+		var location freegeoip.DefaultQuery
+		err := geoipDB.Lookup(remoteIp, &location)
+		if err != nil {
+			log.Error(3, "Unabled to get location from IP.", err)
+			return nil, err
+		}
+		probe.Latitude = location.Location.Latitude
+		probe.Longitude = location.Location.Longitude
+		log.Debug("probe %s is located at lat:%f, long:%f", probe.Name, location.Location.Latitude, location.Location.Longitude)
+
+		if err := sqlstore.UpdateProbe(probe); err != nil {
+			log.Error(3, "could not save Probe location to DB.", err)
+			return nil, err
+		}
+	}
+
+	sess := &CollectorContext{
+		SignedInUser: user,
+		Probe:        probe,
+		Socket:       so,
+		Session: &m.ProbeSession{
+			OrgId:      user.OrgId,
+			ProbeId:    probe.Id,
+			SocketId:   so.Id(),
+			Version:    versionStr,
+			InstanceId: setting.InstanceId,
+			RemoteIp:   remoteIp.String(),
+		},
+	}
+	err = sqlstore.AddProbeSession(sess.Session)
+	if err != nil {
+		return nil, err
+	}
+	log.Info("probe %s with id %d owned by %d authenticated successfully from %s.", name, probe.Id, user.OrgId, remoteIp.String())
+	if lastSocketId != "" {
+		log.Info("removing socket with Id %s", lastSocketId)
+		if err := sqlstore.DeleteProbeSession(&m.ProbeSession{OrgId: sess.OrgId, SocketId: lastSocketId, ProbeId: sess.Probe.Id}); err != nil {
+			log.Error(3, "failed to remove probes lastSocketId", err)
+			return nil, err
+		}
+	}
+
+	log.Info("saving session to contextCache")
+	contextCache.Set(sess.Session.SocketId, sess)
+	log.Info("session saved to contextCache")
+	return sess, nil
 }
 
 func InitCollectorController(metrics met.Backend) {
@@ -238,12 +244,8 @@ func InitCollectorController(metrics met.Backend) {
 	if err != nil {
 		log.Error(3, "failed to load GEOIP DB. ", err)
 	}
-
-}
-
-func init() {
 	contextCache = NewContextCache()
-	var err error
+
 	server, err = socketio.NewServer([]string{"websocket"})
 	if err != nil {
 		log.Fatal(4, "failed to initialize socketio.", err)
@@ -275,9 +277,7 @@ func init() {
 		c.Socket.On("results", c.OnResults)
 		c.Socket.On("disconnection", c.OnDisconnection)
 
-		log.Info("calling refresh for probe %s owned by OrgId: %d", c.Probe.Name, c.OrgId)
-		time.Sleep(time.Second)
-		c.Refresh()
+		//refresh will be sent due to the ProbeSessionCreated event being emitted.
 	})
 
 	server.On("error", func(so socketio.Socket, err error) {
@@ -287,7 +287,6 @@ func init() {
 }
 
 func (c *CollectorContext) EmitReady() error {
-
 	log.Info("sending ready event to probe %s", c.Probe.Name)
 	readyPayload := map[string]interface{}{
 		"collector":     c.Probe,
@@ -299,21 +298,21 @@ func (c *CollectorContext) EmitReady() error {
 }
 
 func (c *CollectorContext) Remove() error {
-	log.Info(fmt.Sprintf("removing socket with Id %s", c.Session.SocketId))
+	log.Info("removing socket with Id %s", c.Session.SocketId)
 	err := sqlstore.DeleteProbeSession(c.Session)
 	return err
 }
 
 func (c *CollectorContext) OnDisconnection() {
-	log.Info(fmt.Sprintf("%s disconnected", c.Probe.Name))
+	log.Info("%s disconnected", c.Probe.Name)
 	if err := c.Remove(); err != nil {
-		log.Error(3, fmt.Sprintf("Failed to remove probeSession. %s", c.Probe.Name), err)
+		log.Error(3, "Failed to remove probeSession for %s, %s", c.Probe.Name, err)
 	}
 	contextCache.Remove(c.Session.SocketId)
 }
 
 func (c *CollectorContext) OnEvent(msg *schema.ProbeEvent) {
-	log.Debug(fmt.Sprintf("received event from %s", c.Probe.Name))
+	log.Debug("received event from %s", c.Probe.Name)
 	if !c.Probe.Public {
 		msg.OrgId = c.OrgId
 	}
