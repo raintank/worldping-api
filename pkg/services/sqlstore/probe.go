@@ -532,7 +532,7 @@ func addProbeSession(sess *session, probeSess *m.ProbeSession) error {
 }
 
 func GetProbeSessions(probeId int64, instance string) ([]m.ProbeSession, error) {
-	sess, err := newSession(true, "probe_session")
+	sess, err := newSession(false, "probe_session")
 	if err != nil {
 		return nil, err
 	}
