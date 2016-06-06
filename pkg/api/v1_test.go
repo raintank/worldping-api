@@ -24,14 +24,14 @@ func InitTestDB(t *testing.T) {
 	x, err := xorm.NewEngine(sqlutil.TestDB_Sqlite3.DriverName, sqlutil.TestDB_Sqlite3.ConnStr)
 	//x, err := xorm.NewEngine(sqlutil.TestDB_Mysql.DriverName, sqlutil.TestDB_Mysql.ConnStr)
 	//x, err := xorm.NewEngine(sqlutil.TestDB_Postgres.DriverName, sqlutil.TestDB_Postgres.ConnStr)
-
+	x.SetMaxOpenConns(1)
 	if err != nil {
 		t.Fatalf("Failed to init in memory sqllite3 db %v", err)
 	}
 
 	sqlutil.CleanDB(x)
 
-	if err := sqlstore.SetEngine(x, false); err != nil {
+	if err := sqlstore.SetEngine(x, true); err != nil {
 		t.Fatal(err)
 	}
 }
