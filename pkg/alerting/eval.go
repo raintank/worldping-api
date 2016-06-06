@@ -8,7 +8,7 @@ import (
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/graphite"
-	"github.com/influxdata/influxdb/client"
+	"bosun.org/vendor/github.com/influxdata/influxdb/client"
 	m "github.com/raintank/worldping-api/pkg/models"
 )
 
