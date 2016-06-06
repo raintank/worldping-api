@@ -758,7 +758,7 @@ func getProbeChecksWithEndpointSlug(sess *session, probe *m.ProbeDTO) ([]CheckWi
 		cid[i] = c.CheckId
 	}
 	sess.Table("check")
-	sess.Join("INNER", "endpoint", "check.endpoint_id=endpoint.id")
+	sess.Join("INNER", "endpoint", "`check`.endpoint_id=endpoint.id")
 	sess.In("`check`.id", cid)
 	sess.Cols("`check`.*", "endpoint.slug")
 	err = sess.Find(&checks)
