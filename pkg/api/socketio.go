@@ -201,10 +201,7 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 			RemoteIp:   remoteIp.String(),
 		},
 	}
-	err = sqlstore.AddProbeSession(sess.Session)
-	if err != nil {
-		return nil, err
-	}
+
 	log.Info("probe %s with id %d owned by %d authenticated successfully from %s.", name, probe.Id, user.OrgId, remoteIp.String())
 	if lastSocketId != "" {
 		log.Info("removing socket with Id %s", lastSocketId)
@@ -217,6 +214,10 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	log.Info("saving session to contextCache")
 	contextCache.Set(sess.Session.SocketId, sess)
 	log.Info("session saved to contextCache")
+	err = sqlstore.AddProbeSession(sess.Session)
+	if err != nil {
+		return nil, err
+	}
 	return sess, nil
 }
 
@@ -300,6 +301,7 @@ func (c *CollectorContext) EmitReady() error {
 func (c *CollectorContext) Remove() error {
 	log.Info("removing socket with Id %s", c.Session.SocketId)
 	err := sqlstore.DeleteProbeSession(c.Session)
+	log.Info("probe session deleted from db.")
 	return err
 }
 
@@ -382,13 +384,14 @@ func (c *CollectorContext) Refresh() {
 	}
 
 	totalSessions := int64(len(sessions))
+	log.Debug("probe %d has %d sessions", c.Probe.Id, totalSessions)
 	//step 2. for each session
 	for pos, sess := range sessions {
 		//we only need to refresh the 1 socket.
 		if sess.SocketId != c.Session.SocketId {
 			continue
 		}
-		//step 3. get list of monitors configured for this colletor.
+		//step 3. get list of checks configured for this colletor.
 		checks, err := sqlstore.GetProbeChecksWithEndpointSlug(c.Probe)
 		if err != nil {
 			log.Error(3, "failed to get checks for probe %s. %s", c.Probe.Id, err)
