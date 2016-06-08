@@ -120,7 +120,7 @@ func GetCollectorByName(query *m.GetCollectorByNameQuery) error {
 	result := results[0]
 
 	tags := make([]string, 0)
-	if result.Tags != "" {
+	if result.Tags != "" {
 		tags = strings.Split(result.Tags, ",")
 	}
 
