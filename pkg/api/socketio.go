@@ -287,12 +287,18 @@ func InitCollectorController(metrics met.Backend) {
 
 }
 
+type ReadyPayload struct {
+	Collector    *m.ProbeDTO        `json:"collector"`
+	MonitorTypes []m.MonitorTypeDTO `json:"monitor_types"`
+	SocketId     string             `json:"socket_id"`
+}
+
 func (c *CollectorContext) EmitReady() error {
 	log.Info("sending ready event to probe %s", c.Probe.Name)
-	readyPayload := map[string]interface{}{
-		"collector":     c.Probe,
-		"monitor_types": m.MonitorTypes,
-		"socket_id":     c.Session.SocketId,
+	readyPayload := &ReadyPayload{
+		Collector:    c.Probe,
+		MonitorTypes: m.MonitorTypes,
+		SocketId:     c.Session.SocketId,
 	}
 	c.Socket.Emit("ready", readyPayload)
 	return nil
@@ -432,12 +438,14 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 
 	// find the checks that have changed.
 	for _, check := range event.Payload.Current.Checks {
-		seenChecks[check.Id] = struct{}{}
-		if check.Updated.After(event.Payload.Current.Updated) {
-			if _, ok := oldChecks[check.Id]; ok {
-				changedChecks = append(changedChecks, check)
-			} else {
-				newChecks = append(newChecks, check)
+		if check.Enabled {
+			seenChecks[check.Id] = struct{}{}
+			if check.Updated.After(event.Payload.Current.Updated) {
+				if _, ok := oldChecks[check.Id]; ok {
+					changedChecks = append(changedChecks, check)
+				} else {
+					newChecks = append(newChecks, check)
+				}
 			}
 		}
 	}
@@ -504,6 +512,9 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 func HandleEndpointCreated(event *events.EndpointCreated) error {
 	log.Debug("processing EndpointCreated event. EndpointId: %d", event.Payload.Id)
 	for _, check := range event.Payload.Checks {
+		if !check.Enabled {
+			continue
+		}
 		probeIds, err := sqlstore.GetProbesForCheck(&check)
 		if err != nil {
 			return err
@@ -522,6 +533,9 @@ func HandleEndpointDeleted(event *events.EndpointDeleted) error {
 	log.Debug("processing EndpointDeleted event. EndpointId: %d", event.Payload.Id)
 
 	for _, check := range event.Payload.Checks {
+		if !check.Enabled {
+			continue
+		}
 		probeIds, err := sqlstore.GetProbesForCheck(&check)
 		if err != nil {
 			return err
