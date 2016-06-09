@@ -111,9 +111,7 @@ func Construct() {
 		go Dispatcher()
 	}
 
-	//start group of workers to execute the checks.
-	for i := 0; i < setting.Executors; i++ {
-		go ChanExecutor(GraphiteAuthContextReturner, recvJobQueue, cache)
-	}
+	//worker to execute the checks.
+	go ChanExecutor(GraphiteAuthContextReturner, recvJobQueue, cache)
 
 }
