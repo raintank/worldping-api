@@ -1,7 +1,10 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/Unknwon/macaron"
+	"github.com/grafana/grafana/pkg/log"
 	"github.com/macaron-contrib/binding"
 	"github.com/raintank/raintank-apps/pkg/auth"
 	"github.com/raintank/worldping-api/pkg/api/rbody"
@@ -94,4 +97,13 @@ func NotFoundHandler(c *middleware.Context) {
 func Heartbeat(c *middleware.Context) {
 	c.JSON(200, "OK")
 	return
+}
+
+func handleError(c *middleware.Context, err error) {
+	if e, ok := err.(m.AppError); ok {
+		c.JSON(e.Code(), e.Message())
+		return
+	}
+	log.Error(3, "%s. %s", c.Req.RequestURI, err)
+	c.JSON(500, fmt.Sprintf("Fatal error. %s", err))
 }

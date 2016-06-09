@@ -1,8 +1,6 @@
 package api
 
 import (
-	"fmt"
-
 	//"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
@@ -13,7 +11,7 @@ func V1GetCollectors(c *middleware.Context, query m.GetProbesQuery) {
 	query.OrgId = c.OrgId
 	probes, err := sqlstore.GetProbes(&query)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to query collectors. %s", err))
+		handleError(c, err)
 		return
 	}
 	c.JSON(200, probes)
@@ -27,7 +25,7 @@ func V1GetCollectorLocations(c *middleware.Context) {
 
 	probes, err := sqlstore.GetProbes(&query)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to query collectors. %s", err))
+		handleError(c, err)
 		return
 	}
 
@@ -50,7 +48,7 @@ func V1GetCollectorById(c *middleware.Context) {
 
 	probe, err := sqlstore.GetProbeById(id, c.OrgId)
 	if err != nil {
-		c.JSON(404, "Collector not found")
+		handleError(c, err)
 		return
 	}
 
@@ -63,7 +61,7 @@ func V1DeleteCollector(c *middleware.Context) {
 
 	err := sqlstore.DeleteProbe(id, c.OrgId)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to delete collector. %s", err))
+		handleError(c, err)
 		return
 	}
 
@@ -83,7 +81,7 @@ func V1AddCollector(c *middleware.Context, probe m.ProbeDTO) {
 	}
 
 	if err := sqlstore.AddProbe(&probe); err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to add collector. %s", err))
+		handleError(c, err)
 		return
 	}
 
@@ -106,7 +104,7 @@ func V1UpdateCollector(c *middleware.Context, probe m.ProbeDTO) {
 	}
 
 	if err := sqlstore.UpdateProbe(&probe); err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to add collector. %s", err))
+		handleError(c, err)
 		return
 	}
 

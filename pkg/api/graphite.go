@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -26,7 +25,7 @@ func V1GraphiteProxy(c *middleware.Context) {
 		if strings.HasPrefix(query, "raintank_db") {
 			response, err := executeRaintankDbQuery(query, c.OrgId)
 			if err != nil {
-				c.JSON(500, fmt.Sprintf("Failed to execute raintank_db query. %s", err))
+				handleError(c, err)
 				return
 			}
 			c.JSON(200, response)

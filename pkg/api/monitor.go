@@ -13,7 +13,7 @@ import (
 func V1GetMonitors(c *middleware.Context, query m.GetMonitorsQuery) {
 	endpoint, err := sqlstore.GetEndpointById(c.OrgId, query.EndpointId)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to list monitors. %s", err))
+		handleError(c, err)
 		return
 	}
 	if endpoint == nil {
@@ -25,7 +25,7 @@ func V1GetMonitors(c *middleware.Context, query m.GetMonitorsQuery) {
 		monitors[i] = m.MonitorDTOFromCheck(check, endpoint.Slug)
 		probeList, err := sqlstore.GetProbesForCheck(&check)
 		if err != nil {
-			c.JSON(500, fmt.Sprintf("Failed to list probes for check. %s", err))
+			handleError(c, err)
 			return
 		}
 		monitors[i].Collectors = probeList
@@ -42,18 +42,14 @@ func V1DeleteMonitor(c *middleware.Context) {
 
 	check, err := sqlstore.GetCheckById(c.OrgId, id)
 	if err != nil {
-		if err.Error() == "check not found" {
-			c.JSON(404, "check not found")
-		} else {
-			c.JSON(500, fmt.Sprintf("Failed to query DB. %s", err))
-		}
+		handleError(c, err)
 		return
 	}
 
 	// get the endpoint that the check belongs too.
 	endpoint, err := sqlstore.GetEndpointById(c.OrgId, check.EndpointId)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf("failed to query DB. %s", err))
+		handleError(c, err)
 		return
 	}
 
@@ -67,7 +63,7 @@ func V1DeleteMonitor(c *middleware.Context) {
 	endpoint.Checks = newChecks
 	err = sqlstore.UpdateEndpoint(endpoint)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf("failed remove check from endpoint. %s", err))
+		handleError(c, err)
 		return
 	}
 	c.JSON(200, "monitor deleted")
@@ -95,12 +91,11 @@ func V1AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 	// get the endpoint that the check belongs too.
 	endpoint, err := sqlstore.GetEndpointById(c.OrgId, cmd.EndpointId)
 	if err != nil {
-		log.Error(3, "failed to add get endpoint for check. %s", err)
-		c.JSON(500, fmt.Sprintf("failed to add get endpoint for check %s", err))
+		handleError(c, err)
 		return
 	}
 	if endpoint == nil {
-		c.JSON(400, "endpoing does not exist.")
+		c.JSON(400, "endpoint does not exist.")
 		return
 	}
 
@@ -140,8 +135,8 @@ func V1AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 	//Update endpoint
 	err = sqlstore.UpdateEndpoint(endpoint)
 	if err != nil {
-		log.Error(3, "failed to add check to endpoint. %s", err)
-		c.JSON(500, fmt.Sprintf("failed to add check to endpoint. %s", err))
+		handleError(c, err)
+		return
 	}
 
 	var monitor m.MonitorDTO
@@ -149,7 +144,7 @@ func V1AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 		if check.Type == m.MonitorTypeToCheckTypeMap[cmd.MonitorTypeId-1] {
 			probeList, err := sqlstore.GetProbesForCheck(&check)
 			if err != nil {
-				c.JSON(500, fmt.Sprintf("Failed to list probes for check. %s", err))
+				handleError(c, err)
 				return
 			}
 			monitor = m.MonitorDTOFromCheck(check, endpoint.Slug)
@@ -184,8 +179,7 @@ func V1UpdateMonitor(c *middleware.Context, cmd m.UpdateMonitorCommand) {
 	// get the endpoint that the check belongs too.
 	endpoint, err := sqlstore.GetEndpointById(c.OrgId, cmd.EndpointId)
 	if err != nil {
-		log.Error(3, "failed to get endpoint for check. %s", err)
-		c.JSON(500, fmt.Sprintf("failed to get endpoint for check %s", err))
+		handleError(c, err)
 		return
 	}
 	if endpoint == nil {
@@ -229,10 +223,15 @@ func V1UpdateMonitor(c *middleware.Context, cmd m.UpdateMonitorCommand) {
 	endpoint.Checks[checkPos].Route = route
 	endpoint.Checks[checkPos].Settings = m.MonitorSettingsDTO(cmd.Settings).ToV2Setting(m.MonitorTypeToCheckTypeMap[cmd.MonitorTypeId-1])
 
+	err = sqlstore.ValidateCheckRoute(&endpoint.Checks[checkPos])
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
 	err = sqlstore.UpdateEndpoint(endpoint)
 	if err != nil {
-		log.Error(3, "Failed to update monitor. %s", err)
-		c.JSON(500, fmt.Sprintf("Failed to update monitor. %s", err))
+		handleError(c, err)
 		return
 	}
 

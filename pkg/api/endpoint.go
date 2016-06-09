@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/endpointdiscovery"
@@ -16,7 +15,7 @@ func V1GetEndpointById(c *middleware.Context) {
 
 	endpoint, err := sqlstore.GetEndpointById(c.OrgId, id)
 	if err != nil {
-		c.JSON(404, "Endpoint not found")
+		handleError(c, err)
 		return
 	}
 
@@ -29,7 +28,7 @@ func V1GetEndpoints(c *middleware.Context, query m.GetEndpointsQuery) {
 
 	endpoints, err := sqlstore.GetEndpoints(&query)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to query endpoints. %s", err))
+		handleError(c, err)
 		return
 	}
 	c.JSON(200, endpoints)
@@ -40,7 +39,7 @@ func V1DeleteEndpoint(c *middleware.Context) {
 
 	err := sqlstore.DeleteEndpoint(c.OrgId, id)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to delete endpoint. %s", err))
+		handleError(c, err)
 		return
 	}
 
@@ -84,8 +83,7 @@ func V1AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) {
 	}
 	err := sqlstore.AddEndpoint(&endpoint)
 	if err != nil {
-		log.Error(3, "failed to add Endpoint. %s", err)
-		c.JSON(500, fmt.Sprintf("failed to add endpoint. %s", err))
+		handleError(c, err)
 		return
 	}
 
@@ -101,7 +99,7 @@ func V1UpdateEndpoint(c *middleware.Context, cmd m.UpdateEndpointCommand) {
 	// get existing endpoint.
 	endpoint, err := sqlstore.GetEndpointById(cmd.OrgId, cmd.Id)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to lookup existing endpoint. %s", err))
+		handleError(c, err)
 		return
 	}
 	if endpoint == nil {
@@ -114,7 +112,7 @@ func V1UpdateEndpoint(c *middleware.Context, cmd m.UpdateEndpointCommand) {
 
 	err = sqlstore.UpdateEndpoint(endpoint)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf("failed to update endpoint. %s", err))
+		handleError(c, err)
 		return
 	}
 
@@ -124,7 +122,7 @@ func V1UpdateEndpoint(c *middleware.Context, cmd m.UpdateEndpointCommand) {
 func V1DiscoverEndpoint(c *middleware.Context, cmd m.DiscoverEndpointCmd) {
 	checks, err := endpointdiscovery.Discover(cmd.Name)
 	if err != nil {
-		c.JSON(500, fmt.Sprintf("Failed to discover endpoint. %s", err))
+		handleError(c, err)
 		return
 	}
 	// convert from checks to v1api SuggestedMonitor
