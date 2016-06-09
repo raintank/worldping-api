@@ -2,6 +2,7 @@ package sqlstore
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -21,6 +22,7 @@ func init() {
 	bus.AddHandler("sql", UpdateMonitor)
 	bus.AddHandler("sql", DeleteMonitor)
 	bus.AddHandler("sql", UpdateMonitorState)
+	rand.Seed(time.Now().UnixNano())
 }
 
 type MonitorWithCollectorDTO struct {
@@ -43,6 +45,11 @@ type MonitorWithCollectorDTO struct {
 	Offset          int64
 	Updated         time.Time
 	Created         time.Time
+}
+
+type CollectorIdsDTO struct {
+	CollectorIds string
+	MonitorId    int64
 }
 
 // scrutinizeState fixes the state.  We can't just trust what the database says, we have to verify that the value actually has been updated recently.
@@ -181,10 +188,18 @@ WHERE monitor.enabled=1 AND (? % monitor.frequency) = monitor.offset
 
 func GetMonitors(query *m.GetMonitorsQuery) error {
 	sess := x.Table("monitor")
+
 	rawParams := make([]interface{}, 0)
+	colidSql := `
+    SELECT 
+        GROUP_CONCAT(DISTINCT(monitor_collector.collector_id)) AS collector_ids,
+        monitor_id 
+    FROM monitor_collector 
+        GROUP BY monitor_id`
+
 	rawSql := `
 SELECT
-    GROUP_CONCAT(DISTINCT(monitor_collector.collector_id)) as collector_ids,
+    NULL AS collector_ids,
     GROUP_CONCAT(DISTINCT(monitor_collector_tag.tag)) as collector_tags,
     GROUP_CONCAT(DISTINCT(collector_tag.collector_id)) as tag_collectors,
     endpoint.slug as endpoint_slug,
@@ -193,7 +208,6 @@ SELECT
 FROM monitor
     INNER JOIN endpoint on endpoint.id = monitor.endpoint_id
     LEFT JOIN monitor_type ON monitor.monitor_type_id = monitor_type.id
-    LEFT JOIN monitor_collector ON monitor.id = monitor_collector.monitor_id
     LEFT JOIN monitor_collector_tag ON monitor.id = monitor_collector_tag.monitor_id
     LEFT JOIN collector_tag on collector_tag.tag = monitor_collector_tag.tag AND collector_tag.org_id = monitor.org_id
 `
@@ -257,18 +271,32 @@ FROM monitor
 	rawSql += " GROUP BY monitor.id"
 
 	result := make([]*MonitorWithCollectorDTO, 0)
-	err := sess.Sql(rawSql, rawParams...).Find(&result)
+	colidResult := make([]*CollectorIdsDTO, 0)
+
+	err := sess.Sql(colidSql).Find(&colidResult)
 	if err != nil {
 		return err
+	}
+
+	err = sess.Sql(rawSql, rawParams...).Find(&result)
+	if err != nil {
+		return err
+	}
+
+	collectorIdList := make(map[int64]string, len(colidResult))
+	for _, c := range colidResult {
+		collectorIdList[c.MonitorId] = c.CollectorIds
 	}
 
 	monitors := make([]*m.MonitorDTO, 0)
 	//iterate through all of the results and build out our checks model.
 	for _, row := range result {
-		monitorCollectorIds := make([]int64, 0)
+		var monitorCollectorIds []int64
 		monitorCollectorsMap := make(map[int64]bool)
-		if row.CollectorIds != "" {
-			for _, l := range strings.Split(row.CollectorIds, ",") {
+		if val, ok := collectorIdList[row.Id]; ok {
+			cols := strings.Split(val, ",")
+			monitorCollectorIds = make([]int64, 0, len(cols))
+			for _, l := range cols {
 				i, err := strconv.ParseInt(l, 10, 64)
 				if err != nil {
 					return err
