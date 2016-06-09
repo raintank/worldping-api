@@ -149,7 +149,7 @@ func getEndpointById(sess *session, orgId, id int64) (*m.EndpointDTO, error) {
 		return nil, err
 	}
 	if len(e) == 0 {
-		return nil, nil
+		return nil, m.NewNotFoundError("endpoint not found")
 	}
 	return &e.ToDTO()[0], nil
 }
@@ -237,7 +237,7 @@ func updateEndpoint(sess *session, e *m.EndpointDTO) error {
 		return err
 	}
 	if existing == nil {
-		return m.ErrEndpointNotFound
+		return m.NewNotFoundError("endpoint not found")
 	}
 	endpoint := &m.Endpoint{
 		Id:      e.Id,
@@ -343,7 +343,7 @@ func updateEndpoint(sess *session, e *m.EndpointDTO) error {
 				checkUpdates = append(checkAdds, c)
 			}
 		} else {
-			return fmt.Errorf("Invalid check definition.")
+			return m.NewValidationError(fmt.Sprintf("an existing %s check is already defined for this endpoint.", c.Type))
 		}
 	}
 	for t, ec := range checkMap {
@@ -399,7 +399,7 @@ func deleteEndpoint(sess *session, orgId, id int64) error {
 		return err
 	}
 	if existing == nil {
-		return m.ErrEndpointNotFound
+		return m.NewNotFoundError("endpoint not found")
 	}
 	var rawSql = "DELETE FROM endpoint WHERE id=? and org_id=?"
 	_, err = sess.Exec(rawSql, id, orgId)
@@ -605,7 +605,7 @@ func updateCheck(sess *session, c *m.Check) error {
 				}
 			}
 		default:
-			return m.UnknownRouteType
+			return m.NewValidationError(m.UnknownRouteType.Error())
 		}
 	}
 	return err
@@ -627,7 +627,7 @@ func getCheckById(sess *session, orgId, checkId int64) (*m.Check, error) {
 		return nil, err
 	}
 	if !has {
-		return nil, fmt.Errorf("check not found")
+		return nil, m.NewNotFoundError("check not found")
 	}
 	return check, nil
 }
@@ -830,4 +830,44 @@ func getChecksForAlerts(sess *session, ts int64) ([]m.CheckForAlertDTO, error) {
 	checks := make([]m.CheckForAlertDTO, 10)
 	err := sess.Find(&checks)
 	return checks, err
+}
+
+func ValidateCheckRoute(check *m.Check) error {
+	sess, err := newSession(false, "check")
+	if err != nil {
+		return err
+	}
+	return validateCheckRoute(sess, check)
+}
+
+func validateCheckRoute(sess *session, check *m.Check) error {
+	switch check.Route.Type {
+	case m.RouteByTags:
+		if len(check.Route.Config["tags"].([]string)) == 0 {
+			return m.NewValidationError("Need at least 1 tag defined in route config.")
+		}
+	case m.RouteByIds:
+		sess.Table("probe")
+		if len(check.Route.Config["ids"].([]int64)) == 0 {
+			return m.NewValidationError("Need at least 1 valid id defined in route config.")
+		}
+		// get all checks.
+		sess.Where("org_id=? OR public=1", check.OrgId).In("id", check.Route.Config["ids"].([]int64))
+		results := make([]ProbeId, 0)
+		err := sess.Find(&results)
+		if err != nil {
+			return err
+		}
+		if len(results) == 0 {
+			return m.NewValidationError("Need at least 1 valid id defined in route config.")
+		}
+		filteredIds := make([]int64, len(results))
+		for i, row := range results {
+			filteredIds[i] = row.Id
+		}
+		check.Route.Config["ids"] = filteredIds
+	default:
+		return m.NewValidationError(m.UnknownRouteType.Error())
+	}
+	return nil
 }

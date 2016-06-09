@@ -72,6 +72,12 @@ func V1AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) {
 			checks[i].Route.Type = m.RouteByIds
 			checks[i].Route.Config = map[string]interface{}{"ids": mon.CollectorIds}
 		}
+		err := sqlstore.ValidateCheckRoute(&checks[i])
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
 	}
 	endpoint := m.EndpointDTO{
 		OrgId:   cmd.OrgId,

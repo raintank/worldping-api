@@ -119,7 +119,7 @@ func V1AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 		}
 	}
 
-	endpoint.Checks = append(endpoint.Checks, m.Check{
+	check := m.Check{
 		OrgId:          cmd.OrgId,
 		EndpointId:     cmd.EndpointId,
 		Type:           m.MonitorTypeToCheckTypeMap[cmd.MonitorTypeId-1],
@@ -130,7 +130,13 @@ func V1AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 		Updated:        time.Now(),
 		Route:          route,
 		Settings:       m.MonitorSettingsDTO(cmd.Settings).ToV2Setting(m.MonitorTypeToCheckTypeMap[cmd.MonitorTypeId-1]),
-	})
+	}
+	err = sqlstore.ValidateCheckRoute(&check)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+	endpoint.Checks = append(endpoint.Checks, check)
 
 	//Update endpoint
 	err = sqlstore.UpdateEndpoint(endpoint)
