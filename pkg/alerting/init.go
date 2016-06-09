@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/hashicorp/golang-lru"
 	"github.com/raintank/met"
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/grafana/grafana/pkg/log"
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore/migrations"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore/migrator"
 	"github.com/raintank/worldping-api/pkg/setting"

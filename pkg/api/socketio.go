@@ -12,11 +12,11 @@ import (
 
 	"github.com/fiorix/freegeoip"
 	"github.com/googollee/go-socket.io"
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/met"
 	"github.com/raintank/raintank-apps/pkg/auth"
 	"github.com/raintank/raintank-metric/schema"
 	"github.com/raintank/worldping-api/pkg/events"
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/collectoreventpublisher"

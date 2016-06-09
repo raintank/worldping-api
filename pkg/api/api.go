@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"github.com/Unknwon/macaron"
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/macaron-contrib/binding"
 	"github.com/raintank/raintank-apps/pkg/auth"
 	"github.com/raintank/worldping-api/pkg/api/rbody"
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"

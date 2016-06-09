@@ -3,7 +3,7 @@ package jobqueue
 import (
 	"time"
 
-	"github.com/grafana/grafana/pkg/log"
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/streadway/amqp"
 	"golang.org/x/net/context"
 )

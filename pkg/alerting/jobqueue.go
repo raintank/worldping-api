@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/worldping-api/pkg/alerting/jobqueue"
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 

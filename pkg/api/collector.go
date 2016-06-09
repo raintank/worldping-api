@@ -1,7 +1,7 @@
 package api
 
 import (
-	//"github.com/grafana/grafana/pkg/log"
+	//"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"

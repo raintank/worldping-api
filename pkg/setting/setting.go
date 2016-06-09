@@ -17,8 +17,8 @@ import (
 
 	"gopkg.in/ini.v1"
 
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/grafana/grafana/pkg/util"
+	"github.com/raintank/worldping-api/pkg/log"
 )
 
 type Scheme string
@@ -387,13 +387,11 @@ func NewConfigContext(args *CommandLineArgs) error {
 
 	alerting := Cfg.Section("alerting")
 	AlertingEnabled = alerting.Key("enabled").MustBool(false)
-	AlertingHandler = alerting.Key("handler").MustString("builtin")
 	TickQueueSize = alerting.Key("tickqueue_size").MustInt(0)
 	InternalJobQueueSize = alerting.Key("internal_jobqueue_size").MustInt(0)
 	PreAMQPJobQueueSize = alerting.Key("pre_amqp_jobqueue_size").MustInt(0)
 	ExecutorLRUSize = alerting.Key("executor_lru_size").MustInt(0)
 	EnableScheduler = alerting.Key("enable_scheduler").MustBool(true)
-	Executors = alerting.Key("executors").MustInt(100)
 	WriteIndividualAlertResults = alerting.Key("write_individual_alert_results").MustBool(false)
 	AlertingInspect = alerting.Key("inspect").MustBool(false)
 
