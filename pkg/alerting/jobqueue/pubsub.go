@@ -153,8 +153,8 @@ func subscribe(sessions chan chan session, exchange string, messages chan<- Mess
 			continue
 		}
 
-		log.Debug("alerting: binding queue %s to routingKey #", q.Name)
-		routingKey := "#"
+		log.Debug("alerting: binding queue %s to routingKey 10", q.Name)
+		routingKey := "10"
 		if err := sub.QueueBind(q.Name, routingKey, exchange, false, nil); err != nil {
 			log.Error(3, "alerting: cannot consume without a binding to exchange: %q, %v", exchange, err)
 			sub.Close()
