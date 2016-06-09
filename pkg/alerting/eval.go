@@ -74,7 +74,7 @@ func (ce *GraphiteCheckEvaluator) Eval(ts time.Time) (m.CheckEvalResult, error) 
 	// cache is unbounded so that we are guaranteed consistent results
 	cacheObj := cache.New(0)
 	eval := func(e *expr.Expr, code m.CheckEvalResult) (m.CheckEvalResult, error) {
-		results, _, err := e.Execute(nil, ce.Context, nil, nil, expr.State{}.InfluxConfig, cacheObj, nil, ts, 0, true, nil, nil, nil)
+		results, _, err := e.Execute(&expr.Backends{GraphiteContext: ce.Context}, &expr.BosunProviders{Cache: cacheObj}, nil, ts, 0, true)
 		if err != nil {
 			// graphite errors are probably transient and non-fatal.
 			if strings.Contains(err.Error(), "graphite") {
