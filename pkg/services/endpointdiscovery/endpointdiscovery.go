@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/grafana/grafana/pkg/log"
+	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 )
 

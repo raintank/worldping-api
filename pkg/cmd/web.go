@@ -11,8 +11,8 @@ import (
 	"github.com/Unknwon/macaron"
 	"github.com/macaron-contrib/toolbox"
 
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/worldping-api/pkg/api"
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 

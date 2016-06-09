@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/Dieterbe/profiletrigger/heap"
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/met/helper"
 	"github.com/raintank/worldping-api/pkg/alerting"
 	"github.com/raintank/worldping-api/pkg/api"
 	"github.com/raintank/worldping-api/pkg/cmd"
 	"github.com/raintank/worldping-api/pkg/events"
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/services/collectoreventpublisher"
 	"github.com/raintank/worldping-api/pkg/services/metricpublisher"
 	"github.com/raintank/worldping-api/pkg/services/notifications"

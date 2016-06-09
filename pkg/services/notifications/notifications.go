@@ -8,8 +8,8 @@ import (
 
 	"path/filepath"
 
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/grafana/grafana/pkg/util"
+	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
 )

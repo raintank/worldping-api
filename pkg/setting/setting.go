@@ -17,8 +17,8 @@ import (
 
 	"gopkg.in/ini.v1"
 
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/grafana/grafana/pkg/util"
+	"github.com/raintank/worldping-api/pkg/log"
 )
 
 type Scheme string

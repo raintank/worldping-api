@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Unknwon/macaron"
-	"github.com/grafana/grafana/pkg/log"
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 )
 

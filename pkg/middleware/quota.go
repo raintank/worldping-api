@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Unknwon/macaron"
-	"github.com/grafana/grafana/pkg/log"
+	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"

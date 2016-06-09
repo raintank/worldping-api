@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/hashicorp/golang-lru"
 	"github.com/raintank/worldping-api/pkg/graphite"
+	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/notifications"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"

@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/nsqio/go-nsq"
 	"github.com/raintank/met"
 	msg "github.com/raintank/raintank-metric/msg"
 	"github.com/raintank/raintank-metric/schema"
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 

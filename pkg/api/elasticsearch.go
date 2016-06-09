@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/grafana/grafana/pkg/log"
 	"github.com/grafana/grafana/pkg/util"
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
