@@ -7,6 +7,7 @@ import (
 
 	"bosun.org/graphite"
 	"github.com/hashicorp/golang-lru"
+	"github.com/raintank/worldping-api/pkg/setting"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -29,6 +30,9 @@ func assertEmpty(t *testing.T, listener chan *graphite.Request, msg string) {
 
 func TestExecutor(t *testing.T) {
 	listener := make(chan *graphite.Request, 100)
+	setting.Rabbitmq = setting.RabbitmqSettings{
+		Enabled: false,
+	}
 	Convey("executor must do the right thing", t, func() {
 
 		fakeGraphiteReturner := func(org_id int64) (graphite.Context, error) {
@@ -49,18 +53,19 @@ func TestExecutor(t *testing.T) {
 				GeneratedAt: time.Now(),
 			}
 		}
-		jobQueue := newInternalJobQueue(10)
+		jobQueue := make(chan *Job, 10)
+		InitJobQueue(jobQueue)
 		cache, err := lru.New(1000)
 		if err != nil {
 			panic(fmt.Sprintf("Can't create LRU: %s", err.Error()))
 		}
 		go ChanExecutor(fakeGraphiteReturner, jobQueue, cache)
-		jobQueue.Put(jobAt(0))
-		jobQueue.Put(jobAt(1))
-		jobQueue.Put(jobAt(2))
-		jobQueue.Put(jobAt(2))
-		jobQueue.Put(jobAt(1))
-		jobQueue.Put(jobAt(0))
+		PublishJob(jobAt(0))
+		PublishJob(jobAt(1))
+		PublishJob(jobAt(2))
+		PublishJob(jobAt(2))
+		PublishJob(jobAt(1))
+		PublishJob(jobAt(0))
 		time.Sleep(100 * time.Millisecond) // yes hacky, can be synchronized later
 		assertReq(t, listener, "expected the first job")
 		assertReq(t, listener, "expected the second job")

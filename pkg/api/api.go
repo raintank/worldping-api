@@ -1,77 +1,85 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/Unknwon/macaron"
+	"github.com/grafana/grafana/pkg/log"
 	"github.com/macaron-contrib/binding"
+	"github.com/raintank/raintank-apps/pkg/auth"
+	"github.com/raintank/worldping-api/pkg/api/rbody"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 // Register adds http routes
 func Register(r *macaron.Macaron) {
-	reqSignedIn := middleware.Auth(&middleware.AuthOptions{ReqSignedIn: true})
-	reqGrafanaAdmin := middleware.Auth(&middleware.AuthOptions{ReqSignedIn: true, ReqGrafanaAdmin: true})
-	reqEditorRole := middleware.RoleAuth(m.ROLE_EDITOR, m.ROLE_ADMIN)
+	r.Use(macaron.Renderer())
+	r.Use(middleware.GetContextHandler())
+	reqEditorRole := middleware.RoleAuth(auth.ROLE_EDITOR, auth.ROLE_ADMIN)
 	quota := middleware.Quota
 	bind := binding.Bind
+	wrap := rbody.Wrap
 
 	// used by LB healthchecks
 	r.Get("/login", Heartbeat)
 
-	// authed api
+	r.Group("/api/v2", func() {
+		r.Get("/quotas", wrap(GetQuotas))
+		r.Group("/admin", func() {
+			r.Group("/quotas", func() {
+				r.Get("/:orgId", wrap(GetOrgQuotas))
+				r.Put("/:orgId/:target/:limit", wrap(UpdateOrgQuota))
+			})
+		}, middleware.RequireAdmin())
+
+	}, middleware.Auth(setting.AdminKey))
+
+	// Old v1 api endpoint.
 	r.Group("/api", func() {
 		// org information available to all users.
 		r.Group("/org", func() {
-			r.Get("/quotas", wrap(GetOwnOrgQuotas))
+			r.Get("/quotas", V1GetOrgQuotas)
 		})
-
-		// orgs (admin routes)
-		r.Group("/orgs/:orgId", func() {
-			r.Get("/quotas", wrap(GetOrgQuotas))
-			r.Put("/quotas/:target", bind(m.UpdateOrgQuotaCmd{}), wrap(UpdateOrgQuota))
-		}, reqGrafanaAdmin)
 
 		r.Group("/collectors", func() {
 			r.Combo("/").
-				Get(bind(m.GetCollectorsQuery{}), wrap(GetCollectors)).
-				Put(reqEditorRole, quota("collector"), bind(m.AddCollectorCommand{}), wrap(AddCollector)).
-				Post(reqEditorRole, bind(m.UpdateCollectorCommand{}), wrap(UpdateCollector))
-			r.Get("/locations", wrap(GetCollectorLocations))
-			r.Get("/:id", wrap(GetCollectorById))
-			r.Delete("/:id", reqEditorRole, wrap(DeleteCollector))
+				Get(bind(m.GetProbesQuery{}), V1GetCollectors).
+				Put(reqEditorRole, quota("probe"), bind(m.ProbeDTO{}), V1AddCollector).
+				Post(reqEditorRole, bind(m.ProbeDTO{}), V1UpdateCollector)
+			r.Get("/locations", V1GetCollectorLocations)
+			r.Get("/:id", V1GetCollectorById)
+			r.Delete("/:id", reqEditorRole, V1DeleteCollector)
 		})
 
 		// Monitors
 		r.Group("/monitors", func() {
 			r.Combo("/").
-				Get(bind(m.GetMonitorsQuery{}), wrap(GetMonitors)).
-				Put(reqEditorRole, bind(m.AddMonitorCommand{}), wrap(AddMonitor)).
-				Post(reqEditorRole, bind(m.UpdateMonitorCommand{}), wrap(UpdateMonitor))
-			r.Get("/:id", wrap(GetMonitorById))
-			r.Delete("/:id", reqEditorRole, wrap(DeleteMonitor))
+				Get(bind(m.GetMonitorsQuery{}), V1GetMonitors).
+				Put(reqEditorRole, bind(m.AddMonitorCommand{}), V1AddMonitor).
+				Post(reqEditorRole, bind(m.UpdateMonitorCommand{}), V1UpdateMonitor)
+			r.Delete("/:id", reqEditorRole, V1DeleteMonitor)
 		})
 		// endpoints
 		r.Group("/endpoints", func() {
-			r.Combo("/").Get(bind(m.GetEndpointsQuery{}), wrap(GetEndpoints)).
-				Put(reqEditorRole, quota("endpoint"), bind(m.AddEndpointCommand{}), wrap(AddEndpoint)).
-				Post(reqEditorRole, bind(m.UpdateEndpointCommand{}), wrap(UpdateEndpoint))
-			r.Get("/:id", wrap(GetEndpointById))
-			r.Delete("/:id", reqEditorRole, wrap(DeleteEndpoint))
-			r.Get("/discover", reqEditorRole, bind(m.EndpointDiscoveryCommand{}), wrap(DiscoverEndpoint))
+			r.Combo("/").Get(bind(m.GetEndpointsQuery{}), V1GetEndpoints).
+				Put(reqEditorRole, quota("endpoint"), bind(m.AddEndpointCommand{}), V1AddEndpoint).
+				Post(reqEditorRole, bind(m.UpdateEndpointCommand{}), V1UpdateEndpoint)
+			r.Get("/:id", V1GetEndpointById)
+			r.Delete("/:id", reqEditorRole, V1DeleteEndpoint)
+			r.Get("/discover", reqEditorRole, bind(m.DiscoverEndpointCmd{}), V1DiscoverEndpoint)
 		})
 
-		r.Get("/monitor_types", wrap(GetMonitorTypes))
-
-		//Events
-		r.Get("/events", bind(m.GetEventsQuery{}), wrap(GetEvents))
+		r.Get("/monitor_types", V1GetMonitorTypes)
 
 		//Get Graph data from Graphite.
-		r.Any("/graphite/*", GraphiteProxy)
+		r.Any("/graphite/*", V1GraphiteProxy)
 
 		//Elasticsearch proxy
-		r.Any("/elasticsearch/*", ElasticsearchProxy)
+		r.Any("/elasticsearch/*", V1ElasticsearchProxy)
 
-	}, reqSignedIn)
+	}, middleware.Auth(setting.AdminKey))
 
 	// rendering
 	//r.Get("/render/*", reqSignedIn, RenderToPng)
@@ -82,11 +90,20 @@ func Register(r *macaron.Macaron) {
 }
 
 func NotFoundHandler(c *middleware.Context) {
-	c.JsonApiErr(404, "Not found", nil)
+	c.JSON(404, "Not found")
 	return
 }
 
 func Heartbeat(c *middleware.Context) {
-	c.JsonOK("OK")
+	c.JSON(200, "OK")
 	return
+}
+
+func handleError(c *middleware.Context, err error) {
+	if e, ok := err.(m.AppError); ok {
+		c.JSON(e.Code(), e.Message())
+		return
+	}
+	log.Error(3, "%s. %s", c.Req.RequestURI, err)
+	c.JSON(500, fmt.Sprintf("Fatal error. %s", err))
 }

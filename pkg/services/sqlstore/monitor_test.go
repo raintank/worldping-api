@@ -21,8 +21,8 @@ func (s scenario) String() string {
 	return fmt.Sprintf("<scenario> now=%d, inState=%s, stateCheck=%d, freq=%d, outState=%s", s.now, s.inState, s.stateCheck, s.frequency, s.outState)
 }
 
-func scrutinizeTest(s scenario) MonitorWithCollectorDTO {
-	mon := MonitorWithCollectorDTO{
+func scrutinizeTest(s scenario) m.Check {
+	mon := m.Check{
 		State:       s.inState,
 		StateCheck:  time.Unix(s.stateCheck, 0),
 		StateChange: time.Unix(s.stateChange, 0),
@@ -76,10 +76,10 @@ var realScenarios = []scenario{
 	{135, m.EvalResultCrit, 117, 1, 10, m.EvalResultCrit},
 	{136, m.EvalResultCrit, 117, 1, 10, m.EvalResultCrit},
 	{137, m.EvalResultCrit, 117, 1, 10, m.EvalResultCrit},
-	{138, m.EvalResultCrit, 117, 1, 10, m.EvalResultUnknown},
-	{139, m.EvalResultCrit, 117, 1, 10, m.EvalResultUnknown},
-	{140, m.EvalResultCrit, 117, 1, 10, m.EvalResultUnknown},
-	{141, m.EvalResultCrit, 117, 1, 10, m.EvalResultUnknown},
+	{148, m.EvalResultCrit, 117, 1, 10, m.EvalResultUnknown},
+	{149, m.EvalResultCrit, 117, 1, 10, m.EvalResultUnknown},
+	{150, m.EvalResultCrit, 117, 1, 10, m.EvalResultUnknown},
+	{151, m.EvalResultCrit, 117, 1, 10, m.EvalResultUnknown},
 }
 
 // crit/warn should become unknown after 2*freq has passed

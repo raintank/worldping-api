@@ -3,18 +3,16 @@ package endpointdiscovery
 import (
 	"errors"
 	"fmt"
-	"github.com/raintank/worldping-api/pkg/bus"
-	m "github.com/raintank/worldping-api/pkg/models"
 	"net"
 	"net/http"
 	"net/url"
 	"os/exec"
 	"strings"
-)
+	"sync"
 
-func init() {
-	bus.AddHandler("endpoint", DiscoverEndpoint)
-}
+	"github.com/grafana/grafana/pkg/log"
+	m "github.com/raintank/worldping-api/pkg/models"
+)
 
 type Endpoint struct {
 	Host string
@@ -22,10 +20,10 @@ type Endpoint struct {
 	URL  *url.URL
 }
 
-func NewEndpoint(domainName string) (*Endpoint, error) {
-	e := &Endpoint{Host: domainName}
-	if strings.Contains(domainName, "://") {
-		u, err := url.Parse(domainName)
+func NewEndpoint(hostname string) (*Endpoint, error) {
+	e := &Endpoint{Host: hostname}
+	if strings.Contains(hostname, "://") {
+		u, err := url.Parse(hostname)
 		if err != nil {
 			return nil, err
 		}
@@ -42,7 +40,7 @@ func NewEndpoint(domainName string) (*Endpoint, error) {
 
 	addr, err := net.LookupHost(e.Host)
 	if err != nil || len(addr) < 1 {
-		e.Host = "www." + domainName
+		e.Host = "www." + hostname
 		addr, err = net.LookupHost(e.Host)
 		if err != nil || len(addr) < 1 {
 			return nil, fmt.Errorf("failed to lookup IP of domain %s.", e.Host)
@@ -52,55 +50,87 @@ func NewEndpoint(domainName string) (*Endpoint, error) {
 	return e, nil
 }
 
-func DiscoverEndpoint(cmd *m.EndpointDiscoveryCommand) error {
-	monitors := make([]*m.SuggestedMonitor, 0)
+func Discover(hostname string) ([]*m.Check, error) {
+	checks := make([]*m.Check, 0)
 
-	endpoint, err := NewEndpoint(cmd.Name)
+	endpoint, err := NewEndpoint(hostname)
 	if err != nil {
-		return err
+		log.Error(3, "failde to parse the endpoint name %s. %s", hostname, err)
+		return nil, err
 	}
+	var wg sync.WaitGroup
+	checkChan := make(chan *m.Check)
+	wg.Add(4)
 
-	pingMonitor, err := DiscoverPing(endpoint)
-	if err == nil {
-		monitors = append(monitors, pingMonitor)
-	}
-
-	httpMonitor, err := DiscoverHttp(endpoint)
-	if err == nil {
-		monitors = append(monitors, httpMonitor)
-	}
-
-	httpsMonitor, err := DiscoverHttps(endpoint)
-	if err == nil {
-		monitors = append(monitors, httpsMonitor)
-	}
-
-	if !endpoint.IsIP {
-		dnsMonitor, err := DiscoverDNS(endpoint)
+	go func() {
+		pingCheck, err := DiscoverPing(endpoint)
 		if err == nil {
-			monitors = append(monitors, dnsMonitor)
+			log.Debug("discovered ping for %s", hostname)
+			checkChan <- pingCheck
 		}
+		wg.Done()
+	}()
+
+	go func() {
+		httpCheck, err := DiscoverHttp(endpoint)
+		if err == nil {
+			log.Debug("discovered http for %s", hostname)
+			checkChan <- httpCheck
+		}
+		wg.Done()
+	}()
+
+	go func() {
+		httpsCheck, err := DiscoverHttps(endpoint)
+		if err == nil {
+			log.Debug("discovered https for %s", hostname)
+			checkChan <- httpsCheck
+		}
+		wg.Done()
+	}()
+
+	go func() {
+		if !endpoint.IsIP {
+			dnsCheck, err := DiscoverDNS(endpoint)
+			if err == nil {
+				log.Debug("discovered dns for %s", hostname)
+				checkChan <- dnsCheck
+			}
+		}
+		wg.Done()
+	}()
+
+	go func() {
+		wg.Wait()
+		close(checkChan)
+	}()
+
+	for c := range checkChan {
+		checks = append(checks, c)
 	}
 
-	cmd.Result = monitors
-	return nil
+	return checks, nil
 
 }
 
-func DiscoverPing(endpoint *Endpoint) (*m.SuggestedMonitor, error) {
+func DiscoverPing(endpoint *Endpoint) (*m.Check, error) {
 	err := exec.Command("ping", "-c 3", "-W 1", "-q", endpoint.Host).Run()
 	if err != nil {
 		return nil, errors.New("host unreachable")
 	}
 
-	settings := []m.MonitorSettingDTO{
-		{Variable: "hostname", Value: endpoint.Host},
-	}
-
-	return &m.SuggestedMonitor{MonitorTypeId: 3, Settings: settings}, nil
+	return &m.Check{
+		Type:      "ping",
+		Frequency: 10,
+		Settings: map[string]interface{}{
+			"hostname": endpoint.Host,
+			"timeout":  5,
+		},
+		Enabled: true,
+	}, nil
 }
 
-func DiscoverHttp(endpoint *Endpoint) (*m.SuggestedMonitor, error) {
+func DiscoverHttp(endpoint *Endpoint) (*m.Check, error) {
 	host := endpoint.Host
 	path := "/"
 	if endpoint.URL != nil {
@@ -126,16 +156,22 @@ func DiscoverHttp(endpoint *Endpoint) (*m.SuggestedMonitor, error) {
 		varPort = hostParts[1]
 	}
 
-	settings := []m.MonitorSettingDTO{
-		{Variable: "host", Value: varHost},
-		{Variable: "port", Value: varPort},
-		{Variable: "path", Value: requestUrl.Path},
-	}
-
-	return &m.SuggestedMonitor{MonitorTypeId: 1, Settings: settings}, nil
+	return &m.Check{
+		Type:      "http",
+		Frequency: 60,
+		Settings: map[string]interface{}{
+			"host":    varHost,
+			"port":    varPort,
+			"path":    requestUrl.Path,
+			"method":  "GET",
+			"headers": "User-Agent: worldping-api\nAccept-Endcoding: gzip\n",
+			"timeout": 5,
+		},
+		Enabled: true,
+	}, nil
 }
 
-func DiscoverHttps(endpoint *Endpoint) (*m.SuggestedMonitor, error) {
+func DiscoverHttps(endpoint *Endpoint) (*m.Check, error) {
 	host := endpoint.Host
 	path := "/"
 	if endpoint.URL != nil {
@@ -157,15 +193,23 @@ func DiscoverHttps(endpoint *Endpoint) (*m.SuggestedMonitor, error) {
 		varPort = hostParts[1]
 	}
 
-	settings := []m.MonitorSettingDTO{
-		{Variable: "host", Value: varHost},
-		{Variable: "port", Value: varPort},
-		{Variable: "path", Value: requestUrl.Path},
-	}
-	return &m.SuggestedMonitor{MonitorTypeId: 2, Settings: settings}, nil
+	return &m.Check{
+		Type:      "https",
+		Frequency: 60,
+		Settings: map[string]interface{}{
+			"host":         varHost,
+			"port":         varPort,
+			"path":         requestUrl.Path,
+			"method":       "GET",
+			"headers":      "User-Agent: worldping-api\nAccept-Endcoding: gzip\n",
+			"timeout":      5,
+			"validateCert": true,
+		},
+		Enabled: true,
+	}, nil
 }
 
-func DiscoverDNS(endpoint *Endpoint) (*m.SuggestedMonitor, error) {
+func DiscoverDNS(endpoint *Endpoint) (*m.Check, error) {
 	domain := endpoint.Host
 	recordType := "A"
 	recordName := domain
@@ -189,10 +233,16 @@ func DiscoverDNS(endpoint *Endpoint) (*m.SuggestedMonitor, error) {
 		}
 	}
 
-	settings := []m.MonitorSettingDTO{
-		{Variable: "name", Value: recordName},
-		{Variable: "type", Value: recordType},
-		{Variable: "server", Value: server},
-	}
-	return &m.SuggestedMonitor{MonitorTypeId: 4, Settings: settings}, nil
+	return &m.Check{
+		Type:      "dns",
+		Frequency: 60,
+		Settings: map[string]interface{}{
+			"name":     recordName,
+			"type":     recordType,
+			"server":   server,
+			"timeout":  5,
+			"protocol": "udp",
+		},
+		Enabled: true,
+	}, nil
 }

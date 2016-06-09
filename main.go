@@ -17,8 +17,8 @@ import (
 	"github.com/raintank/worldping-api/pkg/alerting"
 	"github.com/raintank/worldping-api/pkg/api"
 	"github.com/raintank/worldping-api/pkg/cmd"
+	"github.com/raintank/worldping-api/pkg/events"
 	"github.com/raintank/worldping-api/pkg/services/collectoreventpublisher"
-	"github.com/raintank/worldping-api/pkg/services/eventpublisher"
 	"github.com/raintank/worldping-api/pkg/services/metricpublisher"
 	"github.com/raintank/worldping-api/pkg/services/notifications"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
@@ -62,14 +62,17 @@ func main() {
 		go heap.Run()
 	}
 
-	eventpublisher.Init()
-
-	metricsBackend, err := helper.New(setting.StatsdEnabled, setting.StatsdAddr, setting.StatsdType, "grafana", setting.InstanceId)
+	metricsBackend, err := helper.New(setting.StatsdEnabled, setting.StatsdAddr, setting.StatsdType, "worldping-api", setting.InstanceId)
 	if err != nil {
 		log.Error(3, "Statsd client:", err)
 	}
+
+	// only local events supported.
+	events.Init()
+
 	metricpublisher.Init(metricsBackend)
 	collectoreventpublisher.Init(metricsBackend)
+
 	api.InitCollectorController(metricsBackend)
 	if setting.AlertingEnabled {
 		alerting.Init(metricsBackend)

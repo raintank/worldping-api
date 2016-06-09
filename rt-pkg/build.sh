@@ -11,4 +11,4 @@ cd ${DIR}
 export PATH=$GOPATH/bin:$PATH
 export GOPATH GOBIN
 
-godep go build -o artifacts/bin/worldping-api ../
+go build -o artifacts/bin/worldping-api ../

@@ -106,6 +106,9 @@ var (
 
 	// QUOTA
 	Quota QuotaSettings
+
+	//rabbitmq
+	Rabbitmq RabbitmqSettings
 )
 
 type CommandLineArgs struct {
@@ -404,7 +407,7 @@ func NewConfigContext(args *CommandLineArgs) error {
 
 	readSmtpSettings()
 	readQuotaSettings()
-
+	readRabbitmqSettings()
 	return nil
 }
 

@@ -9,13 +9,13 @@ import (
 	"strings"
 
 	"github.com/grafana/grafana/pkg/util"
-	"github.com/raintank/worldping-api/pkg/bus"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
-func GraphiteProxy(c *middleware.Context) {
+func V1GraphiteProxy(c *middleware.Context) {
 	proxyPath := c.Params("*")
 	target, _ := url.Parse(setting.GraphiteUrl)
 
@@ -25,7 +25,7 @@ func GraphiteProxy(c *middleware.Context) {
 		if strings.HasPrefix(query, "raintank_db") {
 			response, err := executeRaintankDbQuery(query, c.OrgId)
 			if err != nil {
-				c.JsonApiErr(500, "Failed to execute raintank_db query", err)
+				handleError(c, err)
 				return
 			}
 			c.JSON(200, response)
@@ -58,49 +58,50 @@ func executeRaintankDbQuery(query string, orgId int64) (interface{}, error) {
 	tagType := matches[0][1]
 	tagValue := matches[0][2]
 
-	if tagType == "collectors" {
+	if tagType == "collectors" || tagType == "probes" {
 		if tagValue == "*" {
 			// return all tags
-			tagsQuery := m.GetAllCollectorTagsQuery{OrgId: orgId}
-			if err := bus.Dispatch(&tagsQuery); err != nil {
+			tags, err := sqlstore.GetProbeTags(orgId)
+			if err != nil {
 				return nil, err
 			}
 
-			for _, tag := range tagsQuery.Result {
+			for _, tag := range tags {
 				values = append(values, util.DynMap{"text": tag, "expandable": false})
 			}
 			return values, nil
 		} else if tagValue != "" {
 			// return tag values for key
-			collectorsQuery := m.GetCollectorsQuery{OrgId: orgId, Tag: []string{tagValue}}
-			if err := bus.Dispatch(&collectorsQuery); err != nil {
+			collectorsQuery := m.GetProbesQuery{OrgId: orgId, Tag: tagValue}
+			probes, err := sqlstore.GetProbes(&collectorsQuery)
+			if err != nil {
 				return nil, err
 			}
-
-			for _, collector := range collectorsQuery.Result {
+			for _, collector := range probes {
 				values = append(values, util.DynMap{"text": collector.Slug, "expandable": false})
 			}
 		}
 	} else if tagType == "endpoints" {
 		if tagValue == "*" {
 			// return all tags
-			tagsQuery := m.GetAllEndpointTagsQuery{OrgId: orgId}
-			if err := bus.Dispatch(&tagsQuery); err != nil {
+			tags, err := sqlstore.GetEndpointTags(orgId)
+			if err != nil {
 				return nil, err
 			}
 
-			for _, tag := range tagsQuery.Result {
+			for _, tag := range tags {
 				values = append(values, util.DynMap{"text": tag, "expandable": false})
 			}
 			return values, nil
 		} else if tagValue != "" {
 			// return tag values for key
-			endpointsQuery := m.GetEndpointsQuery{OrgId: orgId, Tag: []string{tagValue}}
-			if err := bus.Dispatch(&endpointsQuery); err != nil {
+			endpointsQuery := m.GetEndpointsQuery{OrgId: orgId, Tag: tagValue}
+			endpoints, err := sqlstore.GetEndpoints(&endpointsQuery)
+			if err != nil {
 				return nil, err
 			}
 
-			for _, endpoint := range endpointsQuery.Result {
+			for _, endpoint := range endpoints {
 				values = append(values, util.DynMap{"text": endpoint.Slug, "expandable": false})
 			}
 

@@ -5,8 +5,8 @@ import (
 
 	"github.com/Unknwon/macaron"
 	"github.com/grafana/grafana/pkg/log"
-	"github.com/raintank/worldping-api/pkg/bus"
 	m "github.com/raintank/worldping-api/pkg/models"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
@@ -14,11 +14,11 @@ func Quota(target string) macaron.Handler {
 	return func(c *Context) {
 		limitReached, err := QuotaReached(c, target)
 		if err != nil {
-			c.JsonApiErr(500, "failed to get quota", err)
+			c.JSON(500, fmt.Sprintf("failed to get quota: %s", err))
 			return
 		}
 		if limitReached {
-			c.JsonApiErr(403, fmt.Sprintf("%s Quota reached", target), nil)
+			c.JSON(403, fmt.Sprintf("%s Quota reached", target))
 			return
 		}
 	}
@@ -35,10 +35,10 @@ func QuotaReached(c *Context, target string) (bool, error) {
 		return false, err
 	}
 
-	log.Debug(fmt.Sprintf("checking quota for %s in scopes %v", target, scopes))
+	log.Debug("checking quota for %s in scopes %v", target, scopes)
 
 	for _, scope := range scopes {
-		log.Debug(fmt.Sprintf("checking scope %s", scope.Name))
+		log.Debug("checking scope %s", scope.Name)
 
 		switch scope.Name {
 		case "global":
@@ -48,37 +48,26 @@ func QuotaReached(c *Context, target string) (bool, error) {
 			if scope.DefaultLimit == 0 {
 				return true, nil
 			}
-			if target == "session" {
-				usedSessions := getSessionCount()
-				if int64(usedSessions) > scope.DefaultLimit {
-					log.Debug(fmt.Sprintf("%d sessions active, limit is %d", usedSessions, scope.DefaultLimit))
-					return true, nil
-				}
-				continue
-			}
-			query := m.GetGlobalQuotaByTargetQuery{Target: scope.Target}
-			if err := bus.Dispatch(&query); err != nil {
+			quota, err := sqlstore.GetGlobalQuotaByTarget(scope.Target)
+			if err != nil {
 				return true, err
 			}
-			if query.Result.Used >= scope.DefaultLimit {
+			if quota.Used >= scope.DefaultLimit {
 				return true, nil
 			}
 		case "org":
-			if !c.IsSignedIn {
-				continue
-			}
-			query := m.GetOrgQuotaByTargetQuery{OrgId: c.OrgId, Target: scope.Target, Default: scope.DefaultLimit}
-			if err := bus.Dispatch(&query); err != nil {
+			quota, err := sqlstore.GetOrgQuotaByTarget(c.OrgId, scope.Target, scope.DefaultLimit)
+			if err != nil {
 				return true, err
 			}
-			if query.Result.Limit < 0 {
+			if quota.Limit < 0 {
 				continue
 			}
-			if query.Result.Limit == 0 {
+			if quota.Limit == 0 {
 				return true, nil
 			}
 
-			if query.Result.Used >= query.Result.Limit {
+			if quota.Used >= quota.Limit {
 				return true, nil
 			}
 		}

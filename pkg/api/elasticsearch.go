@@ -19,7 +19,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
-func ElasticsearchProxy(c *middleware.Context) {
+func V1ElasticsearchProxy(c *middleware.Context) {
 	proxyPath := c.Params("*")
 	target, _ := url.Parse(setting.ElasticsearchUrl)
 
@@ -35,12 +35,12 @@ func ElasticsearchProxy(c *middleware.Context) {
 	if c.Req.Request.Method == "POST" && proxyPath == "_msearch" {
 		body, err := ioutil.ReadAll(c.Req.Request.Body)
 		if err != nil {
-			c.JsonApiErr(400, "unable to read request body.", err)
+			c.JSON(400, fmt.Sprintf("unable to read request body. %s", err))
 			return
 		}
 		searchBody, err := restrictSearch(c.OrgId, body)
 		if err != nil {
-			c.JsonApiErr(400, "unable to handle request body.", err)
+			c.JSON(400, fmt.Sprintf("unable to handle request body. %s", err))
 			return
 		}
 		log.Debug("search body is: %s", string(searchBody))

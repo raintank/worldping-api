@@ -1,7 +1,7 @@
 [run]
 init_cmds = [
-  ["godep", "go", "build", "-o", "./bin/worldping-api"],
-	["./bin/grafana-server"]
+  ["go", "build", "-o", "./bin/worldping-api"],
+	["./bin/worldping-api"]
 ]
 watch_all = true
 watch_dirs = [

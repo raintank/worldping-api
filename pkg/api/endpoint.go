@@ -1,75 +1,168 @@
 package api
 
 import (
-	"github.com/raintank/worldping-api/pkg/bus"
+	"fmt"
+	"time"
+
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
-	_ "github.com/raintank/worldping-api/pkg/services/endpointdiscovery"
+	"github.com/raintank/worldping-api/pkg/services/endpointdiscovery"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 )
 
-func GetEndpointById(c *middleware.Context) Response {
+func V1GetEndpointById(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
-	query := m.GetEndpointByIdQuery{Id: id, OrgId: c.OrgId}
-
-	err := bus.Dispatch(&query)
+	endpoint, err := sqlstore.GetEndpointById(c.OrgId, id)
 	if err != nil {
-		return ApiError(404, "Endpoint not found", nil)
+		handleError(c, err)
+		return
 	}
 
-	return Json(200, query.Result)
+	c.JSON(200, endpoint)
+	return
 }
 
-func GetEndpoints(c *middleware.Context, query m.GetEndpointsQuery) Response {
+func V1GetEndpoints(c *middleware.Context, query m.GetEndpointsQuery) {
 	query.OrgId = c.OrgId
 
-	if err := bus.Dispatch(&query); err != nil {
-		return ApiError(500, "Failed to query endpoints", err)
+	endpoints, err := sqlstore.GetEndpoints(&query)
+	if err != nil {
+		handleError(c, err)
+		return
 	}
-	return Json(200, query.Result)
+	c.JSON(200, endpoints)
 }
 
-func DeleteEndpoint(c *middleware.Context) Response {
+func V1DeleteEndpoint(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
-	cmd := &m.DeleteEndpointCommand{Id: id, OrgId: c.OrgId}
-
-	err := bus.Dispatch(cmd)
+	err := sqlstore.DeleteEndpoint(c.OrgId, id)
 	if err != nil {
-		return ApiError(500, "Failed to delete endpoint", err)
+		handleError(c, err)
+		return
 	}
 
-	return ApiSuccess("endpoint deleted")
+	c.JSON(200, "endpoint deleted")
+	return
 }
 
-func AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) Response {
+func V1AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) {
 	cmd.OrgId = c.OrgId
 	if cmd.Name == "" {
-		return ApiError(400, "Endpoint name not set.", nil)
+		c.JSON(400, "Endpoint name not set.")
+		return
 	}
-	if err := bus.Dispatch(&cmd); err != nil {
-		return ApiError(500, "Failed to add endpoint", err)
+	checks := make([]m.Check, len(cmd.Monitors))
+	for i, mon := range cmd.Monitors {
+		checks[i] = m.Check{
+			OrgId:          c.OrgId,
+			EndpointId:     0,
+			Type:           m.MonitorTypeToCheckTypeMap[mon.MonitorTypeId-1],
+			Frequency:      mon.Frequency,
+			Enabled:        mon.Enabled,
+			HealthSettings: mon.HealthSettings,
+			Route:          &m.CheckRoute{},
+			Settings:       m.MonitorSettingsDTO(mon.Settings).ToV2Setting(m.MonitorTypeToCheckTypeMap[mon.MonitorTypeId-1]),
+		}
+		if len(mon.CollectorTags) > 0 {
+			checks[i].Route.Type = m.RouteByTags
+			checks[i].Route.Config = map[string]interface{}{"tags": mon.CollectorTags}
+		} else {
+			checks[i].Route.Type = m.RouteByIds
+			checks[i].Route.Config = map[string]interface{}{"ids": mon.CollectorIds}
+		}
+		err := sqlstore.ValidateCheckRoute(&checks[i])
+		if err != nil {
+			handleError(c, err)
+			return
+		}
+
+	}
+	endpoint := m.EndpointDTO{
+		OrgId:   cmd.OrgId,
+		Name:    cmd.Name,
+		Tags:    cmd.Tags,
+		Created: time.Now(),
+		Updated: time.Now(),
+		Checks:  checks,
+	}
+	err := sqlstore.AddEndpoint(&endpoint)
+	if err != nil {
+		handleError(c, err)
+		return
 	}
 
-	return Json(200, cmd.Result)
+	c.JSON(200, endpoint)
 }
 
-func UpdateEndpoint(c *middleware.Context, cmd m.UpdateEndpointCommand) Response {
+func V1UpdateEndpoint(c *middleware.Context, cmd m.UpdateEndpointCommand) {
 	cmd.OrgId = c.OrgId
 	if cmd.Name == "" {
-		return ApiError(400, "Endpoint name not set.", nil)
+		c.JSON(400, "Endpoint name not set.")
+		return
 	}
-	err := bus.Dispatch(&cmd)
+	// get existing endpoint.
+	endpoint, err := sqlstore.GetEndpointById(cmd.OrgId, cmd.Id)
 	if err != nil {
-		return ApiError(500, "Failed to update endpoint", err)
+		handleError(c, err)
+		return
+	}
+	if endpoint == nil {
+		c.JSON(404, "Endpoint not found")
+		return
 	}
 
-	return ApiSuccess("Endpoint updated")
+	endpoint.Name = cmd.Name
+	endpoint.Tags = cmd.Tags
+
+	err = sqlstore.UpdateEndpoint(endpoint)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+
+	c.JSON(200, "Endpoint updated")
 }
 
-func DiscoverEndpoint(c *middleware.Context, cmd m.EndpointDiscoveryCommand) Response {
-	if err := bus.Dispatch(&cmd); err != nil {
-		return ApiError(500, "Failed to discover endpoint", err)
+func V1DiscoverEndpoint(c *middleware.Context, cmd m.DiscoverEndpointCmd) {
+	checks, err := endpointdiscovery.Discover(cmd.Name)
+	if err != nil {
+		handleError(c, err)
+		return
 	}
-	return Json(200, cmd.Result)
+	// convert from checks to v1api SuggestedMonitor
+	monitors := make([]m.SuggestedMonitor, len(checks))
+	for i, check := range checks {
+		monitors[i] = m.SuggestedMonitor{
+			MonitorTypeId: checkTypeToId(check.Type),
+			Settings:      checkSettingToMonitorSetting(check.Settings),
+		}
+	}
+	c.JSON(200, monitors)
+}
+
+func checkTypeToId(t m.CheckType) int64 {
+	lookup := map[m.CheckType]int64{
+		m.HTTP_CHECK:  1,
+		m.HTTPS_CHECK: 2,
+		m.PING_CHECK:  3,
+		m.DNS_CHECK:   4,
+	}
+	typeNum, exists := lookup[t]
+	if !exists {
+		return 0
+	}
+	return typeNum
+}
+
+func checkSettingToMonitorSetting(settings map[string]interface{}) []m.MonitorSettingDTO {
+	monSetting := make([]m.MonitorSettingDTO, 0)
+	for key, val := range settings {
+		monSetting = append(monSetting, m.MonitorSettingDTO{
+			Variable: key,
+			Value:    fmt.Sprintf("%v", val),
+		})
+	}
+	return monSetting
 }

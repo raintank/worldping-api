@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,17 +14,16 @@ import (
 	"github.com/googollee/go-socket.io"
 	"github.com/grafana/grafana/pkg/log"
 	"github.com/raintank/met"
+	"github.com/raintank/raintank-apps/pkg/auth"
 	"github.com/raintank/raintank-metric/schema"
-	"github.com/raintank/worldping-api/pkg/bus"
 	"github.com/raintank/worldping-api/pkg/events"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/collectoreventpublisher"
 	"github.com/raintank/worldping-api/pkg/services/metricpublisher"
-	"github.com/raintank/worldping-api/pkg/services/rabbitmq"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
 	"github.com/raintank/worldping-api/pkg/util"
-	"github.com/streadway/amqp"
 )
 
 var server *socketio.Server
@@ -35,33 +33,19 @@ var geoipDB *freegeoip.DB
 
 type ContextCache struct {
 	sync.RWMutex
-	Contexts      map[string]*CollectorContext
-	monitorsIndex map[int64]*m.MonitorDTO // index of monitors by Id
+	Contexts map[string]*CollectorContext
 }
 
 func (s *ContextCache) Set(id string, context *CollectorContext) {
 	s.Lock()
-	defer s.Unlock()
 	s.Contexts[id] = context
-	if s.monitorsIndex == nil {
-		s.loadMonitors()
-	}
-	newIndex := make(map[int64]*m.MonitorDTO)
-	for _, mon := range s.monitorsIndex {
-		for _, col := range mon.Collectors {
-			if col == context.Collector.Id {
-				newIndex[mon.Id] = mon
-				break
-			}
-		}
-	}
-	context.MonitorsIndex = newIndex
+	s.Unlock()
 }
 
 func (s *ContextCache) Remove(id string) {
 	s.Lock()
-	defer s.Unlock()
 	delete(s.Contexts, id)
+	s.Unlock()
 }
 
 func (s *ContextCache) Emit(id string, event string, payload interface{}) {
@@ -80,129 +64,9 @@ func (c *ContextCache) Refresh(collectorId int64) {
 	defer c.RUnlock()
 
 	for _, ctx := range c.Contexts {
-		if ctx.Collector.Id == collectorId {
+		if ctx.Probe.Id == collectorId {
 			ctx.Refresh()
 		}
-	}
-}
-
-func (c *ContextCache) loadMonitors() {
-	monQuery := m.GetMonitorsQuery{
-		IsGrafanaAdmin: true,
-		Enabled:        "true",
-	}
-	newIndex := make(map[int64]*m.MonitorDTO)
-	newCollectorIndex := make(map[int64]map[int64]*m.MonitorDTO)
-
-	if err := bus.Dispatch(&monQuery); err != nil {
-		log.Error(0, "failed to get list of monitors.", err)
-	} else {
-		for _, mon := range monQuery.Result {
-			newIndex[mon.Id] = mon
-			for _, col := range mon.Collectors {
-				if _, ok := newCollectorIndex[col]; !ok {
-					newCollectorIndex[col] = make(map[int64]*m.MonitorDTO)
-				}
-				newCollectorIndex[col][mon.Id] = mon
-			}
-		}
-		c.monitorsIndex = newIndex
-	}
-	for _, ctx := range c.Contexts {
-		cIdx, ok := newCollectorIndex[ctx.Collector.Id]
-		if !ok {
-			cIdx = make(map[int64]*m.MonitorDTO)
-		}
-		ctx.MonitorsIndex = cIdx
-	}
-}
-
-func (c *ContextCache) AddMonitor(event *events.MonitorCreated) {
-	mon := &m.MonitorDTO{
-		Id:            event.Id,
-		OrgId:         event.OrgId,
-		EndpointId:    event.EndpointId,
-		EndpointSlug:  event.EndpointSlug,
-		MonitorTypeId: event.MonitorTypeId,
-		CollectorIds:  event.CollectorIds,
-		CollectorTags: event.CollectorTags,
-		Collectors:    event.Collectors,
-		Settings:      event.Settings,
-		Frequency:     event.Frequency,
-		Offset:        event.Offset,
-		Enabled:       event.Enabled,
-		Updated:       event.Updated,
-	}
-	// get map of collectors.
-	colList := make(map[int64]bool)
-	for _, col := range mon.Collectors {
-		colList[col] = true
-	}
-	c.Lock()
-	defer c.Unlock()
-	// add the monitor to the full index.
-	c.monitorsIndex[event.Id] = mon
-
-	// add the monitor to the perCollector index, for each collector it is enabled on.
-	for _, ctx := range c.Contexts {
-		if _, ok := colList[ctx.Collector.Id]; ok {
-			ctx.MonitorsIndex[event.Id] = mon
-		}
-	}
-}
-
-func (c *ContextCache) UpdateMonitor(event *events.MonitorUpdated) {
-	mon := &m.MonitorDTO{
-		Id:            event.Id,
-		OrgId:         event.OrgId,
-		EndpointId:    event.EndpointId,
-		EndpointSlug:  event.EndpointSlug,
-		MonitorTypeId: event.MonitorTypeId,
-		CollectorIds:  event.CollectorIds,
-		CollectorTags: event.CollectorTags,
-		Collectors:    event.Collectors,
-		Settings:      event.Settings,
-		Frequency:     event.Frequency,
-		Offset:        event.Offset,
-		Enabled:       event.Enabled,
-		Updated:       event.Updated,
-	}
-	// get map of collectors.
-	colList := make(map[int64]bool)
-	for _, col := range mon.Collectors {
-		colList[col] = true
-	}
-	c.Lock()
-	defer c.Unlock()
-	c.monitorsIndex[event.Id] = mon
-	// add the monitor to the perCollector index, for each collector it is enabled on.
-	for _, ctx := range c.Contexts {
-		if _, ok := colList[ctx.Collector.Id]; ok {
-			ctx.MonitorsIndex[event.Id] = mon
-		}
-	}
-
-	// remove monitor from collectors it is no longer on.
-	toDelete := make(map[int64]bool)
-	for _, collectorId := range event.LastState.Collectors {
-		if _, ok := colList[collectorId]; !ok {
-			toDelete[collectorId] = true
-		}
-	}
-	for _, ctx := range c.Contexts {
-		if _, ok := toDelete[ctx.Collector.Id]; ok {
-			delete(ctx.MonitorsIndex, event.Id)
-		}
-	}
-}
-
-func (c *ContextCache) DeleteMonitor(event *events.MonitorRemoved) {
-	c.Lock()
-	defer c.Unlock()
-	delete(c.monitorsIndex, event.Id)
-
-	for _, ctx := range c.Contexts {
-		delete(ctx.MonitorsIndex, event.Id)
 	}
 }
 
@@ -212,7 +76,6 @@ func (c *ContextCache) RefreshLoop() {
 		select {
 		case <-ticker.C:
 			c.RLock()
-			c.loadMonitors()
 			for _, ctx := range c.Contexts {
 				ctx.Refresh()
 			}
@@ -231,26 +94,32 @@ func NewContextCache() *ContextCache {
 }
 
 type CollectorContext struct {
-	*m.SignedInUser
-	Collector     *m.CollectorDTO
-	Socket        socketio.Socket
-	SocketId      string
-	MonitorsIndex map[int64]*m.MonitorDTO // index of monitors by Id
-	VersionMajor  int64
-	VersionMinor  float64
+	*auth.SignedInUser
+	Probe   *m.ProbeDTO
+	Socket  socketio.Socket
+	Session *m.ProbeSession
 }
 
-type BinMessage struct {
-	Payload *socketio.Attachment
+func authenticate(keyString string) (*auth.SignedInUser, error) {
+	if keyString != "" {
+		return auth.Auth(setting.AdminKey, keyString)
+	}
+	return nil, auth.ErrInvalidApiKey
 }
 
 func register(so socketio.Socket) (*CollectorContext, error) {
 	req := so.Request()
 	req.ParseForm()
 	keyString := req.Form.Get("apiKey")
+
+	user, err := authenticate(keyString)
+	if err != nil {
+		return nil, err
+	}
+
 	name := req.Form.Get("name")
 	if name == "" {
-		return nil, errors.New("collector name not provided.")
+		return nil, errors.New("probe name not provided.")
 	}
 
 	lastSocketId := req.Form.Get("lastSocketId")
@@ -275,107 +144,99 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	//--------- set required version of collector.------------//
 	//
 	if versionMajor < 0 || versionMinor < 1.3 {
-		return nil, errors.New("invalid collector version. Please upgrade.")
+		return nil, errors.New("invalid probe version. Please upgrade.")
 	}
 	//
 	//--------- set required version of collector.------------//
-	log.Info("collector %s with version %d.%f connected", name, versionMajor, versionMinor)
-	if keyString != "" {
-		user, err := middleware.UserFromGrafanaNetApiKey(keyString)
+	log.Info("probe %s with version %s connected", name, versionStr)
+
+	// lookup collector
+	probe, err := sqlstore.GetProbeByName(name, user.OrgId)
+	if err == m.ErrProbeNotFound {
+		//collector not found, so lets create a new one.
+		probe = &m.ProbeDTO{
+			OrgId:   user.OrgId,
+			Name:    name,
+			Enabled: true,
+		}
+
+		err = sqlstore.AddProbe(probe)
 		if err != nil {
-			return nil, m.ErrInvalidApiKey
-		}
-
-		// lookup collector
-		colQuery := m.GetCollectorByNameQuery{Name: name, OrgId: user.OrgId}
-		if err := bus.Dispatch(&colQuery); err != nil {
-			//collector not found, so lets create a new one.
-			colCmd := m.AddCollectorCommand{
-				OrgId:   user.OrgId,
-				Name:    name,
-				Enabled: true,
-			}
-			if err := bus.Dispatch(&colCmd); err != nil {
-				return nil, err
-			}
-			colQuery.Result = colCmd.Result
-		}
-
-		sess := &CollectorContext{
-			SignedInUser: user,
-			Collector:    colQuery.Result,
-			Socket:       so,
-			SocketId:     so.Id(),
-			VersionMajor: versionMajor,
-			VersionMinor: versionMinor,
-		}
-		log.Info("collector %s with id %d owned by %d authenticated successfully.", name, colQuery.Result.Id, user.OrgId)
-		if lastSocketId != "" {
-			log.Info("removing socket with Id %s", lastSocketId)
-			cmd := &m.DeleteCollectorSessionCommand{
-				SocketId:    lastSocketId,
-				OrgId:       sess.OrgId,
-				CollectorId: sess.Collector.Id,
-			}
-			if err := bus.Dispatch(cmd); err != nil {
-				log.Error(0, "failed to remove collectors lastSocketId", err)
-				return nil, err
-			}
-		}
-
-		if err := sess.Save(); err != nil {
 			return nil, err
 		}
-		log.Info("saving session to contextCache")
-		contextCache.Set(sess.SocketId, sess)
-		log.Info("session saved to contextCache")
-		return sess, nil
+	} else if err != nil {
+		return nil, err
 	}
-	return nil, m.ErrInvalidApiKey
+	remoteIp := net.ParseIP(util.GetRemoteIp(so.Request()))
+	if remoteIp == nil {
+		log.Error(3, "Unable to lookup remote IP address of probe.")
+		remoteIp = net.ParseIP("0.0.0.0")
+	} else if probe.Latitude == 0 || probe.Longitude == 0 {
+		var location freegeoip.DefaultQuery
+		err := geoipDB.Lookup(remoteIp, &location)
+		if err != nil {
+			log.Error(3, "Unabled to get location from IP.", err)
+			return nil, err
+		}
+		probe.Latitude = location.Location.Latitude
+		probe.Longitude = location.Location.Longitude
+		log.Debug("probe %s is located at lat:%f, long:%f", probe.Name, location.Location.Latitude, location.Location.Longitude)
+
+		if err := sqlstore.UpdateProbe(probe); err != nil {
+			log.Error(3, "could not save Probe location to DB.", err)
+			return nil, err
+		}
+	}
+
+	sess := &CollectorContext{
+		SignedInUser: user,
+		Probe:        probe,
+		Socket:       so,
+		Session: &m.ProbeSession{
+			OrgId:      user.OrgId,
+			ProbeId:    probe.Id,
+			SocketId:   so.Id(),
+			Version:    versionStr,
+			InstanceId: setting.InstanceId,
+			RemoteIp:   remoteIp.String(),
+		},
+	}
+
+	log.Info("probe %s with id %d owned by %d authenticated successfully from %s.", name, probe.Id, user.OrgId, remoteIp.String())
+	if lastSocketId != "" {
+		log.Info("removing socket with Id %s", lastSocketId)
+		if err := sqlstore.DeleteProbeSession(&m.ProbeSession{OrgId: sess.OrgId, SocketId: lastSocketId, ProbeId: sess.Probe.Id}); err != nil {
+			log.Error(3, "failed to remove probes lastSocketId", err)
+			return nil, err
+		}
+	}
+
+	log.Info("saving session to contextCache")
+	contextCache.Set(sess.Session.SocketId, sess)
+	log.Info("session saved to contextCache")
+	err = sqlstore.AddProbeSession(sess.Session)
+	if err != nil {
+		return nil, err
+	}
+	return sess, nil
 }
 
 func InitCollectorController(metrics met.Backend) {
-	sec := setting.Cfg.Section("event_publisher")
-	cmd := &m.ClearCollectorSessionCommand{
-		InstanceId: setting.InstanceId,
-	}
-	if err := bus.Dispatch(cmd); err != nil {
-		log.Fatal(0, "failed to clear collectorSessions", err)
+	if err := sqlstore.ClearProbeSessions(setting.InstanceId); err != nil {
+		log.Fatal(4, "failed to clear collectorSessions", err)
 	}
 
-	if sec.Key("enabled").MustBool(false) {
-		url := sec.Key("rabbitmq_url").String()
-		exchange := sec.Key("exchange").String()
-		exch := rabbitmq.Exchange{
-			Name:         exchange,
-			ExchangeType: "topic",
-			Durable:      true,
-		}
-		q := rabbitmq.Queue{
-			Name:       "",
-			Durable:    false,
-			AutoDelete: true,
-			Exclusive:  true,
-		}
-		consumer := rabbitmq.Consumer{
-			Url:        url,
-			Exchange:   &exch,
-			Queue:      &q,
-			BindingKey: []string{"INFO.monitor.*", "INFO.collector.*"},
-		}
-		err := consumer.Connect()
-		if err != nil {
-			log.Fatal(0, "failed to start event.consumer.", err)
-		}
-		consumer.Consume(eventConsumer)
-	} else {
-		//tap into the update/add/Delete events emitted when monitors are modified.
-		bus.AddEventListener(EmitUpdateMonitor)
-		bus.AddEventListener(EmitAddMonitor)
-		bus.AddEventListener(EmitDeleteMonitor)
-		bus.AddEventListener(HandleCollectorConnected)
-		bus.AddEventListener(HandleCollectorDisconnected)
-	}
+	metricsRecvd = metrics.NewCount("collector-ctrl.metrics-recv")
+
+	channel := make(chan events.RawEvent, 100)
+	events.Subscribe("Endpoint.created", channel)
+	events.Subscribe("Endpoint.updated", channel)
+	events.Subscribe("Endpoint.deleted", channel)
+	events.Subscribe("ProbeSession.created", channel)
+	events.Subscribe("ProbeSession.deleted", channel)
+	events.Subscribe("Probe.updated", channel)
+	go eventConsumer(channel)
+
 	metricsRecvd = metrics.NewCount("collector-ctrl.metrics-recv")
 
 	// init GEOIP DB.
@@ -384,13 +245,9 @@ func InitCollectorController(metrics met.Backend) {
 	if err != nil {
 		log.Error(3, "failed to load GEOIP DB. ", err)
 	}
-
-}
-
-func init() {
 	contextCache = NewContextCache()
-	var err error
-	server, err = socketio.NewServer([]string{"polling", "websocket"})
+
+	server, err = socketio.NewServer([]string{"websocket"})
 	if err != nil {
 		log.Fatal(4, "failed to initialize socketio.", err)
 		return
@@ -398,12 +255,12 @@ func init() {
 	server.On("connection", func(so socketio.Socket) {
 		c, err := register(so)
 		if err != nil {
-			if err == m.ErrInvalidApiKey {
-				log.Info("collector failed to authenticate.")
-			} else if err.Error() == "invalid collector version. Please upgrade." {
-				log.Info("collector is wrong version")
+			if err == auth.ErrInvalidApiKey {
+				log.Info("probe failed to authenticate.")
+			} else if err.Error() == "invalid probe version. Please upgrade." {
+				log.Info("probe is wrong version")
 			} else {
-				log.Error(0, "Failed to initialize collector.", err)
+				log.Error(3, "Failed to initialize probe.", err)
 			}
 			so.Emit("error", err.Error())
 			return
@@ -412,8 +269,8 @@ func init() {
 		if err := c.EmitReady(); err != nil {
 			return
 		}
-		log.Info("binding event handlers for collector %s owned by OrgId: %d", c.Collector.Name, c.OrgId)
-		if c.VersionMinor == 1.3 {
+		log.Info("binding event handlers for probe %s owned by OrgId: %d", c.Probe.Name, c.OrgId)
+		if c.Session.Version == "0.1.3" {
 			c.Socket.On("event", c.OnEventOld)
 		} else {
 			c.Socket.On("event", c.OnEvent)
@@ -421,112 +278,50 @@ func init() {
 		c.Socket.On("results", c.OnResults)
 		c.Socket.On("disconnection", c.OnDisconnection)
 
-		log.Info("calling refresh for collector %s owned by OrgId: %d", c.Collector.Name, c.OrgId)
-		time.Sleep(time.Second)
-		c.Refresh()
+		//refresh will be sent due to the ProbeSessionCreated event being emitted.
 	})
 
 	server.On("error", func(so socketio.Socket, err error) {
-		log.Error(0, "socket emitted error", err)
+		log.Error(3, "socket emitted error", err)
 	})
 
 }
 
+type ReadyPayload struct {
+	Collector    *m.ProbeDTO        `json:"collector"`
+	MonitorTypes []m.MonitorTypeDTO `json:"monitor_types"`
+	SocketId     string             `json:"socket_id"`
+}
+
 func (c *CollectorContext) EmitReady() error {
-	//get list of monitorTypes
-	cmd := &m.GetMonitorTypesQuery{}
-	if err := bus.Dispatch(cmd); err != nil {
-		log.Error(0, "Failed to initialize collector.", err)
-		c.Socket.Emit("error", err)
-		return err
-	}
-	log.Info("sending ready event to collector %s", c.Collector.Name)
-	readyPayload := map[string]interface{}{
-		"collector":     c.Collector,
-		"monitor_types": cmd.Result,
-		"socket_id":     c.SocketId,
+	log.Info("sending ready event to probe %s", c.Probe.Name)
+	readyPayload := &ReadyPayload{
+		Collector:    c.Probe,
+		MonitorTypes: m.MonitorTypes,
+		SocketId:     c.Session.SocketId,
 	}
 	c.Socket.Emit("ready", readyPayload)
 	return nil
 }
 
-func (c *CollectorContext) Save() error {
-	cmd := &m.AddCollectorSessionCommand{
-		CollectorId: c.Collector.Id,
-		SocketId:    c.Socket.Id(),
-		OrgId:       c.OrgId,
-		InstanceId:  setting.InstanceId,
-	}
-	if err := bus.Dispatch(cmd); err != nil {
-		log.Info("could not write collector_sesison to DB.", err)
-		return err
-	}
-	log.Info("collector_session %s for collector_id: %d saved to DB.", cmd.SocketId, cmd.CollectorId)
-	if c.Collector.Latitude == 0 || c.Collector.Longitude == 0 {
-		remoteIp := net.ParseIP(util.GetRemoteIp(c.Socket.Request()))
-		if remoteIp == nil {
-			log.Error(3, "Unable to lookup remote IP address of collector.")
-			return nil
-		}
-		var location freegeoip.DefaultQuery
-		err := geoipDB.Lookup(remoteIp, &location)
-		if err != nil {
-			log.Error(3, "Unabled to get location from IP.", err)
-			return nil
-		}
-		log.Debug("collector %s is located at lat:%f, long:%f", c.Collector.Name, location.Location.Latitude, location.Location.Longitude)
-		updateCmd := &m.UpdateCollectorCommand{
-			Id:        c.Collector.Id,
-			OrgId:     c.Collector.OrgId,
-			Name:      c.Collector.Name,
-			Tags:      c.Collector.Tags,
-			Public:    c.Collector.Public,
-			Enabled:   c.Collector.Enabled,
-			Latitude:  location.Location.Latitude,
-			Longitude: location.Location.Longitude,
-		}
-		if err := bus.Dispatch(updateCmd); err != nil {
-			log.Info("could not save collector location to DB.", err)
-			return err
-		}
-	}
-	return nil
-}
-
-func (c *CollectorContext) Update() error {
-	cmd := &m.UpdateCollectorSessionCmd{
-		CollectorId: c.Collector.Id,
-		SocketId:    c.Socket.Id(),
-		OrgId:       c.OrgId,
-	}
-	if err := bus.Dispatch(cmd); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (c *CollectorContext) Remove() error {
-	log.Info(fmt.Sprintf("removing socket with Id %s", c.SocketId))
-	cmd := &m.DeleteCollectorSessionCommand{
-		SocketId:    c.SocketId,
-		OrgId:       c.OrgId,
-		CollectorId: c.Collector.Id,
-	}
-	err := bus.Dispatch(cmd)
+	log.Info("removing socket with Id %s", c.Session.SocketId)
+	err := sqlstore.DeleteProbeSession(c.Session)
+	log.Info("probe session deleted from db.")
 	return err
 }
 
 func (c *CollectorContext) OnDisconnection() {
-	log.Info(fmt.Sprintf("%s disconnected", c.Collector.Name))
+	log.Info("%s disconnected", c.Probe.Name)
 	if err := c.Remove(); err != nil {
-		log.Error(4, fmt.Sprintf("Failed to remove collectorSession. %s", c.Collector.Name), err)
+		log.Error(3, "Failed to remove probeSession for %s, %s", c.Probe.Name, err)
 	}
-	contextCache.Remove(c.SocketId)
+	contextCache.Remove(c.Session.SocketId)
 }
 
 func (c *CollectorContext) OnEvent(msg *schema.ProbeEvent) {
-	log.Debug(fmt.Sprintf("received event from %s", c.Collector.Name))
-	if !c.Collector.Public {
+	log.Debug("received event from %s", c.Probe.Name)
+	if !c.Probe.Public {
 		msg.OrgId = c.OrgId
 	}
 
@@ -548,8 +343,8 @@ type probeEventOld struct {
 }
 
 func (c *CollectorContext) OnEventOld(msg *probeEventOld) {
-	log.Debug(fmt.Sprintf("received event from %s", c.Collector.Name))
-	if !c.Collector.Public {
+	log.Debug("received event from %s", c.Probe.Name)
+	if !c.Probe.Public {
 		msg.OrgId = c.OrgId
 	}
 	//convert our []string of key:valy pairs to
@@ -570,7 +365,7 @@ func (c *CollectorContext) OnEventOld(msg *probeEventOld) {
 		Tags:      tags,
 	}
 	if err := collectoreventpublisher.Publish(e); err != nil {
-		log.Error(0, "failed to publish event.", err)
+		log.Error(3, "failed to publish event.", err)
 	}
 }
 
@@ -578,7 +373,7 @@ func (c *CollectorContext) OnResults(results []*schema.MetricData) {
 	metricsRecvd.Inc(int64(len(results)))
 	for _, r := range results {
 		r.SetId()
-		if !c.Collector.Public {
+		if !c.Probe.Public {
 			r.OrgId = int(c.OrgId)
 		}
 	}
@@ -586,35 +381,39 @@ func (c *CollectorContext) OnResults(results []*schema.MetricData) {
 }
 
 func (c *CollectorContext) Refresh() {
-	log.Info("Collector %d refreshing", c.Collector.Id)
+	log.Info("Probe %d (%s) refreshing", c.Probe.Id, c.Probe.Name)
 	//step 1. get list of collectorSessions for this collector.
-	q := m.GetCollectorSessionsQuery{CollectorId: c.Collector.Id}
-	if err := bus.Dispatch(&q); err != nil {
-		log.Error(0, "failed to get list of collectorSessions.", err)
+	sessions, err := sqlstore.GetProbeSessions(c.Probe.Id, "")
+	if err != nil {
+		log.Error(3, "failed to get list of probeSessions.", err)
 		return
 	}
-	org := c.Collector.OrgId
-	if c.Collector.Public {
-		org = 0
-	}
-	totalSessions := int64(len(q.Result))
+
+	totalSessions := int64(len(sessions))
+	log.Debug("probe %d has %d sessions", c.Probe.Id, totalSessions)
 	//step 2. for each session
-	for pos, sess := range q.Result {
+	for pos, sess := range sessions {
 		//we only need to refresh the 1 socket.
-		if sess.SocketId != c.SocketId {
+		if sess.SocketId != c.Session.SocketId {
 			continue
 		}
-		//step 3. get list of monitors configured for this colletor.
+		//step 3. get list of checks configured for this colletor.
+		checks, err := sqlstore.GetProbeChecksWithEndpointSlug(c.Probe)
+		if err != nil {
+			log.Error(3, "failed to get checks for probe %s. %s", c.Probe.Id, err)
+			break
+		}
 
-		log.Info("sending refresh to " + sess.SocketId)
 		//step 5. send to socket.
-		monitors := make([]*m.MonitorDTO, 0, len(c.MonitorsIndex))
-		for _, mon := range c.MonitorsIndex {
-			if (org == 0 || mon.OrgId == org) && (mon.Id%totalSessions == int64(pos)) {
-				monitors = append(monitors, mon)
+		monitors := make([]m.MonitorDTO, 0, len(checks))
+		for _, check := range checks {
+			if check.Check.Id%totalSessions == int64(pos) {
+				monitors = append(monitors, m.MonitorDTOFromCheck(check.Check, check.Slug))
 			}
 		}
+		log.Info("sending refresh to %s. %d checks", sess.SocketId, len(monitors))
 		c.Socket.Emit("refresh", monitors)
+		break
 	}
 }
 
@@ -626,99 +425,174 @@ func SocketIO(c *middleware.Context) {
 	server.ServeHTTP(c.Resp, c.Req.Request)
 }
 
-func EmitUpdateMonitor(event *events.MonitorUpdated) error {
-	log.Info("processing monitorUpdated event.")
-	contextCache.UpdateMonitor(event)
-	seenCollectors := make(map[int64]bool)
-	for _, collectorId := range event.Collectors {
-		seenCollectors[collectorId] = true
-		if err := EmitEvent(collectorId, "updated", event); err != nil {
-			return err
+func HandleEndpointUpdated(event *events.EndpointUpdated) error {
+	log.Debug("processing EndpointUpdated event. EndpointId: %d", event.Payload.Current.Id)
+	seenChecks := make(map[int64]struct{})
+	oldChecks := make(map[int64]m.Check)
+	changedChecks := make([]m.Check, 0)
+	newChecks := make([]m.Check, 0)
+
+	for _, check := range event.Payload.Last.Checks {
+		oldChecks[check.Id] = check
+	}
+
+	// find the checks that have changed.
+	for _, check := range event.Payload.Current.Checks {
+		if check.Enabled {
+			seenChecks[check.Id] = struct{}{}
+			if check.Updated.After(event.Payload.Current.Updated) {
+				if _, ok := oldChecks[check.Id]; ok {
+					changedChecks = append(changedChecks, check)
+				} else {
+					newChecks = append(newChecks, check)
+				}
+			}
 		}
 	}
-	for _, collectorId := range event.LastState.Collectors {
-		if _, ok := seenCollectors[collectorId]; !ok {
-			if err := EmitEvent(collectorId, "removed", event); err != nil {
+
+	for _, check := range changedChecks {
+		probeIds, err := sqlstore.GetProbesForCheck(&check)
+		if err != nil {
+			return err
+		}
+		seenProbes := make(map[int64]struct{})
+		for _, probe := range probeIds {
+			seenProbes[probe] = struct{}{}
+			log.Debug("notifying probe:%d about updated %s check for %s", probe, check.Type, event.Payload.Current.Slug)
+			if err := EmitCheckEvent(probe, check.Id, "updated", m.MonitorDTOFromCheck(check, event.Payload.Current.Slug)); err != nil {
 				return err
 			}
-
 		}
-	}
-
-	return nil
-}
-
-func EmitAddMonitor(event *events.MonitorCreated) error {
-	log.Info("processing monitorCreated event")
-	contextCache.AddMonitor(event)
-	for _, collectorId := range event.Collectors {
-		if err := EmitEvent(collectorId, "created", event); err != nil {
+		oldCheck := oldChecks[check.Id]
+		oldProbes, err := sqlstore.GetProbesForCheck(&oldCheck)
+		if err != nil {
 			return err
 		}
+		for _, probe := range oldProbes {
+			if _, ok := seenProbes[probe]; !ok {
+				log.Debug("%s check for %s should no longer be running on probe %s", check.Type, event.Payload.Current.Slug, probe)
+				if err := EmitCheckEvent(probe, check.Id, "removed", m.MonitorDTOFromCheck(check, event.Payload.Last.Slug)); err != nil {
+					return err
+				}
+			}
+		}
 	}
+
+	for _, check := range newChecks {
+		probeIds, err := sqlstore.GetProbesForCheck(&check)
+		if err != nil {
+			return err
+		}
+		for _, probe := range probeIds {
+			log.Debug("notifying probe:%d about new %s check for %s", probe, check.Type, event.Payload.Current.Slug)
+			if err := EmitCheckEvent(probe, check.Id, "created", m.MonitorDTOFromCheck(check, event.Payload.Current.Slug)); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, check := range oldChecks {
+		if _, ok := seenChecks[check.Id]; !ok {
+			oldProbes, err := sqlstore.GetProbesForCheck(&check)
+			if err != nil {
+				return err
+			}
+			for _, probe := range oldProbes {
+				log.Debug("%s check for %s should no longer be running on probe %s", check.Type, event.Payload.Current.Slug, probe)
+				if err := EmitCheckEvent(probe, check.Id, "removed", m.MonitorDTOFromCheck(check, event.Payload.Last.Slug)); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
-func EmitDeleteMonitor(event *events.MonitorRemoved) error {
-	log.Info("processing monitorRemoved event")
-	contextCache.DeleteMonitor(event)
-	for _, collectorId := range event.Collectors {
-		if err := EmitEvent(collectorId, "removed", event); err != nil {
+func HandleEndpointCreated(event *events.EndpointCreated) error {
+	log.Debug("processing EndpointCreated event. EndpointId: %d", event.Payload.Id)
+	for _, check := range event.Payload.Checks {
+		if !check.Enabled {
+			continue
+		}
+		probeIds, err := sqlstore.GetProbesForCheck(&check)
+		if err != nil {
 			return err
+		}
+		for _, probe := range probeIds {
+			log.Debug("notifying probe:%d about new %s check for %s", probe, check.Type, event.Payload.Slug)
+			if err := EmitCheckEvent(probe, check.Id, "created", m.MonitorDTOFromCheck(check, event.Payload.Slug)); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func EmitEvent(collectorId int64, eventName string, event interface{}) error {
-	q := m.GetCollectorSessionsQuery{CollectorId: collectorId}
-	if err := bus.Dispatch(&q); err != nil {
+func HandleEndpointDeleted(event *events.EndpointDeleted) error {
+	log.Debug("processing EndpointDeleted event. EndpointId: %d", event.Payload.Id)
+
+	for _, check := range event.Payload.Checks {
+		if !check.Enabled {
+			continue
+		}
+		probeIds, err := sqlstore.GetProbesForCheck(&check)
+		if err != nil {
+			return err
+		}
+		for _, probe := range probeIds {
+			log.Debug("notifying probe:%d about deleted %s check for %s", probe, check.Type, event.Payload.Slug)
+			if err := EmitCheckEvent(probe, check.Id, "removed", m.MonitorDTOFromCheck(check, event.Payload.Slug)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func EmitCheckEvent(probeId int64, checkId int64, eventName string, event interface{}) error {
+	sessions, err := sqlstore.GetProbeSessions(probeId, "")
+	if err != nil {
+		log.Error(3, "failed to get list of probeSessions.", err)
 		return err
 	}
-	totalSessions := int64(len(q.Result))
+	totalSessions := int64(len(sessions))
 	if totalSessions < 1 {
 		return nil
 	}
-	eventId := reflect.ValueOf(event).Elem().FieldByName("Id").Int()
-	log.Info(fmt.Sprintf("emitting %s event for MonitorId %d totalSessions: %d", eventName, eventId, totalSessions))
-	pos := eventId % totalSessions
-	if q.Result[pos].InstanceId == setting.InstanceId {
-		socketId := q.Result[pos].SocketId
+
+	log.Info(fmt.Sprintf("emitting %s event for CheckId %d totalSessions: %d", eventName, checkId, totalSessions))
+	pos := checkId % totalSessions
+	if sessions[pos].InstanceId == setting.InstanceId {
+		socketId := sessions[pos].SocketId
 		contextCache.Emit(socketId, eventName, event)
 	}
 	return nil
 }
 
-func HandleCollectorConnected(event *events.CollectorConnected) error {
-	contextCache.Refresh(event.CollectorId)
+func HandleProbeSessionCreated(event *events.ProbeSessionCreated) error {
+	contextCache.Refresh(event.Payload.ProbeId)
 	return nil
 }
 
-func HandleCollectorDisconnected(event *events.CollectorDisconnected) error {
-	contextCache.Refresh(event.CollectorId)
+func HandleProbeSessionDeleted(event *events.ProbeSessionDeleted) error {
+	contextCache.Refresh(event.Payload.ProbeId)
 	return nil
 }
 
-func HandleCollectorUpdated(event *events.CollectorUpdated) error {
+func HandleProbeUpdated(event *events.ProbeUpdated) error {
 	contextCache.RLock()
 	defer contextCache.RUnlock()
 	// get list of local sockets for this collector.
 	contexts := make([]*CollectorContext, 0)
 	for _, ctx := range contextCache.Contexts {
-		if ctx.Collector.Id == event.Id {
+		if ctx.Probe.Id == event.Payload.Current.Id {
 			contexts = append(contexts, ctx)
 		}
 	}
 	if len(contexts) > 0 {
-		q := m.GetCollectorByIdQuery{
-			Id:    event.Id,
-			OrgId: contexts[0].Collector.OrgId,
-		}
-		if err := bus.Dispatch(&q); err != nil {
-			return err
-		}
 		for _, ctx := range contexts {
-			ctx.Collector = q.Result
+			ctx.Probe = event.Payload.Current
 			_ = ctx.EmitReady()
 		}
 	}
@@ -726,79 +600,74 @@ func HandleCollectorUpdated(event *events.CollectorUpdated) error {
 	return nil
 }
 
-func eventConsumer(msg *amqp.Delivery) error {
-	log.Info("processing amqp message with routing key: " + msg.RoutingKey)
-	eventRaw := events.OnTheWireEvent{}
-	err := json.Unmarshal(msg.Body, &eventRaw)
-	if err != nil {
-		log.Error(0, "failed to unmarshal event.", err)
+func eventConsumer(channel chan events.RawEvent) {
+	for msg := range channel {
+		go func(e events.RawEvent) {
+			log.Debug("handling event of type %s", e.Type)
+			log.Debug("%s", e.Body)
+			switch e.Type {
+			case "Endpoint.updated":
+				event := events.EndpointUpdated{}
+				if err := json.Unmarshal(e.Body, &event.Payload); err != nil {
+					log.Error(3, "unable to unmarshal payload into EndpointUpdated event.", err)
+					break
+				}
+				if err := HandleEndpointUpdated(&event); err != nil {
+					log.Error(3, "failed to emit EndpointUpdated event.", err)
+					// this is bad, but as probes refresh every 5minutes, the changes will propagate.
+				}
+				break
+			case "Endpoint.created":
+				event := events.EndpointCreated{}
+				if err := json.Unmarshal(e.Body, &event.Payload); err != nil {
+					log.Error(3, "unable to unmarshal payload into EndpointUpdated event.", err)
+					break
+				}
+				if err := HandleEndpointCreated(&event); err != nil {
+					log.Error(3, "failed to emit EndpointCreated event.", err)
+				}
+				break
+			case "Endpoint.deleted":
+				event := events.EndpointDeleted{}
+				if err := json.Unmarshal(e.Body, &event.Payload); err != nil {
+					log.Error(3, "unable to unmarshal payload into EndpointDeleted event.", err)
+					break
+				}
+				if err := HandleEndpointDeleted(&event); err != nil {
+					log.Error(3, "failed to emit EndpointDeleted event.", err)
+				}
+				break
+			case "ProbeSession.created":
+				event := events.ProbeSessionCreated{}
+				if err := json.Unmarshal(e.Body, &event.Payload); err != nil {
+					log.Error(3, "unable to unmarshal payload into ProbeSessionCreated event.", err)
+					break
+				}
+				if err := HandleProbeSessionCreated(&event); err != nil {
+					log.Error(3, "failed to emit ProbeSessionCreated event.", err)
+				}
+				break
+			case "ProbeSesssion.deleted":
+				event := events.ProbeSessionDeleted{}
+				if err := json.Unmarshal(e.Body, &event.Payload); err != nil {
+					log.Error(3, "unable to unmarshal payload into ProbeSessionDeleted event.", err)
+					break
+				}
+				if err := HandleProbeSessionDeleted(&event); err != nil {
+					log.Error(3, "failed to emit ProbeSessionDeleted event.", err)
+				}
+				break
+			case "Probe.updated":
+				event := events.ProbeUpdated{}
+				if err := json.Unmarshal(e.Body, &event.Payload); err != nil {
+					log.Error(3, "unable to unmarshal payload into ProbeUpdated event.", err)
+					break
+				}
+				if err := HandleProbeUpdated(&event); err != nil {
+					log.Error(3, "failed to emit ProbeUpdated event.", err)
+				}
+				break
+			}
+		}(msg)
 	}
-	payloadRaw, err := json.Marshal(eventRaw.Payload)
-	if err != nil {
-		log.Error(0, "unable to marshal event payload back to json.", err)
-	}
-	switch msg.RoutingKey {
-	case "INFO.monitor.updated":
-		event := events.MonitorUpdated{}
-		if err := json.Unmarshal(payloadRaw, &event); err != nil {
-			log.Error(0, "unable to unmarshal payload into MonitorUpdated event.", err)
-			return err
-		}
-		if err := EmitUpdateMonitor(&event); err != nil {
-			return err
-		}
-		break
-	case "INFO.monitor.created":
-		event := events.MonitorCreated{}
-		if err := json.Unmarshal(payloadRaw, &event); err != nil {
-			log.Error(0, "unable to unmarshal payload into MonitorUpdated event.", err)
-			return err
-		}
-		if err := EmitAddMonitor(&event); err != nil {
-			return err
-		}
-		break
-	case "INFO.monitor.removed":
-		event := events.MonitorRemoved{}
-		if err := json.Unmarshal(payloadRaw, &event); err != nil {
-			log.Error(0, "unable to unmarshal payload into MonitorUpdated event.", err)
-			return err
-		}
-		if err := EmitDeleteMonitor(&event); err != nil {
-			return err
-		}
-		break
-	case "INFO.collector.connected":
-		event := events.CollectorConnected{}
-		if err := json.Unmarshal(payloadRaw, &event); err != nil {
-			log.Error(0, "unable to unmarshal payload into CollectorConnected event.", err)
-			return err
-		}
-		if err := HandleCollectorConnected(&event); err != nil {
-			return err
-		}
-		break
-	case "INFO.collector.disconnected":
-		event := events.CollectorDisconnected{}
-		if err := json.Unmarshal(payloadRaw, &event); err != nil {
-			log.Error(0, "unable to unmarshal payload into CollectorDisconnected event.", err)
-			return err
-		}
-		if err := HandleCollectorDisconnected(&event); err != nil {
-			return err
-		}
-		break
-	case "INFO.collector.updated":
-		event := events.CollectorUpdated{}
-		if err := json.Unmarshal(payloadRaw, &event); err != nil {
-			log.Error(0, "unable to unmarshal payload into CollectorUpdated event.", err)
-			return err
-		}
-		if err := HandleCollectorUpdated(&event); err != nil {
-			return err
-		}
-		break
-	}
-
-	return nil
 }

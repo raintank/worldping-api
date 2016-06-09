@@ -8,8 +8,8 @@ import (
 
 	"path/filepath"
 
+	"github.com/grafana/grafana/pkg/log"
 	"github.com/grafana/grafana/pkg/util"
-	"github.com/raintank/worldping-api/pkg/bus"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
@@ -18,8 +18,6 @@ var mailTemplates *template.Template
 
 func Init() error {
 	initMailQueue()
-
-	bus.AddHandler("email", sendEmailCommandHandler)
 
 	mailTemplates = template.New("name")
 	mailTemplates.Funcs(template.FuncMap{
@@ -44,9 +42,12 @@ func subjectTemplateFunc(obj map[string]interface{}, value string) string {
 	return ""
 }
 
-func sendEmailCommandHandler(cmd *m.SendEmailCommand) error {
+func SendEmail(cmd *m.SendEmailCommand) error {
 	if !setting.Smtp.Enabled {
-		return errors.New("Grafana mailing/smtp options not configured, contact your Grafana admin")
+		return errors.New("Worldping mailing/smtp options not configured, contact your network admin")
+	}
+	if mailTemplates == nil {
+		log.Fatal(4, "email templates not yet initialized.")
 	}
 
 	var buffer bytes.Buffer

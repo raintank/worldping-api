@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/raintank/raintank-metric/schema"
-	"github.com/raintank/worldping-api/pkg/bus"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/metricpublisher"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
@@ -20,13 +20,13 @@ import (
 // that said, for convenience, we track the generatedAt timestamp
 type Job struct {
 	OrgId           int64
-	MonitorId       int64
+	CheckId         int64
 	EndpointId      int64
 	EndpointName    string
 	EndpointSlug    string
-	Settings        map[string]string
-	MonitorTypeName string
-	Notifications   m.MonitorNotificationSetting
+	Settings        map[string]interface{}
+	CheckType       string
+	Notifications   m.CheckNotificationSetting
 	Freq            int64
 	Offset          int64 // offset on top of "even" minute/10s/.. intervals
 	Definition      CheckDef
@@ -39,7 +39,7 @@ type Job struct {
 }
 
 func (job Job) String() string {
-	return fmt.Sprintf("<Job> monitorId=%d generatedAt=%s lastPointTs=%s definition: %s", job.MonitorId, job.GeneratedAt, job.LastPointTs, job.Definition)
+	return fmt.Sprintf("<Job> checkId=%d generatedAt=%s lastPointTs=%s definition: %s", job.CheckId, job.GeneratedAt, job.LastPointTs, job.Definition)
 }
 
 func (job Job) StoreResult(res m.CheckEvalResult) {
@@ -51,8 +51,8 @@ func (job Job) StoreResult(res m.CheckEvalResult) {
 	for pos, state := range metricNames {
 		metrics[pos] = &schema.MetricData{
 			OrgId:      int(job.OrgId),
-			Name:       fmt.Sprintf("health.%s.%s.%s", job.EndpointSlug, strings.ToLower(job.MonitorTypeName), state),
-			Metric:     fmt.Sprintf("health.%s.%s", strings.ToLower(job.MonitorTypeName), state),
+			Name:       fmt.Sprintf("health.%s.%s.%s", job.EndpointSlug, strings.ToLower(job.CheckType), state),
+			Metric:     fmt.Sprintf("health.%s.%s", strings.ToLower(job.CheckType), state),
 			Interval:   int(job.Freq),
 			Value:      0.0,
 			Unit:       "state",
@@ -60,7 +60,7 @@ func (job Job) StoreResult(res m.CheckEvalResult) {
 			TargetType: "gauge",
 			Tags: []string{
 				fmt.Sprintf("endpoint_id:%d", job.EndpointId),
-				fmt.Sprintf("monitor_id:%d", job.MonitorId),
+				fmt.Sprintf("monitor_id:%d", job.CheckId),
 			},
 		}
 		metrics[pos].SetId()
@@ -79,17 +79,14 @@ func (job *Job) assertStart() {
 // getJobs retrieves all jobs for which lastPointAt % their freq == their offset.
 func getJobs(lastPointAt int64) ([]*Job, error) {
 
-	query := m.GetMonitorsForAlertsQuery{
-		Timestamp: lastPointAt,
-	}
-
-	if err := bus.Dispatch(&query); err != nil {
+	checks, err := sqlstore.GetChecksForAlerts(lastPointAt)
+	if err != nil {
 		return nil, err
 	}
 
 	jobs := make([]*Job, 0)
-	for _, monitor := range query.Result {
-		job := buildJobForMonitor(monitor)
+	for _, monitor := range checks {
+		job := buildJobForMonitor(&monitor)
 		if job != nil {
 			jobs = append(jobs, job)
 		}
@@ -98,24 +95,24 @@ func getJobs(lastPointAt int64) ([]*Job, error) {
 	return jobs, nil
 }
 
-func buildJobForMonitor(monitor *m.MonitorForAlertDTO) *Job {
+func buildJobForMonitor(check *m.CheckForAlertDTO) *Job {
 	//state could in theory be ok, warn, error, but we only use ok vs error for now
 
-	if monitor.HealthSettings == nil {
+	if check.HealthSettings == nil {
 		return nil
 	}
 
-	if monitor.Frequency == 0 || monitor.HealthSettings.Steps == 0 || monitor.HealthSettings.NumCollectors == 0 {
+	if check.Frequency == 0 || check.HealthSettings.Steps == 0 || check.HealthSettings.NumProbes == 0 {
 		//fmt.Printf("bad monitor definition given: %#v", monitor)
 		return nil
 	}
 
 	type Settings struct {
-		EndpointSlug    string
-		MonitorTypeName string
-		Duration        string
-		NumCollectors   int
-		Steps           int
+		EndpointSlug string
+		CheckType    string
+		Duration     string
+		NumProbes    int
+		Steps        int
 	}
 
 	// graphite behaves like so:
@@ -126,11 +123,11 @@ func buildJobForMonitor(monitor *m.MonitorForAlertDTO) *Job {
 	// we can just query from 970
 
 	settings := Settings{
-		EndpointSlug:    monitor.EndpointSlug,
-		MonitorTypeName: monitor.MonitorTypeName,
-		Duration:        fmt.Sprintf("%d", int64(monitor.HealthSettings.Steps)*monitor.Frequency),
-		NumCollectors:   monitor.HealthSettings.NumCollectors,
-		Steps:           monitor.HealthSettings.Steps,
+		EndpointSlug: check.Slug,
+		CheckType:    string(check.Type),
+		Duration:     fmt.Sprintf("%d", int64(check.HealthSettings.Steps)*check.Frequency),
+		NumProbes:    check.HealthSettings.NumProbes,
+		Steps:        check.HealthSettings.Steps,
 	}
 
 	funcMap := template.FuncMap{
@@ -147,8 +144,8 @@ func buildJobForMonitor(monitor *m.MonitorForAlertDTO) *Job {
 	// note: it may look like the end of the queried interval is ambiguous here, and if offset > frequency, may include "too recent" values by accident.
 	// fear not, as when we execute the alert in the executor, we set the lastPointTs as end time
 
-	target := `litmus.{{.EndpointSlug}}.*.{{.MonitorTypeName | ToLower }}.error_state`
-	tpl := `sum(t(streak(graphite("` + target + `", "{{.Duration}}s", "", "")) == {{.Steps}} , "")) >= {{.NumCollectors}}`
+	target := `litmus.{{.EndpointSlug}}.*.{{.CheckType | ToLower }}.error_state`
+	tpl := `sum(t(streak(graphite("` + target + `", "{{.Duration}}s", "", "")) == {{.Steps}} , "")) >= {{.NumProbes}}`
 
 	var t = template.Must(template.New("query").Funcs(funcMap).Parse(tpl))
 	var b bytes.Buffer
@@ -157,23 +154,23 @@ func buildJobForMonitor(monitor *m.MonitorForAlertDTO) *Job {
 		panic(fmt.Sprintf("Could not execute alert query template: %q", err))
 	}
 	j := &Job{
-		MonitorId:       monitor.Id,
-		EndpointId:      monitor.EndpointId,
-		EndpointName:    monitor.EndpointName,
-		EndpointSlug:    monitor.EndpointSlug,
-		Settings:        monitor.SettingsMap(),
-		MonitorTypeName: monitor.MonitorTypeName,
-		Notifications:   monitor.HealthSettings.Notifications,
-		OrgId:           monitor.OrgId,
-		Freq:            monitor.Frequency,
-		Offset:          monitor.Offset,
+		CheckId:       check.Id,
+		EndpointId:    check.EndpointId,
+		EndpointName:  check.Name,
+		EndpointSlug:  check.Slug,
+		Settings:      check.Settings,
+		CheckType:     string(check.Type),
+		Notifications: check.HealthSettings.Notifications,
+		OrgId:         check.OrgId,
+		Freq:          check.Frequency,
+		Offset:        check.Offset,
 		Definition: CheckDef{
 			CritExpr: b.String(),
 			WarnExpr: "0", // for now we have only good or bad. so only crit is needed
 		},
-		AssertMinSeries: monitor.HealthSettings.NumCollectors,
-		AssertStep:      int(monitor.Frequency),
-		AssertSteps:     monitor.HealthSettings.Steps,
+		AssertMinSeries: check.HealthSettings.NumProbes,
+		AssertStep:      int(check.Frequency),
+		AssertSteps:     check.HealthSettings.Steps,
 	}
 	return j
 }

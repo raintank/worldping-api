@@ -5,8 +5,8 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd ${DIR}
 
 : ${GOPATH:="${HOME}/.go_workspace"}
-: ${ORG_PATH:="github.com/grafana"}
-: ${REPO_PATH:="${ORG_PATH}/grafana"}
+: ${ORG_PATH:="github.com/raintank"}
+: ${REPO_PATH:="${ORG_PATH}/raintank"}
 
 if [ ! -z ${CIRCLECI} ] ; then
   : ${CHECKOUT:="/home/ubuntu/${CIRCLE_PROJECT_REPONAME}"}
@@ -26,5 +26,5 @@ echo "Linking ${GOPATH}/src/${REPO_PATH} to ${CHECKOUT}"
 mkdir -p ${GOPATH}/src/${ORG_PATH}
 ln -s ${CHECKOUT} ${GOPATH}/src/${REPO_PATH}
 
-go get github.com/tools/godep
-
+cd ${GOPATH}/src/${REPO_PATH}
+go get -t ./...

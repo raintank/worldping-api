@@ -1,35 +1,36 @@
 package api
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/Unknwon/macaron"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestHttpApi(t *testing.T) {
 
-	// Convey("Given the grafana api", t, func() {
-	// 	ConveyApiScenario("Can sign up", func(c apiTestContext) {
-	// 		c.PostJson()
-	// 		So(c.Resp, ShouldEqualJsonApiResponse, "User created and logged in")
-	// 	})
-	//
-	// 	m := macaron.New()
-	// 	m.Use(middleware.GetContextHandler())
-	// 	m.Use(middleware.Sessioner(&session.Options{}))
-	// 	Register(m)
-	//
-	// 	var context *middleware.Context
-	// 	m.Get("/", func(c *middleware.Context) {
-	// 		context = c
-	// 	})
-	//
-	// 	resp := httptest.NewRecorder()
-	// 	req, err := http.NewRequest("GET", "/", nil)
-	// 	So(err, ShouldBeNil)
-	//
-	// 	m.ServeHTTP(resp, req)
-	//
-	// 	Convey("should red 200", func() {
-	// 		So(resp.Code, ShouldEqual, 200)
-	// 	})
-	// })
+	m := macaron.New()
+	Register(m)
+
+	Convey("Given request for /foobar", t, func() {
+		resp := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/foobar", nil)
+		So(err, ShouldBeNil)
+		m.ServeHTTP(resp, req)
+		Convey("should return 404", func() {
+			So(resp.Code, ShouldEqual, 404)
+		})
+	})
+	Convey("Given request for /login", t, func() {
+		resp := httptest.NewRecorder()
+		req, err := http.NewRequest("GET", "/login", nil)
+		So(err, ShouldBeNil)
+		m.ServeHTTP(resp, req)
+		Convey("should return 200", func() {
+			So(resp.Code, ShouldEqual, 200)
+		})
+	})
+
 }

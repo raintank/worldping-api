@@ -62,4 +62,41 @@ func addQuotaMigration(mg *Migrator) {
 		"updated": "updated",
 	}))
 	mg.AddMigration("Drop old table quota_v1", NewDropTableMigration("quota_v1"))
+
+	//-------  drop indexes ------------------
+	addDropAllIndicesMigrations(mg, "v2", quotaV2)
+
+	//------- rename table ------------------
+	addTableRenameMigration(mg, "quota", "quota_v2", "v2")
+
+	var quotaV3 = Table{
+		Name: "quota",
+		Columns: []*Column{
+			{Name: "id", Type: DB_BigInt, IsPrimaryKey: true, IsAutoIncrement: true},
+			{Name: "org_id", Type: DB_BigInt, Nullable: true},
+			{Name: "target", Type: DB_NVarchar, Length: 255, Nullable: false},
+			{Name: "limit", Type: DB_BigInt, Nullable: false},
+			{Name: "created", Type: DB_DateTime, Nullable: false},
+			{Name: "updated", Type: DB_DateTime, Nullable: false},
+		},
+		Indices: []*Index{
+			{Cols: []string{"org_id", "target"}, Type: UniqueIndex},
+		},
+	}
+	mg.AddMigration("create quota table v3", NewAddTableMigration(quotaV3))
+
+	//-------  indexes ------------------
+	addTableIndicesMigrations(mg, "v3", quotaV3)
+
+	//------- copy data from v1 to v2 -------------------
+	mg.AddMigration("copy quota v2 to v3", NewCopyTableDataMigration("quota", "quota_v2", map[string]string{
+		"id":      "id",
+		"org_id":  "org_id",
+		"target":  "target",
+		"limit":   "limit",
+		"created": "created",
+		"updated": "updated",
+	}))
+	mg.AddMigration("Drop old table quota_v2", NewDropTableMigration("quota_v2"))
+
 }

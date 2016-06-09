@@ -11,14 +11,14 @@ import (
 func TestScheduleBuilding(t *testing.T) {
 
 	Convey("Can build schedules from monitor configs", t, func() {
-		m := &m.MonitorForAlertDTO{
-			EndpointSlug:    "test_endpoint_be",
-			MonitorTypeName: "smtp",
-			Frequency:       60,
-			Offset:          37,
-			HealthSettings: &m.MonitorHealthSettingDTO{
-				NumCollectors: 16,
-				Steps:         5,
+		m := &m.CheckForAlertDTO{
+			Slug:      "test_endpoint_be",
+			Type:      "smtp",
+			Frequency: 60,
+			Offset:    37,
+			HealthSettings: &m.CheckHealthSettings{
+				NumProbes: 16,
+				Steps:     5,
 			},
 		}
 		sched := buildJobForMonitor(m)
