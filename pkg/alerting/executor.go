@@ -1,7 +1,6 @@
 package alerting
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -174,15 +173,7 @@ func execute(fn GraphiteReturner, job *Job, cache *lru.Cache) error {
 		return fmt.Errorf("non-fatal: failed to update check state: %q", err)
 	}
 	if gr, ok := gr.(*graphite.GraphiteContext); ok {
-		requests := ""
-		for _, trace := range gr.Traces {
-			r := trace.Request
-			// mangle trace.Response to keep the dumped out graphite
-			// responses from crashing logstash
-			resp := bytes.Replace(trace.Response, []byte("\n"), []byte("\n> "), -1)
-			requests += fmt.Sprintf("\ntargets: %s\nfrom:%s\nto:%s\nresponse:%s\n", r.Targets, r.Start, r.End, resp)
-		}
-		log.Debug("Job %s state_change=%t request traces: %s", job, affected > 0, requests)
+		log.Debug("Job %s state_change=%t request traces: %v", job, affected > 0, gr.Traces)
 	}
 	if affected > 0 && res != m.EvalResultUnknown {
 		//emit a state change event.

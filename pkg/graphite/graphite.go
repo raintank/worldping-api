@@ -2,6 +2,7 @@
 package graphite
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -134,7 +135,8 @@ type Trace struct {
 }
 
 func (t Trace) String() string {
-	return fmt.Sprintf("{Request start:%s end:%s targets:%s url:%s Response:%s}", t.Request.Start, t.Request.End, t.Request.Targets, t.Request.URL, t.Response)
+	resp := bytes.Replace(t.Response, []byte("\n"), []byte("\n> "), -1)
+	return fmt.Sprintf("{Request start:%s end:%s targets:%s url:%s Response:%s}", t.Request.Start, t.Request.End, t.Request.Targets, t.Request.URL, resp)
 }
 
 func (gc *GraphiteContext) Query(r *bgraphite.Request) (bgraphite.Response, error) {
@@ -153,38 +155,40 @@ func (gc *GraphiteContext) Query(r *bgraphite.Request) (bgraphite.Response, erro
 	trace := Trace{r, resp}
 	gc.Traces = append(gc.Traces, trace)
 
-	start := gc.AssertStart.Unix()
+	/*
+		start := gc.AssertStart.Unix()
 
-	for _, s := range res {
-		if len(s.Datapoints) != gc.AssertSteps {
-			gc.BadSteps += 1
-		}
-		for i, p := range s.Datapoints {
-			if p[0] == "" {
-				gc.MissingVals += 1
+		for _, s := range res {
+			if len(s.Datapoints) != gc.AssertSteps {
+				gc.BadSteps += 1
 			}
-			unix, _ := p[1].Int64()
-			if i == 0 {
-				if unix != start {
-					gc.BadStart += 1
+			for i, p := range s.Datapoints {
+				if p[0] == "" {
+					gc.MissingVals += 1
 				}
-			} else {
-				if unix != start+int64(i*gc.AssertStep) {
-					gc.BadStep += 1
+				unix, _ := p[1].Int64()
+				if i == 0 {
+					if unix != start {
+						gc.BadStart += 1
+					}
+				} else {
+					if unix != start+int64(i*gc.AssertStep) {
+						gc.BadStep += 1
+					}
 				}
 			}
 		}
-	}
 
-	if gc.BadStart > 0 {
-		errors = append(errors, fmt.Sprintf("%d bad start ts", gc.BadStart))
-	}
-	if gc.BadStep > 0 {
-		errors = append(errors, fmt.Sprintf("%d bad step", gc.BadStep))
-	}
-	if gc.BadSteps > 0 {
-		errors = append(errors, fmt.Sprintf("%d bad num steps", gc.BadSteps))
-	}
+		if gc.BadStart > 0 {
+			errors = append(errors, fmt.Sprintf("%d bad start ts", gc.BadStart))
+		}
+		if gc.BadStep > 0 {
+			errors = append(errors, fmt.Sprintf("%d bad step", gc.BadStep))
+		}
+		if gc.BadSteps > 0 {
+			errors = append(errors, fmt.Sprintf("%d bad num steps", gc.BadSteps))
+		}
+	*/
 
 	if len(res) == 0 {
 		gc.EmptyResp += 1
