@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/go-xorm/xorm"
+	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	. "github.com/raintank/worldping-api/pkg/services/sqlstore/migrator"
-	"github.com/raintank/worldping-api/pkg/log"
 )
 
 func addCheckMigration(mg *Migrator) {
@@ -362,13 +362,14 @@ func addCheckMigration(mg *Migrator) {
 			// set route on any checks that have a null route still.
 			if _, ok := routes[c.Id]; !ok {
 				if _, ok := routesByTag[c.Id]; !ok {
-					checkWithoutRoute := m.Check{Id, c.Id, Route: m.CheckRoute{Type: m.RouteByIds, Config: {"ids": []int64{}}}}
+					checkWithoutRoute := m.Check{Id: c.Id, Route: &m.CheckRoute{Type: m.RouteByIds, Config: map[string]interface{}{"ids": []int64{}}}}
 					log.Info("ERROR: Check %d has no probes set.", c.Id)
 					_, err := sess.Id(c.Id).Cols("route").Update(&checkWithoutRoute)
 					if err != nil {
 						return err
 					}
 				}
+			}
 		}
 
 		return err
