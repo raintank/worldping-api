@@ -6,6 +6,7 @@ import (
 	"github.com/go-xorm/xorm"
 	m "github.com/raintank/worldping-api/pkg/models"
 	. "github.com/raintank/worldping-api/pkg/services/sqlstore/migrator"
+	"github.com/raintank/worldping-api/pkg/log"
 )
 
 func addCheckMigration(mg *Migrator) {
@@ -273,12 +274,12 @@ func addCheckMigration(mg *Migrator) {
 			MonitorId    int64
 			CollectorIds []int64
 		}
-		routes := make(map[int64]rById)
+		routes := make(map[int64]*rById)
 
 		for _, row := range byIds {
 			r, ok := routes[row.MonitorId]
 			if !ok {
-				r = rById{MonitorId: row.MonitorId, CollectorIds: make([]int64, 0)}
+				r = &rById{MonitorId: row.MonitorId, CollectorIds: make([]int64, 0)}
 				routes[row.MonitorId] = r
 			}
 			r.CollectorIds = append(r.CollectorIds, row.CollectorId)
@@ -306,24 +307,26 @@ func addCheckMigration(mg *Migrator) {
 		if err != nil {
 			return err
 		}
+
 		type rByTag struct {
 			MonitorId int64
 			Tags      []string
 		}
-		routesByTag := make(map[int64]rByTag)
+		routesByTag := make(map[int64]*rByTag)
 		for _, row := range byTags {
 			if _, ok := routes[row.MonitorId]; ok {
-				fmt.Printf("ERROR: check %d has both collector_tags and collector_ids", row.MonitorId)
+				log.Info("ERROR: check %d has both collector_tags and collector_ids", row.MonitorId)
 				continue
 			}
 			r, ok := routesByTag[row.MonitorId]
 			if !ok {
-				r = rByTag{MonitorId: row.MonitorId, Tags: make([]string, 0)}
+				r = &rByTag{MonitorId: row.MonitorId, Tags: make([]string, 0)}
 				routesByTag[row.MonitorId] = r
 			}
 			r.Tags = append(r.Tags, row.Tag)
 		}
 		for _, r := range routesByTag {
+			fmt.Printf("check %d has %d tags\n", r.MonitorId, len(r.Tags))
 			check := m.Check{Id: r.MonitorId, Route: &m.CheckRoute{
 				Type: m.RouteByTags,
 				Config: map[string]interface{}{
@@ -355,6 +358,17 @@ func addCheckMigration(mg *Migrator) {
 			if err != nil {
 				return err
 			}
+
+			// set route on any checks that have a null route still.
+			if _, ok := routes[c.Id]; !ok {
+				if _, ok := routesByTag[c.Id]; !ok {
+					checkWithoutRoute := m.Check{Id, c.Id, Route: m.CheckRoute{Type: m.RouteByIds, Config: {"ids": []int64{}}}}
+					log.Info("ERROR: Check %d has no probes set.", c.Id)
+					_, err := sess.Id(c.Id).Cols("route").Update(&checkWithoutRoute)
+					if err != nil {
+						return err
+					}
+				}
 		}
 
 		return err
