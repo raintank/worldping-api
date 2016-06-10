@@ -107,7 +107,7 @@ func addCollectorMigration(mg *Migrator) {
 			{Name: "org_id", Type: DB_BigInt, Nullable: false},
 			{Name: "probe_id", Type: DB_BigInt, Nullable: false},
 			{Name: "tag", Type: DB_NVarchar, Length: 255, Nullable: false},
-			{Name: "created", Type: DB_DateTime},
+			{Name: "created", Type: DB_DateTime, Nullable: true},
 		},
 		Indices: []*Index{
 			{Cols: []string{"org_id", "probe_id"}},

@@ -220,7 +220,7 @@ func addCheckMigration(mg *Migrator) {
 			{Name: "endpoint_id", Type: DB_BigInt, Nullable: false},
 			{Name: "org_id", Type: DB_BigInt, Nullable: false},
 			{Name: "type", Type: DB_NVarchar, Length: 16, Nullable: false},
-			{Name: "route", Type: DB_NVarchar, Length: 2048, Nullable: false},
+			{Name: "route", Type: DB_NVarchar, Length: 2048, Nullable: true},
 			{Name: "offset", Type: DB_BigInt, Nullable: false},
 			{Name: "frequency", Type: DB_BigInt, Nullable: false},
 			{Name: "enabled", Type: DB_Bool, Nullable: false},
@@ -374,7 +374,7 @@ func addCheckMigration(mg *Migrator) {
 			{Name: "id", Type: DB_BigInt, IsPrimaryKey: true, IsAutoIncrement: true},
 			{Name: "check_id", Type: DB_BigInt, Nullable: false},
 			{Name: "probe_id", Type: DB_BigInt, Nullable: false},
-			{Name: "created", Type: DB_DateTime},
+			{Name: "created", Type: DB_DateTime, Nullable: true},
 		},
 		Indices: []*Index{
 			{Cols: []string{"check_id", "probe_id"}, Type: UniqueIndex},
@@ -401,7 +401,7 @@ func addCheckMigration(mg *Migrator) {
 			{Name: "id", Type: DB_BigInt, IsPrimaryKey: true, IsAutoIncrement: true},
 			{Name: "org_id", Type: DB_BigInt, Nullable: false},
 			{Name: "check_id", Type: DB_BigInt, Nullable: false},
-			{Name: "tag", Type: DB_BigInt, Nullable: false},
+			{Name: "tag", Type: DB_NVarchar, Length: 255, Nullable: false},
 			{Name: "created", Type: DB_DateTime},
 		},
 		Indices: []*Index{
