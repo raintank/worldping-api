@@ -296,6 +296,7 @@ func addCheckMigration(mg *Migrator) {
 				return err
 			}
 		}
+
 		type byTagRow struct {
 			MonitorId int64
 			Tag       string
@@ -311,6 +312,10 @@ func addCheckMigration(mg *Migrator) {
 		}
 		routesByTag := make(map[int64]rByTag)
 		for _, row := range byTags {
+			if _, ok := routes[row.MonitorId]; ok {
+				fmt.Printf("ERROR: check %d has both collector_tags and collector_ids", row.MonitorId)
+				continue
+			}
 			r, ok := routesByTag[row.MonitorId]
 			if !ok {
 				r = rByTag{MonitorId: row.MonitorId, Tags: make([]string, 0)}
@@ -326,6 +331,27 @@ func addCheckMigration(mg *Migrator) {
 				},
 			}}
 			_, err := sess.Cols("route").Id(check.Id).Update(&check)
+			if err != nil {
+				return err
+			}
+		}
+
+		//update check settings
+		type tmpCheck struct {
+			Settings []m.MonitorSettingDTO
+			Id       int64
+			Type     m.CheckType
+		}
+		checks := make([]tmpCheck, 0)
+		err = sess.Table("check").Find(&checks)
+		if err != nil {
+			return err
+		}
+
+		for _, c := range checks {
+			newCheck := m.Check{Id: c.Id}
+			newCheck.Settings = m.MonitorSettingsDTO(c.Settings).ToV2Setting(c.Type)
+			_, err := sess.Id(c.Id).Cols("settings").Update(&newCheck)
 			if err != nil {
 				return err
 			}
