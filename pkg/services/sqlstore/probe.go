@@ -414,7 +414,7 @@ func getProbesForCheck(sess *session, c *m.Check) ([]int64, error) {
 		}
 		sess.Join("LEFT", "probe_tag", "probe.id = probe_tag.probe_id AND probe_tag.org_id=?", c.OrgId)
 		sess.In("probe_tag.tag", tags)
-		sess.Cols("probe.id")
+		sess.Distinct("probe.id")
 		err := sess.Find(&probes)
 		if err != nil {
 			return nil, err
