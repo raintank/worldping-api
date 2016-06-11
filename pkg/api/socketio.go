@@ -436,14 +436,16 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 	newChecks := make([]m.Check, 0)
 
 	for _, check := range event.Payload.Last.Checks {
-		oldChecks[check.Id] = check
+		if check.Enabled {
+			oldChecks[check.Id] = check
+		}
 	}
 
 	// find the checks that have changed.
 	for _, check := range event.Payload.Current.Checks {
 		if check.Enabled {
 			seenChecks[check.Id] = struct{}{}
-			if check.Updated.After(event.Payload.Current.Updated) {
+			if !check.Updated.Before(event.Payload.Current.Updated) {
 				if _, ok := oldChecks[check.Id]; ok {
 					changedChecks = append(changedChecks, check)
 				} else {
@@ -473,7 +475,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 		}
 		for _, probe := range oldProbes {
 			if _, ok := seenProbes[probe]; !ok {
-				log.Debug("%s check for %s should no longer be running on probe %s", check.Type, event.Payload.Current.Slug, probe)
+				log.Debug("%s check for %s should no longer be running on probe %d", check.Type, event.Payload.Current.Slug, probe)
 				if err := EmitCheckEvent(probe, check.Id, "removed", m.MonitorDTOFromCheck(check, event.Payload.Last.Slug)); err != nil {
 					return err
 				}
