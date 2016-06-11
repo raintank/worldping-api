@@ -60,8 +60,8 @@ const (
 
 type Check struct {
 	Id             int64                  `json:"id"`
-	OrgId          int64                  `json:"-"`
-	EndpointId     int64                  `json:"-"`
+	OrgId          int64                  `json:"orgId"`
+	EndpointId     int64                  `json:"endpointId"`
 	Route          *CheckRoute            `xorm:"JSON" json:"route"`
 	Type           CheckType              `json:"type" binding:"Required,In(http,https,dns,ping)"`
 	Frequency      int64                  `json:"frequency" binding:"Required,Range(10,300)"`
