@@ -407,7 +407,7 @@ func (c *CollectorContext) Refresh() {
 		//step 5. send to socket.
 		monitors := make([]m.MonitorDTO, 0, len(checks))
 		for _, check := range checks {
-			if !check.enabled {
+			if !check.Enabled {
 				continue
 			}
 			if check.Check.Id%totalSessions == int64(pos) {
