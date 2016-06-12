@@ -841,6 +841,9 @@ func ValidateCheckRoute(check *m.Check) error {
 }
 
 func validateCheckRoute(sess *session, check *m.Check) error {
+	if !check.Enabled {
+		return nil
+	}
 	switch check.Route.Type {
 	case m.RouteByTags:
 		if len(check.Route.Config["tags"].([]string)) == 0 {

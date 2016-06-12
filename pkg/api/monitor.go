@@ -23,12 +23,14 @@ func V1GetMonitors(c *middleware.Context, query m.GetMonitorsQuery) {
 	monitors := make([]m.MonitorDTO, len(endpoint.Checks))
 	for i, check := range endpoint.Checks {
 		monitors[i] = m.MonitorDTOFromCheck(check, endpoint.Slug)
-		probeList, err := sqlstore.GetProbesForCheck(&check)
-		if err != nil {
-			handleError(c, err)
-			return
+		if check.Enabled {
+			probeList, err := sqlstore.GetProbesForCheck(&check)
+			if err != nil {
+				handleError(c, err)
+				return
+			}
+			monitors[i].Collectors = probeList
 		}
-		monitors[i].Collectors = probeList
 	}
 	c.JSON(200, monitors)
 }
@@ -147,14 +149,18 @@ func V1AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 
 	var monitor m.MonitorDTO
 	for _, check := range endpoint.Checks {
+
 		if check.Type == m.MonitorTypeToCheckTypeMap[cmd.MonitorTypeId-1] {
-			probeList, err := sqlstore.GetProbesForCheck(&check)
-			if err != nil {
-				handleError(c, err)
-				return
-			}
 			monitor = m.MonitorDTOFromCheck(check, endpoint.Slug)
-			monitor.Collectors = probeList
+			if check.Enabled {
+				probeList, err := sqlstore.GetProbesForCheck(&check)
+				if err != nil {
+					handleError(c, err)
+					return
+				}
+
+				monitor.Collectors = probeList
+			}
 			break
 		}
 	}
