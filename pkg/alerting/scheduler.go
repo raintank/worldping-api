@@ -24,7 +24,7 @@ func Dispatcher() {
 	cl := clock.New()
 	ticker := NewTicker(lastProcessed, offset, cl)
 	go func() {
-		offsetReadTicker := cl.Ticker(time.Duration(1) * time.Second)
+		offsetReadTicker := cl.Ticker(time.Minute)
 		for range offsetReadTicker.C {
 			offset := time.Duration(LoadOrSetOffset()) * time.Second
 			ticker.updateOffset(offset)
