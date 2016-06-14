@@ -212,6 +212,8 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 			return nil, err
 		}
 		log.Info("removed previous socket with Id %s from probeId=%d", lastSocketId, sess.Probe.Id)
+		//allow time for our change to propagate.
+		time.Sleep(time.Second)
 	}
 
 	contextCache.Set(sess.Session.SocketId, sess)
