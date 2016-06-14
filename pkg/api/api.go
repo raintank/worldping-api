@@ -32,6 +32,7 @@ func Register(r *macaron.Macaron) {
 				r.Get("/:orgId", wrap(GetOrgQuotas))
 				r.Put("/:orgId/:target/:limit", wrap(UpdateOrgQuota))
 			})
+			r.Get("/usage", wrap(GetUsage))
 		}, middleware.RequireAdmin())
 
 	}, middleware.Auth(setting.AdminKey))
