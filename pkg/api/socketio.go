@@ -155,21 +155,24 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	if err == m.ErrProbeNotFound {
 		//collector not found, so lets create a new one.
 		probe = &m.ProbeDTO{
-			OrgId:   user.OrgId,
-			Name:    name,
-			Enabled: true,
+			OrgId:        user.OrgId,
+			Name:         name,
+			Enabled:      true,
+			Online:       true,
+			OnlineChange: time.Now(),
 		}
 
 		err = sqlstore.AddProbe(probe)
 		if err != nil {
 			return nil, err
 		}
+		log.Info("created new entry in DB for probe %s, probeId=%d", probe.Name, probe.Id)
 	} else if err != nil {
 		return nil, err
 	}
 	remoteIp := net.ParseIP(util.GetRemoteIp(so.Request()))
 	if remoteIp == nil {
-		log.Error(3, "Unable to lookup remote IP address of probe.")
+		log.Error(3, "Unable to lookup remote IP address of probeId=%d", probe.Id)
 		remoteIp = net.ParseIP("0.0.0.0")
 	} else if probe.Latitude == 0 || probe.Longitude == 0 {
 		var location freegeoip.DefaultQuery
@@ -181,7 +184,7 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 		probe.Latitude = location.Location.Latitude
 		probe.Longitude = location.Location.Longitude
 		log.Debug("probe %s is located at lat:%f, long:%f", probe.Name, location.Location.Latitude, location.Location.Longitude)
-
+		log.Info("updating location data for probeId=%d,  lat:%f, long:%f", probe.Id, location.Location.Latitude, location.Location.Longitude)
 		if err := sqlstore.UpdateProbe(probe); err != nil {
 			log.Error(3, "could not save Probe location to DB.", err)
 			return nil, err
@@ -202,22 +205,17 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 		},
 	}
 
-	log.Info("probe %s with id %d owned by %d authenticated successfully from %s.", name, probe.Id, user.OrgId, remoteIp.String())
+	log.Info("probe %s with probeId=%d owned by %d authenticated successfully from %s.", name, probe.Id, user.OrgId, remoteIp.String())
 	if lastSocketId != "" {
-		log.Info("removing socket with Id %s", lastSocketId)
 		if err := sqlstore.DeleteProbeSession(&m.ProbeSession{OrgId: sess.OrgId, SocketId: lastSocketId, ProbeId: sess.Probe.Id}); err != nil {
-			log.Error(3, "failed to remove probes lastSocketId", err)
+			log.Error(3, "failed to remove lastSocketId for probeId=%d", probe.Id, err)
 			return nil, err
 		}
+		log.Info("removed previous socket with Id %s from probeId=%d", lastSocketId, sess.Probe.Id)
 	}
 
-	log.Info("saving session to contextCache")
 	contextCache.Set(sess.Session.SocketId, sess)
-	log.Info("session saved to contextCache")
-	err = sqlstore.AddProbeSession(sess.Session)
-	if err != nil {
-		return nil, err
-	}
+	log.Info("saved session to contextCache for probeId=%d", probe.Id)
 	return sess, nil
 }
 
@@ -225,6 +223,8 @@ func InitCollectorController(metrics met.Backend) {
 	if err := sqlstore.ClearProbeSessions(setting.InstanceId); err != nil {
 		log.Fatal(4, "failed to clear collectorSessions", err)
 	}
+
+	contextCache = NewContextCache()
 
 	metricsRecvd = metrics.NewCount("collector-ctrl.metrics-recv")
 
@@ -245,7 +245,6 @@ func InitCollectorController(metrics met.Backend) {
 	if err != nil {
 		log.Error(3, "failed to load GEOIP DB. ", err)
 	}
-	contextCache = NewContextCache()
 
 	server, err = socketio.NewServer([]string{"websocket"})
 	if err != nil {
@@ -258,18 +257,18 @@ func InitCollectorController(metrics met.Backend) {
 			if err == auth.ErrInvalidApiKey {
 				log.Info("probe failed to authenticate.")
 			} else if err.Error() == "invalid probe version. Please upgrade." {
-				log.Info("probe is wrong version")
+				log.Info("probeIdis wrong version")
 			} else {
 				log.Error(3, "Failed to initialize probe.", err)
 			}
 			so.Emit("error", err.Error())
 			return
 		}
-		log.Info("connection registered without error")
+		log.Info("connection for probeId=%d registered without error", c.Probe.Id)
 		if err := c.EmitReady(); err != nil {
 			return
 		}
-		log.Info("binding event handlers for probe %s owned by OrgId: %d", c.Probe.Name, c.OrgId)
+		log.Info("binding event handlers for probeId=%d", c.Probe.Id)
 		if c.Session.Version == "0.1.3" {
 			c.Socket.On("event", c.OnEventOld)
 		} else {
@@ -278,7 +277,16 @@ func InitCollectorController(metrics met.Backend) {
 		c.Socket.On("results", c.OnResults)
 		c.Socket.On("disconnection", c.OnDisconnection)
 
-		//refresh will be sent due to the ProbeSessionCreated event being emitted.
+		log.Info("saving probe session to DB for probeId=%d", c.Probe.Id)
+		err = sqlstore.AddProbeSession(c.Session)
+		if err != nil {
+			log.Error(3, "Failed to add probeSession to DB.", err)
+			so.Emit("error", fmt.Sprintf("internal server error. %s", err.Error()))
+			return
+		}
+		log.Info("saved session to DB for probeId=%d", c.Probe.Id)
+		// adding the probeSession will emit an event that will trigger
+		// a refresh to be sent.
 	})
 
 	server.On("error", func(so socketio.Socket, err error) {
@@ -294,7 +302,7 @@ type ReadyPayload struct {
 }
 
 func (c *CollectorContext) EmitReady() error {
-	log.Info("sending ready event to probe %s", c.Probe.Name)
+	log.Info("sending ready event to probeId %d", c.Probe.Id)
 	readyPayload := &ReadyPayload{
 		Collector:    c.Probe,
 		MonitorTypes: m.MonitorTypes,
@@ -305,28 +313,28 @@ func (c *CollectorContext) EmitReady() error {
 }
 
 func (c *CollectorContext) Remove() error {
-	log.Info("removing socket with Id %s", c.Session.SocketId)
+	log.Info("removing socket with Id %s for probeId=%d", c.Session.SocketId, c.Probe.Id)
 	err := sqlstore.DeleteProbeSession(c.Session)
-	log.Info("probe session deleted from db.")
+	log.Info("probe session deleted from db for probeId=%d", c.Probe.Id)
 	return err
 }
 
 func (c *CollectorContext) OnDisconnection() {
 	log.Info("%s disconnected", c.Probe.Name)
-	if err := c.Remove(); err != nil {
-		log.Error(3, "Failed to remove probeSession for %s, %s", c.Probe.Name, err)
-	}
 	contextCache.Remove(c.Session.SocketId)
+	if err := c.Remove(); err != nil {
+		log.Error(3, "Failed to remove probeSession for probeId=%d, %s", c.Probe.Id, err)
+	}
 }
 
 func (c *CollectorContext) OnEvent(msg *schema.ProbeEvent) {
-	log.Debug("received event from %s", c.Probe.Name)
+	log.Debug("received event from probeId%", c.Probe.Id)
 	if !c.Probe.Public {
 		msg.OrgId = c.OrgId
 	}
 
 	if err := collectoreventpublisher.Publish(msg); err != nil {
-		log.Error(0, "failed to publish event.", err)
+		log.Error(3, "failed to publish event.", err)
 	}
 }
 
@@ -343,7 +351,7 @@ type probeEventOld struct {
 }
 
 func (c *CollectorContext) OnEventOld(msg *probeEventOld) {
-	log.Debug("received event from %s", c.Probe.Name)
+	log.Debug("received event from probeId=%d", c.Probe.Id)
 	if !c.Probe.Public {
 		msg.OrgId = c.OrgId
 	}
@@ -381,7 +389,7 @@ func (c *CollectorContext) OnResults(results []*schema.MetricData) {
 }
 
 func (c *CollectorContext) Refresh() {
-	log.Info("Probe %d (%s) refreshing", c.Probe.Id, c.Probe.Name)
+	log.Info("probeId=%d (%s) refreshing", c.Probe.Id, c.Probe.Name)
 	//step 1. get list of collectorSessions for this collector.
 	sessions, err := sqlstore.GetProbeSessions(c.Probe.Id, "")
 	if err != nil {
@@ -390,7 +398,7 @@ func (c *CollectorContext) Refresh() {
 	}
 
 	totalSessions := int64(len(sessions))
-	log.Debug("probe %d has %d sessions", c.Probe.Id, totalSessions)
+	log.Debug("probeId=%d has %d sessions", c.Probe.Id, totalSessions)
 	//step 2. for each session
 	for pos, sess := range sessions {
 		//we only need to refresh the 1 socket.
@@ -400,7 +408,7 @@ func (c *CollectorContext) Refresh() {
 		//step 3. get list of checks configured for this colletor.
 		checks, err := sqlstore.GetProbeChecksWithEndpointSlug(c.Probe)
 		if err != nil {
-			log.Error(3, "failed to get checks for probe %s. %s", c.Probe.Id, err)
+			log.Error(3, "failed to get checks for probeId=%d. %s", c.Probe.Id, err)
 			break
 		}
 
@@ -414,7 +422,7 @@ func (c *CollectorContext) Refresh() {
 				monitors = append(monitors, m.MonitorDTOFromCheck(check.Check, check.Slug))
 			}
 		}
-		log.Info("sending refresh to %s. %d checks", sess.SocketId, len(monitors))
+		log.Info("sending refresh to socket %s, probeId=%d,  %d checks", sess.SocketId, sess.ProbeId, len(monitors))
 		c.Socket.Emit("refresh", monitors)
 		break
 	}
@@ -463,7 +471,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 		seenProbes := make(map[int64]struct{})
 		for _, probe := range probeIds {
 			seenProbes[probe] = struct{}{}
-			log.Debug("notifying probe:%d about updated %s check for %s", probe, check.Type, event.Payload.Current.Slug)
+			log.Debug("notifying probeId=%d about updated %s check for %s", probe, check.Type, event.Payload.Current.Slug)
 			if err := EmitCheckEvent(probe, check.Id, "updated", m.MonitorDTOFromCheck(check, event.Payload.Current.Slug)); err != nil {
 				return err
 			}
@@ -475,7 +483,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 		}
 		for _, probe := range oldProbes {
 			if _, ok := seenProbes[probe]; !ok {
-				log.Debug("%s check for %s should no longer be running on probe %d", check.Type, event.Payload.Current.Slug, probe)
+				log.Debug("%s check for %s should no longer be running on probeId=%d", check.Type, event.Payload.Current.Slug, probe)
 				if err := EmitCheckEvent(probe, check.Id, "removed", m.MonitorDTOFromCheck(check, event.Payload.Last.Slug)); err != nil {
 					return err
 				}
@@ -489,7 +497,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 			return err
 		}
 		for _, probe := range probeIds {
-			log.Debug("notifying probe:%d about new %s check for %s", probe, check.Type, event.Payload.Current.Slug)
+			log.Debug("notifying probeId=%d about new %s check for %s", probe, check.Type, event.Payload.Current.Slug)
 			if err := EmitCheckEvent(probe, check.Id, "created", m.MonitorDTOFromCheck(check, event.Payload.Current.Slug)); err != nil {
 				return err
 			}
@@ -503,7 +511,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 				return err
 			}
 			for _, probe := range oldProbes {
-				log.Debug("%s check for %s should no longer be running on probe %s", check.Type, event.Payload.Current.Slug, probe)
+				log.Debug("%s check for %s should no longer be running on probeId=%d", check.Type, event.Payload.Current.Slug, probe)
 				if err := EmitCheckEvent(probe, check.Id, "removed", m.MonitorDTOFromCheck(check, event.Payload.Last.Slug)); err != nil {
 					return err
 				}
@@ -525,7 +533,7 @@ func HandleEndpointCreated(event *events.EndpointCreated) error {
 			return err
 		}
 		for _, probe := range probeIds {
-			log.Debug("notifying probe:%d about new %s check for %s", probe, check.Type, event.Payload.Slug)
+			log.Debug("notifying probeId=%d about new %s check for %s", probe, check.Type, event.Payload.Slug)
 			if err := EmitCheckEvent(probe, check.Id, "created", m.MonitorDTOFromCheck(check, event.Payload.Slug)); err != nil {
 				return err
 			}
@@ -546,7 +554,7 @@ func HandleEndpointDeleted(event *events.EndpointDeleted) error {
 			return err
 		}
 		for _, probe := range probeIds {
-			log.Debug("notifying probe:%d about deleted %s check for %s", probe, check.Type, event.Payload.Slug)
+			log.Debug("notifying probeId=%d about deleted %s check for %s", probe, check.Type, event.Payload.Slug)
 			if err := EmitCheckEvent(probe, check.Id, "removed", m.MonitorDTOFromCheck(check, event.Payload.Slug)); err != nil {
 				return err
 			}
@@ -576,11 +584,13 @@ func EmitCheckEvent(probeId int64, checkId int64, eventName string, event interf
 }
 
 func HandleProbeSessionCreated(event *events.ProbeSessionCreated) error {
+	log.Info("ProbeSessionCreated on %s: ProbeId=%d", event.Payload.InstanceId, event.Payload.ProbeId)
 	contextCache.Refresh(event.Payload.ProbeId)
 	return nil
 }
 
 func HandleProbeSessionDeleted(event *events.ProbeSessionDeleted) error {
+	log.Info("ProbeSessionDeleted from %s: ProbeId=%d", event.Payload.InstanceId, event.Payload.ProbeId)
 	contextCache.Refresh(event.Payload.ProbeId)
 	return nil
 }
