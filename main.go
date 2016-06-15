@@ -44,8 +44,8 @@ func main() {
 	setting.BuildVersion = version
 	setting.BuildCommit = commit
 	setting.BuildStamp = buildstampInt64
-
-	go listenToSystemSignels()
+	notifyShutdown := make(chan struct{})
+	go listenToSystemSignels(notifyShutdown)
 
 	flag.Parse()
 	writePIDFile()
@@ -83,7 +83,7 @@ func main() {
 		log.Fatal(3, "Notification service failed to initialize", err)
 	}
 
-	cmd.StartServer()
+	cmd.StartServer(notifyShutdown)
 	exitChan <- 0
 }
 
@@ -123,7 +123,7 @@ func writePIDFile() {
 	}
 }
 
-func listenToSystemSignels() {
+func listenToSystemSignels(notifyShutdown chan struct{}) {
 	signalChan := make(chan os.Signal, 1)
 	code := 0
 
@@ -142,7 +142,9 @@ func listenToSystemSignels() {
 			log.Warn("Shutting down")
 		}
 	}
+	close(notifyShutdown)
 
+	api.ShutdownController()
 	log.Close()
 	os.Exit(code)
 }

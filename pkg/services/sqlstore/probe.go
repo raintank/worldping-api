@@ -586,13 +586,13 @@ func deleteProbeSession(sess *session, p *m.ProbeSession) error {
 		//nothing was deleted. so no need to cleanup anything
 		return nil
 	}
-	sessions, err := getProbeSessions(sess, p.ProbeId, "")
+	sessions, err := getProbeSessions(sess, existing.ProbeId, "")
 	if err != nil {
 		return err
 	}
 	if len(sessions) < 1 {
 		rawSql := "UPDATE probe set online=0, online_change=? where id=?"
-		if _, err := sess.Exec(rawSql, time.Now(), p.ProbeId); err != nil {
+		if _, err := sess.Exec(rawSql, time.Now(), existing.ProbeId); err != nil {
 			return err
 		}
 	}
@@ -625,58 +625,19 @@ func ClearProbeSessions(instance string) error {
 }
 
 func clearProbeSessions(sess *session, instance string) error {
-	var rawSql = "DELETE FROM probe_session where instance_id=?"
-
-	if _, err := sess.Exec(rawSql, instance); err != nil {
+	sessions, err := getProbeSessions(sess, 0, instance)
+	if err != nil {
 		return err
 	}
 
-	rawSql = `select probe.id as probe_id, probe.online, probe_session.id as session_id
-          from probe LEFT join probe_session
-          on probe_session.probe_id = probe.id group by probe.id, probe_session.id`
-	result := make([]*probeOnlineSession, 0)
-	if err := sess.Sql(rawSql).Find(&result); err != nil {
-		return err
-	}
-	toOnline := make([]int64, 0)
-	toOffline := make([]int64, 0)
-	for _, r := range result {
-		if r.Online && r.SessionId == 0 {
-			toOffline = append(toOffline, r.ProbeId)
-		} else if !r.Online && r.SessionId > 0 {
-			toOnline = append(toOnline, r.ProbeId)
+	if len(sessions) > 0 {
+		for _, s := range sessions {
+			if err := deleteProbeSession(sess, &s); err != nil {
+				return err
+			}
 		}
 	}
-	if len(toOnline) > 0 {
-		a := make([]string, len(toOnline))
-		args := make([]interface{}, len(toOnline)+1)
-		args[0] = time.Now()
-		for i, id := range toOnline {
-			args[i+1] = id
-			a[i] = "?"
-		}
-		rawSql = fmt.Sprintf("UPDATE probe set online=1, online_change=? where id in (%s)", strings.Join(a, ","))
 
-		if _, err := sess.Exec(rawSql, args...); err != nil {
-			fmt.Println("failed to set probes to online: ", rawSql)
-			return err
-		}
-	}
-	if len(toOffline) > 0 {
-		a := make([]string, len(toOffline))
-		args := make([]interface{}, len(toOffline)+1)
-		args[0] = time.Now()
-		for i, id := range toOffline {
-			args[i+1] = id
-			a[i] = "?"
-		}
-		rawSql = fmt.Sprintf("UPDATE probe set online=0, online_change=? where id in (%s)", strings.Join(a, ","))
-
-		if _, err := sess.Exec(rawSql, args...); err != nil {
-			fmt.Println("failed to set probes to offline:", rawSql)
-			return err
-		}
-	}
 	return nil
 }
 

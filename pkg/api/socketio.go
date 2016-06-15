@@ -34,6 +34,7 @@ var geoipDB *freegeoip.DB
 type ContextCache struct {
 	sync.RWMutex
 	Contexts map[string]*CollectorContext
+	shutdown chan struct{}
 }
 
 func (s *ContextCache) Set(id string, context *CollectorContext) {
@@ -47,26 +48,44 @@ func (s *ContextCache) Remove(id string) {
 	delete(s.Contexts, id)
 	s.Unlock()
 }
+func (c *ContextCache) Shutdown() {
+	c.shutdown <- struct{}{}
+	sessList := make([]*CollectorContext, 0)
+	c.Lock()
+	for _, ctx := range c.Contexts {
+		sessList = append(sessList, ctx)
+	}
+	c.Contexts = make(map[string]*CollectorContext)
+	c.Unlock()
+	for _, ctx := range sessList {
+		ctx.Remove()
+	}
+	return
+}
 
 func (s *ContextCache) Emit(id string, event string, payload interface{}) {
 	s.RLock()
-	defer s.RUnlock()
 	context, ok := s.Contexts[id]
 	if !ok {
 		log.Info("socket " + id + " is not local.")
+		s.RUnlock()
 		return
 	}
+	s.RUnlock()
 	context.Socket.Emit(event, payload)
 }
 
 func (c *ContextCache) Refresh(collectorId int64) {
+	sessList := make([]*CollectorContext, 0)
 	c.RLock()
-	defer c.RUnlock()
-
 	for _, ctx := range c.Contexts {
 		if ctx.Probe.Id == collectorId {
-			ctx.Refresh()
+			sessList = append(sessList, ctx)
 		}
+	}
+	c.RUnlock()
+	for _, ctx := range sessList {
+		ctx.Refresh()
 	}
 }
 
@@ -74,12 +93,20 @@ func (c *ContextCache) RefreshLoop() {
 	ticker := time.NewTicker(time.Minute * 5)
 	for {
 		select {
+		case <-c.shutdown:
+			log.Info("RefreshLoop terminating due to shutdown signal.")
+			ticker.Stop()
+			return
 		case <-ticker.C:
+			sessList := make([]*CollectorContext, 0)
 			c.RLock()
 			for _, ctx := range c.Contexts {
-				ctx.Refresh()
+				sessList = append(sessList, ctx)
 			}
 			c.RUnlock()
+			for _, ctx := range sessList {
+				ctx.Refresh()
+			}
 		}
 	}
 }
@@ -87,6 +114,7 @@ func (c *ContextCache) RefreshLoop() {
 func NewContextCache() *ContextCache {
 	cache := &ContextCache{
 		Contexts: make(map[string]*CollectorContext),
+		shutdown: make(chan struct{}),
 	}
 
 	go cache.RefreshLoop()
@@ -98,6 +126,7 @@ type CollectorContext struct {
 	Probe   *m.ProbeDTO
 	Socket  socketio.Socket
 	Session *m.ProbeSession
+	closed  bool
 }
 
 func authenticate(keyString string) (*auth.SignedInUser, error) {
@@ -297,6 +326,12 @@ func InitCollectorController(metrics met.Backend) {
 
 }
 
+func ShutdownController() {
+	log.Info("shutting down collectorController")
+	contextCache.Shutdown()
+	log.Info("collectorController shutdown.")
+}
+
 type ReadyPayload struct {
 	Collector    *m.ProbeDTO        `json:"collector"`
 	MonitorTypes []m.MonitorTypeDTO `json:"monitor_types"`
@@ -322,6 +357,7 @@ func (c *CollectorContext) Remove() error {
 }
 
 func (c *CollectorContext) OnDisconnection() {
+	c.closed = true
 	log.Info("%s disconnected", c.Probe.Name)
 	contextCache.Remove(c.Session.SocketId)
 	if err := c.Remove(); err != nil {
@@ -391,6 +427,10 @@ func (c *CollectorContext) OnResults(results []*schema.MetricData) {
 }
 
 func (c *CollectorContext) Refresh() {
+	if c.closed {
+		log.Info("Refresh called on closed session.")
+		return
+	}
 	log.Info("probeId=%d (%s) refreshing", c.Probe.Id, c.Probe.Name)
 	//step 1. get list of collectorSessions for this collector.
 	sessions, err := sqlstore.GetProbeSessions(c.Probe.Id, "")
