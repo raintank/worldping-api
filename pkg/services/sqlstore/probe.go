@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/raintank/worldping-api/pkg/events"
+	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 )
 
@@ -520,9 +521,10 @@ func addProbeSession(sess *session, probeSess *m.ProbeSession) error {
 		return err
 	}
 	rawSql := "UPDATE probe set online=1, online_change=? where id=?"
-	if _, err := sess.Exec(rawSql, time.Now(), probeSess.Id); err != nil {
+	if _, err := sess.Exec(rawSql, time.Now(), probeSess.ProbeId); err != nil {
 		return err
 	}
+	log.Info("marking probeId=%d online as new session created.", probeSess.ProbeId)
 	events.Publish(&events.ProbeSessionCreated{
 		Ts:      probeSess.Updated,
 		Payload: probeSess,
@@ -591,6 +593,7 @@ func deleteProbeSession(sess *session, p *m.ProbeSession) error {
 		return err
 	}
 	if len(sessions) < 1 {
+		log.Info("No sessions found for probeId=%d, marking probe as offline.", existing.ProbeId)
 		rawSql := "UPDATE probe set online=0, online_change=? where id=?"
 		if _, err := sess.Exec(rawSql, time.Now(), existing.ProbeId); err != nil {
 			return err
