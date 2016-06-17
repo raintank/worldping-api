@@ -10,6 +10,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
@@ -96,6 +97,10 @@ func NotFoundHandler(c *middleware.Context) {
 }
 
 func Heartbeat(c *middleware.Context) {
+	err := sqlstore.TestDB()
+	if err != nil {
+		c.JSON(500, err.Error)
+	}
 	c.JSON(200, "OK")
 	return
 }

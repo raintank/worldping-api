@@ -71,6 +71,8 @@ func SetEngine(engine *xorm.Engine, enableLog bool) (err error) {
 		}
 	}
 
+	x.SetMaxOpenConns(20)
+
 	return nil
 }
 
@@ -123,4 +125,23 @@ func LoadConfig() {
 	}
 	DbCfg.SslMode = sec.Key("ssl_mode").String()
 	DbCfg.Path = sec.Key("path").MustString("data/grafana.db")
+}
+
+func TestDB() error {
+	sess, err := newSession(true, "endpoint")
+	if err != nil {
+		return err
+	}
+	defer sess.Cleanup()
+
+	if err = testDB(sess); err != nil {
+		return err
+	}
+	sess.Complete()
+	return nil
+}
+
+func testDB(sess *session) error {
+	_, err := sess.Query("SELECT 1")
+	return err
 }
