@@ -28,8 +28,21 @@ import (
 
 var server *socketio.Server
 var contextCache *ContextCache
-var metricsRecvd met.Count
 var geoipDB *freegeoip.DB
+
+var (
+	metricsRecvd                  met.Count
+	ProbesConnected               met.Gauge
+	ProbeSessionCreatedEventsSeen met.Count
+	ProbeSessionDeletedEventsSeen met.Count
+	UpdatesSent                   met.Count
+	CreatesSent                   met.Count
+	RemovesSent                   met.Count
+	UpdatesRecv                   met.Count
+	CreatesRecv                   met.Count
+	RemovesRecv                   met.Count
+	RefreshDuration               met.Timer
+)
 
 type ContextCache struct {
 	sync.RWMutex
@@ -41,13 +54,16 @@ func (s *ContextCache) Set(id string, context *CollectorContext) {
 	s.Lock()
 	s.Contexts[id] = context
 	s.Unlock()
+	ProbesConnected.Inc(1)
 }
 
 func (s *ContextCache) Remove(id string) {
 	s.Lock()
 	delete(s.Contexts, id)
 	s.Unlock()
+	ProbesConnected.Inc(-1)
 }
+
 func (c *ContextCache) Shutdown() {
 	c.shutdown <- struct{}{}
 	sessList := make([]*CollectorContext, 0)
@@ -73,6 +89,14 @@ func (s *ContextCache) Emit(id string, event string, payload interface{}) {
 	}
 	s.RUnlock()
 	context.Socket.Emit(event, payload)
+	switch event {
+	case "updated":
+		UpdatesSent.Inc(1)
+	case "created":
+		CreatesSent.Inc(1)
+	case "removed":
+		RemovesSent.Inc(1)
+	}
 }
 
 func (c *ContextCache) Refresh(collectorId int64) {
@@ -87,6 +111,7 @@ func (c *ContextCache) Refresh(collectorId int64) {
 	for _, ctx := range sessList {
 		ctx.Refresh()
 	}
+
 }
 
 func (c *ContextCache) RefreshLoop() {
@@ -107,6 +132,7 @@ func (c *ContextCache) RefreshLoop() {
 			for _, ctx := range sessList {
 				ctx.Refresh()
 			}
+
 		}
 	}
 }
@@ -257,8 +283,6 @@ func InitCollectorController(metrics met.Backend) {
 
 	contextCache = NewContextCache()
 
-	metricsRecvd = metrics.NewCount("collector-ctrl.metrics-recv")
-
 	channel := make(chan events.RawEvent, 100)
 	events.Subscribe("Endpoint.created", channel)
 	events.Subscribe("Endpoint.updated", channel)
@@ -269,6 +293,20 @@ func InitCollectorController(metrics met.Backend) {
 	go eventConsumer(channel)
 
 	metricsRecvd = metrics.NewCount("collector-ctrl.metrics-recv")
+	ProbesConnected = metrics.NewGauge("collector-ctrl.probes-connected", 0)
+
+	UpdatesSent = metrics.NewCount("collector-ctrl.updates-sent")
+	CreatesSent = metrics.NewCount("collector-ctrl.creates-sent")
+	RemovesSent = metrics.NewCount("collector-ctrl.removes-sent")
+
+	UpdatesRecv = metrics.NewCount("collector-ctrl.updates-recv")
+	CreatesRecv = metrics.NewCount("collector-ctrl.creates-recv")
+	RemovesRecv = metrics.NewCount("collector-ctrl.removes-recv")
+
+	RefreshDuration = metrics.NewTimer("collector-ctrl.refresh-duration", 0)
+
+	ProbeSessionCreatedEventsSeen = metrics.NewCount("collector-ctrl.probe-session-created-events")
+	ProbeSessionDeletedEventsSeen = metrics.NewCount("collector-ctrl.probe-session-deleted-events")
 
 	// init GEOIP DB.
 	var err error
@@ -431,6 +469,7 @@ func (c *CollectorContext) Refresh() {
 		log.Info("Refresh called on closed session.")
 		return
 	}
+	pre := time.Now()
 	log.Info("probeId=%d (%s) refreshing", c.Probe.Id, c.Probe.Name)
 	//step 1. get list of collectorSessions for this collector.
 	sessions, err := sqlstore.GetProbeSessions(c.Probe.Id, "")
@@ -468,6 +507,7 @@ func (c *CollectorContext) Refresh() {
 		c.Socket.Emit("refresh", monitors)
 		break
 	}
+	RefreshDuration.Value(time.Since(pre))
 }
 
 func SocketIO(c *middleware.Context) {
@@ -616,7 +656,7 @@ func EmitCheckEvent(probeId int64, checkId int64, eventName string, event interf
 		return nil
 	}
 
-	log.Info(fmt.Sprintf("emitting %s event for CheckId %d totalSessions: %d", eventName, checkId, totalSessions))
+	log.Info(fmt.Sprintf("emitting %s event for CheckId %d to probeId:%d totalSessions: %d", eventName, checkId, probeId, totalSessions))
 	pos := checkId % totalSessions
 	if sessions[pos].InstanceId == setting.InstanceId {
 		socketId := sessions[pos].SocketId
@@ -669,6 +709,7 @@ func eventConsumer(channel chan events.RawEvent) {
 					log.Error(3, "unable to unmarshal payload into EndpointUpdated event.", err)
 					break
 				}
+				UpdatesRecv.Inc(1)
 				if err := HandleEndpointUpdated(&event); err != nil {
 					log.Error(3, "failed to emit EndpointUpdated event.", err)
 					// this is bad, but as probes refresh every 5minutes, the changes will propagate.
@@ -680,6 +721,7 @@ func eventConsumer(channel chan events.RawEvent) {
 					log.Error(3, "unable to unmarshal payload into EndpointUpdated event.", err)
 					break
 				}
+				CreatesRecv.Inc(1)
 				if err := HandleEndpointCreated(&event); err != nil {
 					log.Error(3, "failed to emit EndpointCreated event.", err)
 				}
@@ -690,6 +732,7 @@ func eventConsumer(channel chan events.RawEvent) {
 					log.Error(3, "unable to unmarshal payload into EndpointDeleted event.", err)
 					break
 				}
+				RemovesRecv.Inc(1)
 				if err := HandleEndpointDeleted(&event); err != nil {
 					log.Error(3, "failed to emit EndpointDeleted event.", err)
 				}
@@ -700,6 +743,7 @@ func eventConsumer(channel chan events.RawEvent) {
 					log.Error(3, "unable to unmarshal payload into ProbeSessionCreated event.", err)
 					break
 				}
+				ProbeSessionCreatedEventsSeen.Inc(1)
 				if err := HandleProbeSessionCreated(&event); err != nil {
 					log.Error(3, "failed to emit ProbeSessionCreated event.", err)
 				}
@@ -710,6 +754,8 @@ func eventConsumer(channel chan events.RawEvent) {
 					log.Error(3, "unable to unmarshal payload into ProbeSessionDeleted event.", err)
 					break
 				}
+				ProbeSessionDeletedEventsSeen.Inc(1)
+
 				if err := HandleProbeSessionDeleted(&event); err != nil {
 					log.Error(3, "failed to emit ProbeSessionDeleted event.", err)
 				}
