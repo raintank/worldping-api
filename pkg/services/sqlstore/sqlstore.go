@@ -43,6 +43,7 @@ func NewEngine() {
 	if err != nil {
 		log.Fatal(3, "fail to initialize orm engine: %v", err)
 	}
+	x.SetMaxOpenConns(20)
 }
 
 func SetEngine(engine *xorm.Engine, enableLog bool) (err error) {
@@ -70,9 +71,6 @@ func SetEngine(engine *xorm.Engine, enableLog bool) (err error) {
 			x.ShowSQL(true)
 		}
 	}
-
-	x.SetMaxOpenConns(20)
-
 	return nil
 }
 
