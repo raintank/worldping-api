@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/Unknwon/macaron"
 	"github.com/macaron-contrib/toolbox"
@@ -58,10 +59,10 @@ func StartServer(notifyShutdown chan struct{}) {
 			Certificates: []tls.Certificate{cert},
 			NextProtos:   []string{"http/1.1"},
 		}
-		tlsListener := tls.NewListener(l, srv.TLSConfig)
+		tlsListener := tls.NewListener(tcpKeepAliveListener{l.(*net.TCPListener)}, srv.TLSConfig)
 		err = srv.Serve(tlsListener)
 	} else {
-		err = srv.Serve(l)
+		err = srv.Serve(tcpKeepAliveListener{l.(*net.TCPListener)})
 	}
 
 	if err != nil {
@@ -73,4 +74,18 @@ func handleShutdown(notifyShutdown chan struct{}, l net.Listener) {
 	<-notifyShutdown
 	log.Info("shutdown started.")
 	l.Close()
+}
+
+type tcpKeepAliveListener struct {
+	*net.TCPListener
+}
+
+func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
+	tc, err := ln.AcceptTCP()
+	if err != nil {
+		return
+	}
+	tc.SetKeepAlive(true)
+	tc.SetKeepAlivePeriod(3 * time.Minute)
+	return tc, nil
 }
