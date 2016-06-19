@@ -30,12 +30,16 @@ func storeResults(stateChanges chan *m.AlertingJob) {
 	for {
 		select {
 		case <-ticker.C:
+			if len(buf) == 0 {
+				break
+			}
 			results, err := sqlstore.BatchUpdateCheckState(buf)
 			if err != nil {
 				log.Error(3, "failed to update checkStates. ", err)
 				buf = buf[:0]
 				break
 			}
+			log.Debug("updated state of %d checks in batch. %d resutled in stateChange.", len(buf), len(results))
 			for _, job := range results {
 				stateChanges <- job
 			}
@@ -53,6 +57,7 @@ func ProcessResult(job *m.AlertingJob) {
 
 func handleStateChange(c chan *m.AlertingJob) {
 	for job := range c {
+		log.Debug("state change: orgId=%d, monitorId=%d, endpointSlug=%s, state=%s", job.OrgId, job.CheckId, job.EndpointSlug, job.NewState.String())
 		if job.Notifications.Enabled {
 			emails := strings.Split(job.Notifications.Addresses, ",")
 			if len(emails) < 1 {
