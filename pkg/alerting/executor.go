@@ -154,7 +154,11 @@ func execute(fn GraphiteReturner, job *m.AlertingJob, cache *lru.Cache) error {
 	}
 	job.NewState = res
 	job.TimeExec = preExec
-	ProcessResult(job)
+
+	// lets only update the stateCheck value every second check, which will half the load we place on the DB.
+	if job.State != job.NewState || job.TimeExec.Sub(job.StateCheck) > (time.Second*time.Duration(job.Freq*2)) {
+		ProcessResult(job)
+	}
 
 	//store the result in graphite.
 	StoreResult(job)
