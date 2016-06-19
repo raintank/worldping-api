@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/golang-lru"
 	"github.com/raintank/met"
 	"github.com/raintank/worldping-api/pkg/log"
+	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
@@ -102,7 +103,7 @@ func Construct() {
 		log.Fatal(3, "Alerting in standalone mode requires a scheduler (enable_scheduler = true)")
 	}
 
-	recvJobQueue := make(chan *Job, setting.InternalJobQueueSize)
+	recvJobQueue := make(chan *m.AlertingJob, setting.InternalJobQueueSize)
 
 	InitJobQueue(recvJobQueue)
 

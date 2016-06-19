@@ -5,15 +5,12 @@ import (
 	"net/http"
 	"net/url"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/raintank/worldping-api/pkg/graphite"
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
-	"github.com/raintank/worldping-api/pkg/services/notifications"
-	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
 
 	bgraphite "bosun.org/graphite"
@@ -38,12 +35,12 @@ func GraphiteAuthContextReturner(org_id int64) (bgraphite.Context, error) {
 	return &ctx, nil
 }
 
-func ChanExecutor(fn GraphiteReturner, jobQueue <-chan *Job, cache *lru.Cache) {
+func ChanExecutor(fn GraphiteReturner, jobQueue <-chan *m.AlertingJob, cache *lru.Cache) {
 	executorNum.Inc(1)
 	defer executorNum.Dec(1)
 
 	for j := range jobQueue {
-		go func(job *Job) {
+		go func(job *m.AlertingJob) {
 			jobQueueInternalItems.Value(int64(len(jobQueue)))
 			jobQueueInternalSize.Value(int64(setting.InternalJobQueueSize))
 			if setting.AlertingInspect {
@@ -55,7 +52,7 @@ func ChanExecutor(fn GraphiteReturner, jobQueue <-chan *Job, cache *lru.Cache) {
 	}
 }
 
-func inspect(fn GraphiteReturner, job *Job, cache *lru.Cache) {
+func inspect(fn GraphiteReturner, job *m.AlertingJob, cache *lru.Cache) {
 	key := fmt.Sprintf("%d-%d", job.CheckId, job.LastPointTs.Unix())
 	if found, _ := cache.ContainsOrAdd(key, true); found {
 		//log.Debug("Job %s already done", job)
@@ -83,7 +80,7 @@ func inspect(fn GraphiteReturner, job *Job, cache *lru.Cache) {
 // execute executes an alerting job and returns any errors.
 // errors are always prefixed with 'non-fatal' (i.e. error condition that imply retrying the job later might fix it)
 // or 'fatal', when we're sure the job will never process successfully.
-func execute(fn GraphiteReturner, job *Job, cache *lru.Cache) error {
+func execute(fn GraphiteReturner, job *m.AlertingJob, cache *lru.Cache) error {
 	key := fmt.Sprintf("%d-%d", job.CheckId, job.LastPointTs.Unix())
 
 	preConsider := time.Now()
@@ -155,59 +152,12 @@ func execute(fn GraphiteReturner, job *Job, cache *lru.Cache) error {
 		executorAlertOutcomesErr.Inc(1)
 		return fmt.Errorf("fatal: eval failed for job %q : %s", job, err.Error())
 	}
+	job.NewState = res
+	job.TimeExec = preExec
+	ProcessResult(job)
 
-	checkState := m.CheckState{
-		Id:      job.CheckId,
-		State:   res,
-		Updated: job.LastPointTs, // this protects against jobs running out of order.
-		Checked: preExec,
-	}
-	var affected int64
-	if affected, err = sqlstore.UpdateCheckState(&checkState); err != nil {
-		//check if we failed due to deadlock.
-		if err.Error() == "Error 1213: Deadlock found when trying to get lock; try restarting transaction" {
-			affected, err = sqlstore.UpdateCheckState(&checkState)
-		}
-	}
-	if err != nil {
-		return fmt.Errorf("non-fatal: failed to update check state: %q", err)
-	}
-	if gr, ok := gr.(*graphite.GraphiteContext); ok {
-		log.Debug("Job %s state_change=%t request traces: %v", job, affected > 0, gr.Traces)
-	}
-	if affected > 0 && res != m.EvalResultUnknown {
-		//emit a state change event.
-		if job.Notifications.Enabled {
-			emails := strings.Split(job.Notifications.Addresses, ",")
-			if len(emails) < 1 {
-				log.Debug("no email addresses provided. OrgId: %d monitorId: %d", job.OrgId, job.CheckId)
-			} else {
-				for _, email := range emails {
-					log.Info("sending email. addr=%s, orgId=%d, monitorId=%d, endpointSlug=%s, state=%s", email, job.OrgId, job.CheckId, job.EndpointSlug, res.String())
-				}
-				sendCmd := m.SendEmailCommand{
-					To:       emails,
-					Template: "alerting_notification.html",
-					Data: map[string]interface{}{
-						"EndpointId":   job.EndpointId,
-						"EndpointName": job.EndpointName,
-						"EndpointSlug": job.EndpointSlug,
-						"Settings":     job.Settings,
-						"CheckType":    job.CheckType,
-						"State":        res.String(),
-						"TimeLastData": job.LastPointTs, // timestamp of the most recent data used
-						"TimeExec":     preExec,         // when we executed the alerting rule and made the determination
-					},
-				}
-
-				if err := notifications.SendEmail(&sendCmd); err != nil {
-					log.Error(3, "failed to send email to %s. OrgId: %d monitorId: %d due to: %s", emails, job.OrgId, job.CheckId, err)
-				}
-			}
-		}
-	}
 	//store the result in graphite.
-	job.StoreResult(res)
+	StoreResult(job)
 
 	switch res {
 	case m.EvalResultOK:

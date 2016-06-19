@@ -51,7 +51,7 @@ func NewFakeGraphite(values [][]int, initialTs int64, step int) *fakeGraphite {
 }
 
 func check(expr string, warn, crit int, values [][]int, expectErr error, expectRes m.CheckEvalResult) {
-	checkDef := CheckDef{}
+	checkDef := m.CheckDef{}
 	if warn != -1 {
 		checkDef.WarnExpr = fmt.Sprintf(expr, `graphite("test", "2m", "", "")`, warn)
 	}

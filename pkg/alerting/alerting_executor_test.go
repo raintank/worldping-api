@@ -7,6 +7,7 @@ import (
 
 	"bosun.org/graphite"
 	"github.com/hashicorp/golang-lru"
+	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -43,9 +44,9 @@ func TestExecutor(t *testing.T) {
 				queries: listener,
 			}, nil
 		}
-		jobAt := func(ts int64) *Job {
-			return &Job{
-				Definition: CheckDef{
+		jobAt := func(ts int64) *m.AlertingJob {
+			return &m.AlertingJob{
+				Definition: m.CheckDef{
 					CritExpr: `graphite("foo", "2m", "", "")`,
 					WarnExpr: "0",
 				},
@@ -53,7 +54,7 @@ func TestExecutor(t *testing.T) {
 				GeneratedAt: time.Now(),
 			}
 		}
-		jobQueue := make(chan *Job, 10)
+		jobQueue := make(chan *m.AlertingJob, 10)
 		InitJobQueue(jobQueue)
 		cache, err := lru.New(1000)
 		if err != nil {

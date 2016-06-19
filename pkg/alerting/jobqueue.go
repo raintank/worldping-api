@@ -6,6 +6,7 @@ import (
 
 	"github.com/raintank/worldping-api/pkg/alerting/jobqueue"
 	"github.com/raintank/worldping-api/pkg/log"
+	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
@@ -14,7 +15,7 @@ var (
 	subChan chan jobqueue.Message
 )
 
-func InitJobQueue(jobQueue chan<- *Job) {
+func InitJobQueue(jobQueue chan<- *m.AlertingJob) {
 
 	if setting.Rabbitmq.Enabled {
 		pubChan = make(chan jobqueue.Message, setting.PreAMQPJobQueueSize)
@@ -33,7 +34,7 @@ func InitJobQueue(jobQueue chan<- *Job) {
 	return
 }
 
-func PublishJob(job *Job) error {
+func PublishJob(job *m.AlertingJob) error {
 	body, err := json.Marshal(job)
 	if err != nil {
 		return err
@@ -54,16 +55,16 @@ func PublishJob(job *Job) error {
 	return nil
 }
 
-func handleJobs(c chan jobqueue.Message, jobQueue chan<- *Job) {
-	for m := range c {
+func handleJobs(c chan jobqueue.Message, jobQueue chan<- *m.AlertingJob) {
+	for message := range c {
 		go func(msg jobqueue.Message) {
-			j := &Job{}
+			j := &m.AlertingJob{}
 			err := json.Unmarshal(msg.Payload, j)
 			if err != nil {
 				log.Error(3, "unable to unmarshal Job. %s", err)
 				return
 			}
 			jobQueue <- j
-		}(m)
+		}(message)
 	}
 }

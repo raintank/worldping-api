@@ -765,38 +765,43 @@ func getProbeChecksWithEndpointSlug(sess *session, probe *m.ProbeDTO) ([]CheckWi
 	return checks, err
 }
 
-func UpdateCheckState(cState *m.CheckState) (int64, error) {
+func BatchUpdateCheckState(jobs []*m.AlertingJob) ([]*m.AlertingJob, error) {
 	sess, err := newSession(true, "check")
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer sess.Cleanup()
-	var affected int64
-	if affected, err = updateCheckState(sess, cState); err != nil {
-		return 0, err
+	jobsWithStateChange, err := batchUpdateCheckState(sess, jobs)
+	if err != nil {
+		return nil, err
 	}
 	sess.Complete()
-	return affected, nil
+	return jobsWithStateChange, nil
 }
 
-func updateCheckState(sess *session, cState *m.CheckState) (int64, error) {
-	sess.Table("check")
+func batchUpdateCheckState(sess *session, jobs []*m.AlertingJob) ([]*m.AlertingJob, error) {
 	rawSql := "UPDATE `check` SET state=?, state_change=? WHERE id=? AND state != ? AND state_change < ?"
+	jobsWithStateChange := make([]*m.AlertingJob, 0)
+	for _, j := range jobs {
+		res, err := sess.Exec(rawSql, int(j.NewState), j.TimeExec, j.CheckId, int(j.NewState), j.TimeExec)
+		if err != nil {
+			return nil, err
+		}
 
-	res, err := sess.Exec(rawSql, int(cState.State), cState.Updated, cState.Id, int(cState.State), cState.Updated)
-	if err != nil {
-		return 0, err
+		aff, _ := res.RowsAffected()
+		if aff > 0 {
+			// state change.
+			jobsWithStateChange = append(jobsWithStateChange, j)
+		}
+
+		rawSql = "UPDATE `check` SET state_check=? WHERE id=?"
+		res, err = sess.Exec(rawSql, j.TimeExec, j.CheckId)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	aff, _ := res.RowsAffected()
-
-	rawSql = "UPDATE `check` SET state_check=? WHERE id=?"
-	res, err = sess.Exec(rawSql, cState.Checked, cState.Id)
-	if err != nil {
-		return aff, err
-	}
-
-	return aff, nil
+	return jobsWithStateChange, nil
 }
 
 func GetChecksForAlerts(ts int64) ([]m.CheckForAlertDTO, error) {
@@ -820,6 +825,7 @@ func getChecksForAlerts(sess *session, ts int64) ([]m.CheckForAlertDTO, error) {
 		"`check`.offset",
 		"`check`.frequency",
 		"`check`.enabled",
+		"`check`.state`",
 		"`check`.state_change",
 		"`check`.state_check",
 		"`check`.settings",

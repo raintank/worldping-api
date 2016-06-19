@@ -71,7 +71,7 @@ func dispatchJobs() {
 		for _, job := range jobs {
 			job.GeneratedAt = time.Now()
 			job.LastPointTs = lastPointAt
-			job.assertStart()
+			job.SetAssertStart()
 
 			PublishJob(job)
 

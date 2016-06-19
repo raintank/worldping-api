@@ -11,21 +11,12 @@ import (
 	m "github.com/raintank/worldping-api/pkg/models"
 )
 
-type CheckDef struct {
-	CritExpr string
-	WarnExpr string
-}
-
-func (c CheckDef) String() string {
-	return fmt.Sprintf("<CheckDef> Crit: ''%s' -- Warn: '%s'", c.CritExpr, c.WarnExpr)
-}
-
 type Check struct {
 	// do we need these members here?
 	//Id           int64
 	//OrgId        int64
 	//DataSourceId int64
-	Definition CheckDef
+	Definition m.CheckDef
 }
 
 type CheckEvaluator interface {
@@ -34,12 +25,12 @@ type CheckEvaluator interface {
 
 type GraphiteCheckEvaluator struct {
 	Context  graphite.Context
-	Check    CheckDef
+	Check    m.CheckDef
 	critExpr *expr.Expr
 	warnExpr *expr.Expr
 }
 
-func NewGraphiteCheckEvaluator(c graphite.Context, check CheckDef) (*GraphiteCheckEvaluator, error) {
+func NewGraphiteCheckEvaluator(c graphite.Context, check m.CheckDef) (*GraphiteCheckEvaluator, error) {
 	var warnExpr *expr.Expr
 	var critExpr *expr.Expr
 	var err error

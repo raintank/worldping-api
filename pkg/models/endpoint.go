@@ -218,6 +218,7 @@ type CheckForAlertDTO struct {
 	Offset         int64
 	Frequency      int64
 	Enabled        bool
+	State          CheckEvalResult
 	StateChange    time.Time
 	StateCheck     time.Time
 	Settings       map[string]interface{} `xorm:"JSON"`

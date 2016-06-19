@@ -51,12 +51,12 @@ func TestJobAssertStart(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		job := &Job{
+		job := &m.AlertingJob{
 			LastPointTs: time.Unix(c.last, 0),
 			AssertStep:  c.step,
 			AssertSteps: c.steps,
 		}
-		job.assertStart()
+		job.SetAssertStart()
 		start := job.AssertStart.Unix()
 		if start != c.first {
 			t.Fatalf("job assertStart case %d expected %d, got %d", i, c.first, start)

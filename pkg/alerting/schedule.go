@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/raintank/raintank-metric/schema"
 	m "github.com/raintank/worldping-api/pkg/models"
@@ -14,35 +13,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
-// Job is a job for an alert execution
-// note that LastPointTs is a time denoting the timestamp of the last point to run against
-// this way the check runs always on the right data, irrespective of execution delays
-// that said, for convenience, we track the generatedAt timestamp
-type Job struct {
-	OrgId           int64
-	CheckId         int64
-	EndpointId      int64
-	EndpointName    string
-	EndpointSlug    string
-	Settings        map[string]interface{}
-	CheckType       string
-	Notifications   m.CheckNotificationSetting
-	Freq            int64
-	Offset          int64 // offset on top of "even" minute/10s/.. intervals
-	Definition      CheckDef
-	GeneratedAt     time.Time
-	LastPointTs     time.Time
-	AssertMinSeries int       // to verify during execution at least this many series are returned (would be nice at some point to include actual number of collectors)
-	AssertStart     time.Time // to verify timestamps in response
-	AssertStep      int       // to verify step duration
-	AssertSteps     int       // to verify during execution this many points are included
-}
-
-func (job Job) String() string {
-	return fmt.Sprintf("<Job> checkId=%d generatedAt=%s lastPointTs=%s definition: %s", job.CheckId, job.GeneratedAt, job.LastPointTs, job.Definition)
-}
-
-func (job Job) StoreResult(res m.CheckEvalResult) {
+func StoreResult(job *m.AlertingJob) {
 	if !setting.WriteIndividualAlertResults {
 		return
 	}
@@ -65,26 +36,21 @@ func (job Job) StoreResult(res m.CheckEvalResult) {
 		}
 		metrics[pos].SetId()
 	}
-	if int(res) >= 0 {
-		metrics[int(res)].Value = 1.0
+	if int(job.NewState) >= 0 {
+		metrics[int(job.NewState)].Value = 1.0
 	}
 	metricpublisher.Publish(metrics)
 }
 
-func (job *Job) assertStart() {
-	startTs := job.LastPointTs.Unix() - int64(job.AssertStep*(job.AssertSteps))
-	job.AssertStart = time.Unix((startTs+int64(job.AssertStep))-(startTs%int64(job.AssertStep)), 0)
-}
-
 // getJobs retrieves all jobs for which lastPointAt % their freq == their offset.
-func getJobs(lastPointAt int64) ([]*Job, error) {
+func getJobs(lastPointAt int64) ([]*m.AlertingJob, error) {
 
 	checks, err := sqlstore.GetChecksForAlerts(lastPointAt)
 	if err != nil {
 		return nil, err
 	}
 
-	jobs := make([]*Job, 0)
+	jobs := make([]*m.AlertingJob, 0)
 	for _, monitor := range checks {
 		job := buildJobForMonitor(&monitor)
 		if job != nil {
@@ -95,7 +61,7 @@ func getJobs(lastPointAt int64) ([]*Job, error) {
 	return jobs, nil
 }
 
-func buildJobForMonitor(check *m.CheckForAlertDTO) *Job {
+func buildJobForMonitor(check *m.CheckForAlertDTO) *m.AlertingJob {
 	//state could in theory be ok, warn, error, but we only use ok vs error for now
 
 	if check.HealthSettings == nil {
@@ -153,7 +119,7 @@ func buildJobForMonitor(check *m.CheckForAlertDTO) *Job {
 	if err != nil {
 		panic(fmt.Sprintf("Could not execute alert query template: %q", err))
 	}
-	j := &Job{
+	j := &m.AlertingJob{
 		CheckId:       check.Id,
 		EndpointId:    check.EndpointId,
 		EndpointName:  check.Name,
@@ -164,7 +130,10 @@ func buildJobForMonitor(check *m.CheckForAlertDTO) *Job {
 		OrgId:         check.OrgId,
 		Freq:          check.Frequency,
 		Offset:        check.Offset,
-		Definition: CheckDef{
+		State:         check.State,
+		StateCheck:    check.StateCheck,
+		StateChange:   check.StateChange,
+		Definition: m.CheckDef{
 			CritExpr: b.String(),
 			WarnExpr: "0", // for now we have only good or bad. so only crit is needed
 		},
