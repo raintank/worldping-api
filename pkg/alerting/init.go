@@ -115,4 +115,6 @@ func Construct() {
 	//worker to execute the checks.
 	go ChanExecutor(GraphiteAuthContextReturner, recvJobQueue, cache)
 
+	InitResultHandler()
+
 }
