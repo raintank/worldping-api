@@ -50,16 +50,16 @@ func redial(ctx context.Context, url, exchange string) chan chan session {
 			var ch *amqp.Channel
 			var err error
 			for !connected {
-				log.Debug("dialing amqp url: %s", url)
+				log.Info("dialing amqp url: %s", url)
 				conn, err = amqp.Dial(url)
 				if err != nil {
 					log.Error(3, "cannot (re)dial: %v: %q", err, url)
 					time.Sleep(time.Second)
 					continue
 				}
-				log.Debug("connected to %s", url)
+				log.Info("connected to %s", url)
 
-				log.Debug("creating new channel on AMQP connection.")
+				log.Info("creating new channel on AMQP connection.")
 				ch, err = conn.Channel()
 				if err != nil {
 					log.Error(3, "cannot create channel: %v", err)
@@ -67,13 +67,13 @@ func redial(ctx context.Context, url, exchange string) chan chan session {
 					time.Sleep(time.Second)
 					continue
 				}
-				log.Debug("Ensuring that %s topic exchange exists on AMQP server.", exchange)
+				log.Info("Ensuring that %s topic exchange exists on AMQP server.", exchange)
 				if err := ch.ExchangeDeclare(exchange, "topic", true, false, false, false, nil); err != nil {
 					log.Error(3, "cannot declare topic exchange: %v", err)
 					conn.Close()
 					time.Sleep(time.Second)
 				}
-				log.Debug("Successfully connected to RabbitMQ.")
+				log.Info("Successfully connected to RabbitMQ.")
 				connected = true
 			}
 
