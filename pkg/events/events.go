@@ -115,13 +115,14 @@ func Publish(e Event, attempts int) error {
 	}
 	ticker := time.NewTicker(2 * time.Second)
 	pre := time.Now()
+WAITLOOP:
 	for {
 		select {
 		case <-ticker.C:
 			log.Error(3, "blocked writing to event publish channel for %f seconds", time.Since(pre).Seconds())
 		case pubChan <- msg:
 			ticker.Stop()
-			return nil
+			break WAITLOOP
 		}
 	}
 
