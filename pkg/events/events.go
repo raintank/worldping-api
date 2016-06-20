@@ -113,7 +113,18 @@ func Publish(e Event, attempts int) error {
 		RoutingKey: e.Type(),
 		Payload:    body,
 	}
-	pubChan <- msg
+	ticker := time.NewTicker(2 * time.Second)
+	pre := time.Now()
+	for {
+		select {
+		case <-ticker.C:
+			log.Error(3, "blocked writing to event publish channel for %f seconds", time.Since(pre).Seconds())
+		case pubChan <- msg:
+			ticker.Stop()
+			return nil
+		}
+	}
+
 	return nil
 }
 
