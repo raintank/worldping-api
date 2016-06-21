@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/endpointdiscovery"
@@ -25,7 +26,7 @@ func V1GetEndpointById(c *middleware.Context) {
 
 func V1GetEndpoints(c *middleware.Context, query m.GetEndpointsQuery) {
 	query.OrgId = c.OrgId
-
+	log.Info("calling sqlstore.GetEndpoints")
 	endpoints, err := sqlstore.GetEndpoints(&query)
 	if err != nil {
 		handleError(c, err)
