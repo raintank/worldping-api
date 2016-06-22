@@ -46,8 +46,9 @@ var (
 
 type ContextCache struct {
 	sync.RWMutex
-	Contexts map[string]*CollectorContext
-	shutdown chan struct{}
+	Contexts    map[string]*CollectorContext
+	shutdown    chan struct{}
+	refreshChan chan int64
 }
 
 func (s *ContextCache) Set(id string, context *CollectorContext) {
@@ -100,6 +101,10 @@ func (s *ContextCache) Emit(id string, event string, payload interface{}) {
 }
 
 func (c *ContextCache) Refresh(collectorId int64) {
+	c.refreshChan <- collectorId
+}
+
+func (c *ContextCache) refresh(collectorId int64) {
 	sessList := make([]*CollectorContext, 0)
 	c.RLock()
 	for _, ctx := range c.Contexts {
@@ -114,6 +119,36 @@ func (c *ContextCache) Refresh(collectorId int64) {
 
 }
 
+func (c *ContextCache) RefreshQueue() {
+	ticker := time.NewTicker(time.Second * 2)
+	buffer := make([]int64, 0)
+	for {
+		select {
+		case <-c.shutdown:
+			log.Info("RefreshQueue terminating due to shutdown signal.")
+			ticker.Stop()
+			return
+		case <-ticker.C:
+			if len(buffer) == 0 {
+				break
+			}
+			log.Debug("processing %d queued probe refreshes.", len(buffer))
+			collectorIds := make(map[int64]struct{})
+			for _, id := range buffer {
+				collectorIds[id] = struct{}{}
+			}
+			log.Debug("%d refreshes are for %d probes", len(buffer), len(collectorIds))
+			for id := range collectorIds {
+				c.refresh(id)
+			}
+			buffer = buffer[:0]
+		case id := <-c.refreshChan:
+			log.Debug("adding refresh of %d to buffer", id)
+			buffer = append(buffer, id)
+		}
+	}
+}
+
 func (c *ContextCache) RefreshLoop() {
 	ticker := time.NewTicker(time.Minute * 5)
 	for {
@@ -126,7 +161,9 @@ func (c *ContextCache) RefreshLoop() {
 			sessList := make([]*CollectorContext, 0)
 			c.RLock()
 			for _, ctx := range c.Contexts {
-				sessList = append(sessList, ctx)
+				if time.Since(ctx.LastRefresh) >= time.Minute*5 {
+					sessList = append(sessList, ctx)
+				}
 			}
 			c.RUnlock()
 			for _, ctx := range sessList {
@@ -139,20 +176,23 @@ func (c *ContextCache) RefreshLoop() {
 
 func NewContextCache() *ContextCache {
 	cache := &ContextCache{
-		Contexts: make(map[string]*CollectorContext),
-		shutdown: make(chan struct{}),
+		Contexts:    make(map[string]*CollectorContext),
+		shutdown:    make(chan struct{}),
+		refreshChan: make(chan int64, 100),
 	}
 
 	go cache.RefreshLoop()
+	go cache.RefreshQueue()
 	return cache
 }
 
 type CollectorContext struct {
 	*auth.SignedInUser
-	Probe   *m.ProbeDTO
-	Socket  socketio.Socket
-	Session *m.ProbeSession
-	closed  bool
+	Probe       *m.ProbeDTO
+	Socket      socketio.Socket
+	Session     *m.ProbeSession
+	closed      bool
+	LastRefresh time.Time
 }
 
 func authenticate(keyString string) (*auth.SignedInUser, error) {
@@ -470,6 +510,7 @@ func (c *CollectorContext) Refresh() {
 		return
 	}
 	pre := time.Now()
+	c.LastRefresh = pre
 	log.Info("probeId=%d (%s) refreshing", c.Probe.Id, c.Probe.Name)
 	//step 1. get list of collectorSessions for this collector.
 	sessions, err := sqlstore.GetProbeSessions(c.Probe.Id, "")
