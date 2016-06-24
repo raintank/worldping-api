@@ -639,7 +639,7 @@ func getCheckById(sess *session, orgId, checkId int64) (*m.Check, error) {
 
 func deleteCheck(sess *session, c *m.Check) error {
 	sess.Table("check")
-	if _, err := sess.Delete(c); err != nil {
+	if _, err := sess.Id(c.Id).Delete(&m.Check{}); err != nil {
 		return err
 	}
 
