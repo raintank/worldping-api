@@ -536,16 +536,11 @@ func updateCheck(sess *session, c *m.Check) error {
 				}
 			}
 			if len(tagsToDel) > 0 {
-				tagRoutes := make([]m.RouteByTagIndex, len(tagsToDel))
-				for i, tag := range tagsToDel {
-					tagRoutes[i] = m.RouteByTagIndex{
-						CheckId: c.Id,
-						Tag:     tag,
+				for _, tag := range tagsToDel {
+					_, err := sess.Where("check_id=? AND tag=?", c.Id, tag).Delete(&m.RouteByTagIndex{})
+					if err != nil {
+						return err
 					}
-				}
-				_, err := sess.Delete(&tagRoutes)
-				if err != nil {
-					return err
 				}
 			}
 			if len(tagsToAdd) > 0 {
@@ -583,16 +578,11 @@ func updateCheck(sess *session, c *m.Check) error {
 				}
 			}
 			if len(idsToDel) > 0 {
-				idRoutes := make([]m.RouteByIdIndex, len(idsToDel))
-				for i, id := range idsToDel {
-					idRoutes[i] = m.RouteByIdIndex{
-						CheckId: c.Id,
-						ProbeId: id,
+				for _, id := range idsToDel {
+					_, err := sess.Where("check_id=? and probe_id=?", c.Id, id).Delete(&m.RouteByIdIndex{})
+					if err != nil {
+						return err
 					}
-				}
-				_, err := sess.Delete(&idRoutes)
-				if err != nil {
-					return err
 				}
 			}
 			if len(idsToAdd) > 0 {
