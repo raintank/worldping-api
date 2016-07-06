@@ -297,6 +297,7 @@ func updateProbe(sess *session, p *m.ProbeDTO) error {
 	}
 	// If the OrgId is different, the only changes that can be made is to Tags.
 	if p.OrgId == existing.OrgId {
+		log.Debug("users owns probe, so can update all fields.")
 		if existing.Enabled != p.Enabled {
 			p.EnabledChange = time.Now()
 		}
@@ -319,6 +320,12 @@ func updateProbe(sess *session, p *m.ProbeDTO) error {
 		}
 
 		p.Updated = probe.Updated
+	} else {
+		log.Debug("user does not own probe, only tags can be updated.")
+		tmp := *existing
+		tmp.Tags = p.Tags
+		tmp.OrgId = p.OrgId
+		*p = tmp
 	}
 
 	tagMap := make(map[string]bool)
@@ -382,11 +389,14 @@ func updateProbe(sess *session, p *m.ProbeDTO) error {
 		}
 	}
 
-	e := new(events.ProbeUpdated)
-	e.Ts = p.Updated
-	e.Payload.Current = p
-	e.Payload.Last = existing
-	events.Publish(e, 0)
+	// dont emit events when only tags are changed.
+	if p.OrgId == existing.OrgId {
+		e := new(events.ProbeUpdated)
+		e.Ts = p.Updated
+		e.Payload.Current = p
+		e.Payload.Last = existing
+		events.Publish(e, 0)
+	}
 
 	return nil
 }
