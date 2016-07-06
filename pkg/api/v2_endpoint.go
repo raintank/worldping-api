@@ -48,6 +48,7 @@ func AddEndpoint(c *middleware.Context, endpoint m.EndpointDTO) *rbody.ApiRespon
 	}
 	for i, _ := range endpoint.Checks {
 		check := endpoint.Checks[i]
+		check.OrgId = c.OrgId
 		err := sqlstore.ValidateCheckRoute(&check)
 		if err != nil {
 			return rbody.ErrResp(err)
@@ -66,6 +67,9 @@ func UpdateEndpoint(c *middleware.Context, endpoint m.EndpointDTO) *rbody.ApiRes
 	endpoint.OrgId = c.OrgId
 	if endpoint.Name == "" {
 		return rbody.ErrResp(m.NewValidationError("Endpoint name not set."))
+	}
+	if endpoint.Id == 0 {
+		return rbody.ErrResp(m.NewValidationError("Endpoint id not set."))
 	}
 
 	err := sqlstore.UpdateEndpoint(&endpoint)
