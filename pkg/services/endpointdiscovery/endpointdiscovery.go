@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os/exec"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -50,8 +51,8 @@ func NewEndpoint(hostname string) (*Endpoint, error) {
 	return e, nil
 }
 
-func Discover(hostname string) ([]*m.Check, error) {
-	checks := make([]*m.Check, 0)
+func Discover(hostname string) (*m.EndpointDTO, error) {
+	checks := make([]m.Check, 0)
 
 	endpoint, err := NewEndpoint(hostname)
 	if err != nil {
@@ -106,10 +107,15 @@ func Discover(hostname string) ([]*m.Check, error) {
 	}()
 
 	for c := range checkChan {
-		checks = append(checks, c)
+		checks = append(checks, *c)
 	}
 
-	return checks, nil
+	resp := m.EndpointDTO{
+		Name:   endpoint.Host,
+		Checks: checks,
+	}
+
+	return &resp, nil
 
 }
 
@@ -151,9 +157,9 @@ func DiscoverHttp(endpoint *Endpoint) (*m.Check, error) {
 
 	hostParts := strings.Split(requestUrl.Host, ":")
 	varHost := hostParts[0]
-	varPort := "80"
+	varPort := int64(80)
 	if len(hostParts) > 1 {
-		varPort = hostParts[1]
+		varPort, _ = strconv.ParseInt(hostParts[1], 10, 32)
 	}
 
 	return &m.Check{
@@ -188,9 +194,9 @@ func DiscoverHttps(endpoint *Endpoint) (*m.Check, error) {
 
 	hostParts := strings.Split(requestUrl.Host, ":")
 	varHost := hostParts[0]
-	varPort := "443"
+	varPort := int64(443)
 	if len(hostParts) > 1 {
-		varPort = hostParts[1]
+		varPort, _ = strconv.ParseInt(hostParts[1], 10, 32)
 	}
 
 	return &m.Check{
@@ -239,6 +245,7 @@ func DiscoverDNS(endpoint *Endpoint) (*m.Check, error) {
 		Settings: map[string]interface{}{
 			"name":     recordName,
 			"type":     recordType,
+			"port":     53,
 			"server":   server,
 			"timeout":  5,
 			"protocol": "udp",

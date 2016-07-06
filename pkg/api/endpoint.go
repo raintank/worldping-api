@@ -127,14 +127,14 @@ func V1UpdateEndpoint(c *middleware.Context, cmd m.UpdateEndpointCommand) {
 }
 
 func V1DiscoverEndpoint(c *middleware.Context, cmd m.DiscoverEndpointCmd) {
-	checks, err := endpointdiscovery.Discover(cmd.Name)
+	endpoint, err := endpointdiscovery.Discover(cmd.Name)
 	if err != nil {
 		handleError(c, err)
 		return
 	}
 	// convert from checks to v1api SuggestedMonitor
-	monitors := make([]m.SuggestedMonitor, len(checks))
-	for i, check := range checks {
+	monitors := make([]m.SuggestedMonitor, len(endpoint.Checks))
+	for i, check := range endpoint.Checks {
 		monitors[i] = m.SuggestedMonitor{
 			MonitorTypeId: checkTypeToId(check.Type),
 			Settings:      checkSettingToMonitorSetting(check.Settings),
