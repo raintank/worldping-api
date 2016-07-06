@@ -236,6 +236,8 @@ func TestEndpoints(t *testing.T) {
 	Convey("When getting checks for probe", t, func() {
 		checks, err := GetProbeChecksWithEndpointSlug(&m.ProbeDTO{Id: 4})
 		So(err, ShouldBeNil)
-		So(len(checks), ShouldEqual, 14)
+		// 2 checks for each endpoint created.  But then we updated 2 endpoints
+		// end changed their routing.
+		So(len(checks), ShouldEqual, (endpointCount*2)-2)
 	})
 }
