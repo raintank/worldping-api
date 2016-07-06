@@ -67,12 +67,6 @@ func UpdateProbe(c *middleware.Context, probe m.ProbeDTO) *rbody.ApiResponse {
 		return rbody.ErrResp(m.NewValidationError("Probe name not set."))
 	}
 
-	if probe.Public {
-		if !c.IsAdmin {
-			return rbody.ErrResp(m.NewValidationError("Only admins can make public probes."))
-		}
-	}
-
 	if err := sqlstore.UpdateProbe(&probe); err != nil {
 		return rbody.ErrResp(err)
 	}
