@@ -93,10 +93,8 @@ func Wrap(action interface{}) macaron.Handler {
 		if res.Meta.Code == 500 {
 			log.Error(3, "internal server error: %s", res.Meta.Message)
 		}
-		log.Debug("request handled.")
 		timer(c, time.Since(pre))
 		c.JSON(200, res)
-
 	}
 }
 
