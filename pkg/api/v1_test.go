@@ -11,7 +11,6 @@ import (
 
 	"github.com/Unknwon/macaron"
 	"github.com/go-xorm/xorm"
-	"github.com/raintank/worldping-api/pkg/api/rbody"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore/sqlutil"
@@ -105,124 +104,6 @@ func TestQuotasV1Api(t *testing.T) {
 				Convey("quota response should be valid", func() {
 					quota := make([]m.OrgQuotaDTO, 0)
 					err := json.Unmarshal(resp.Body.Bytes(), &quota)
-					So(err, ShouldBeNil)
-
-					So(len(quota), ShouldEqual, 2)
-
-					for i := range []int{1, 2, 3} {
-						Convey(fmt.Sprintf("when %d endpoints", i), func() {
-							err := sqlstore.AddEndpoint(&m.EndpointDTO{
-								Name:  fmt.Sprintf("test%d", i),
-								OrgId: 1,
-							})
-							endpointCount = i
-							So(err, ShouldBeNil)
-							for _, q := range quota {
-								So(quota[0].OrgId, ShouldEqual, 1)
-								So(quota[0].Limit, ShouldEqual, 10)
-								So(q.Target, ShouldBeIn, "endpoint", "probe")
-								if q.Target == "endpoint" {
-									So(q.Used, ShouldEqual, endpointCount)
-								}
-							}
-						})
-					}
-					for i := range []int{1, 2, 3} {
-						Convey(fmt.Sprintf("when %d probes", i), func() {
-							err := sqlstore.AddProbe(&m.ProbeDTO{
-								Name:  fmt.Sprintf("test%d", i),
-								OrgId: 1,
-							})
-							probeCount = i
-							So(err, ShouldBeNil)
-							for _, q := range quota {
-								So(quota[0].OrgId, ShouldEqual, 1)
-								So(quota[0].Limit, ShouldEqual, 10)
-								So(q.Target, ShouldBeIn, "endpoint", "probe")
-								if q.Target == "probe" {
-									So(q.Used, ShouldEqual, probeCount)
-								}
-							}
-						})
-					}
-				})
-			})
-		})
-	})
-}
-
-func TestQuotasV2Api(t *testing.T) {
-	InitTestDB(t)
-	r := macaron.Classic()
-	setting.AdminKey = "test"
-	setting.Quota = setting.QuotaSettings{
-		Enabled: false,
-		Org: &setting.OrgQuota{
-			Endpoint: 10,
-			Probe:    10,
-		},
-		Global: &setting.GlobalQuota{
-			Endpoint: -1,
-			Probe:    -1,
-		},
-	}
-	Register(r)
-
-	Convey("When quotas not enabled", t, func() {
-		setting.Quota.Enabled = false
-		Convey("Given GET request for /api/v2/quotas", func() {
-			resp := httptest.NewRecorder()
-			req, err := http.NewRequest("GET", "/api/v2/quotas", nil)
-			So(err, ShouldBeNil)
-			addAuthHeader(req)
-
-			r.ServeHTTP(resp, req)
-			Convey("should return 200", func() {
-				So(resp.Code, ShouldEqual, 200)
-				Convey("quota response should be valid ApiResponse", func() {
-					response := rbody.ApiResponse{}
-					err := json.Unmarshal(resp.Body.Bytes(), &response)
-					So(err, ShouldBeNil)
-					So(response.Meta.Code, ShouldEqual, 200)
-					So(response.Meta.Type, ShouldEqual, "quotas")
-
-					quota := make([]m.OrgQuotaDTO, 0)
-					err = json.Unmarshal(response.Body, &quota)
-					So(err, ShouldBeNil)
-
-					So(len(quota), ShouldEqual, 2)
-					So(quota[0].OrgId, ShouldEqual, 1)
-					So(quota[0].Limit, ShouldEqual, -1)
-					So(quota[0].Used, ShouldEqual, -1)
-					for _, q := range quota {
-						So(q.Target, ShouldBeIn, "endpoint", "probe")
-					}
-				})
-			})
-		})
-	})
-
-	endpointCount := 0
-	probeCount := 0
-	Convey("When quotas are enabled", t, func() {
-		setting.Quota.Enabled = true
-		Convey("Given GET request for /api/org/quotas", func() {
-			resp := httptest.NewRecorder()
-			req, err := http.NewRequest("GET", "/api/v2/quotas", nil)
-			So(err, ShouldBeNil)
-			addAuthHeader(req)
-
-			r.ServeHTTP(resp, req)
-			Convey("should return 200", func() {
-				So(resp.Code, ShouldEqual, 200)
-				Convey("quota response should be valid", func() {
-					response := rbody.ApiResponse{}
-					err := json.Unmarshal(resp.Body.Bytes(), &response)
-					So(err, ShouldBeNil)
-					So(response.Meta.Code, ShouldEqual, 200)
-					So(response.Meta.Type, ShouldEqual, "quotas")
-					quota := make([]m.OrgQuotaDTO, 0)
-					err = json.Unmarshal(response.Body, &quota)
 					So(err, ShouldBeNil)
 
 					So(len(quota), ShouldEqual, 2)
