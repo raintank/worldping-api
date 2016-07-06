@@ -28,6 +28,7 @@ func Register(r *macaron.Macaron) {
 
 	r.Group("/api/v2", func() {
 		r.Get("/quotas", wrap(GetQuotas))
+
 		r.Group("/admin", func() {
 			r.Group("/quotas", func() {
 				r.Get("/:orgId", wrap(GetOrgQuotas))
@@ -35,6 +36,26 @@ func Register(r *macaron.Macaron) {
 			})
 			r.Get("/usage", wrap(GetUsage))
 		}, middleware.RequireAdmin())
+
+		r.Group("/endpoints", func() {
+			r.Combo("/").
+				Get(bind(m.GetEndpointsQuery{}), wrap(GetEndpoints)).
+				Post(reqEditorRole, bind(m.EndpointDTO{}), wrap(AddEndpoint)).
+				Put(reqEditorRole, bind(m.EndpointDTO{}), wrap(UpdateEndpoint))
+			r.Delete("/:id", reqEditorRole, wrap(DeleteEndpoint))
+			r.Get("/discover", reqEditorRole, bind(m.DiscoverEndpointCmd{}), wrap(DiscoverEndpoint))
+			r.Get("/:id", wrap(GetEndpointById))
+		})
+
+		r.Group("/probes", func() {
+			r.Combo("/").
+				Get(bind(m.GetProbesQuery{}), wrap(GetProbes)).
+				Post(reqEditorRole, bind(m.ProbeDTO{}), wrap(AddProbe)).
+				Put(reqEditorRole, bind(m.ProbeDTO{}), wrap(UpdateProbe))
+			r.Delete("/:id", reqEditorRole, wrap(DeleteProbe))
+			r.Get("/locations", V1GetCollectorLocations)
+			r.Get("/:id", wrap(GetProbeById))
+		})
 
 	}, middleware.Auth(setting.AdminKey))
 
