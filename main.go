@@ -98,7 +98,7 @@ func initRuntime() {
 		log.Fatal(3, err.Error())
 	}
 
-	log.Info("Starting Grafana")
+	log.Info("Starting worldping-api")
 	log.Info("Version: %v, Commit: %v, Build date: %v", setting.BuildVersion, setting.BuildCommit, time.Unix(setting.BuildStamp, 0))
 	setting.LogConfigurationInfo()
 

@@ -450,7 +450,7 @@ func initLogging(args *CommandLineArgs) {
 				"formatting": formatting,
 			}
 		case "file":
-			logPath := sec.Key("file_name").MustString(filepath.Join(LogsPath, "grafana.log"))
+			logPath := sec.Key("file_name").MustString(filepath.Join(LogsPath, "worldping-api.log"))
 			os.MkdirAll(filepath.Dir(logPath), os.ModePerm)
 			LogConfigs[i] = util.DynMap{
 				"level":    level,
