@@ -1,7 +1,6 @@
 package models
 
 import (
-	"errors"
 	"regexp"
 	"strings"
 	"time"
@@ -9,8 +8,8 @@ import (
 
 // Typed errors
 var (
-	ErrProbeNotFound           = errors.New("Probe not found")
-	ErrProbeWithSameCodeExists = errors.New("A Probe with the same code already exists")
+	ErrProbeNotFound           = NewNotFoundError("Probe not found")
+	ErrProbeWithSameCodeExists = NewValidationError("A Probe with the same code already exists")
 )
 
 type Probe struct {
