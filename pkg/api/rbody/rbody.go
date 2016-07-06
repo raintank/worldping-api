@@ -3,16 +3,13 @@ package rbody
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/Unknwon/macaron"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
-)
-
-var (
-	NotFound         = ErrResp(404, fmt.Errorf("Not found"))
-	PermissionDenied = ErrResp(403, fmt.Errorf("Permission Denied"))
-	ServerError      = ErrResp(500, fmt.Errorf("Server error"))
+	m "github.com/raintank/worldping-api/pkg/models"
 )
 
 type ApiError struct {
@@ -45,7 +42,7 @@ func (r *ApiResponse) Error() error {
 func OkResp(t string, body interface{}) *ApiResponse {
 	bRaw, err := json.Marshal(body)
 	if err != nil {
-		return ErrResp(500, err)
+		return ErrResp(err)
 	}
 	resp := &ApiResponse{
 		Meta: &ResponseMeta{
@@ -58,11 +55,19 @@ func OkResp(t string, body interface{}) *ApiResponse {
 	return resp
 }
 
-func ErrResp(code int, err error) *ApiResponse {
+func ErrResp(err error) *ApiResponse {
+	code := 500
+	message := err.Error()
+
+	if e, ok := err.(m.AppError); ok {
+		code = e.Code()
+		message = e.Message()
+	}
+
 	resp := &ApiResponse{
 		Meta: &ResponseMeta{
 			Code:    code,
-			Message: err.Error(),
+			Message: message,
 			Type:    "error",
 		},
 		Body: json.RawMessage([]byte("null")),
@@ -72,18 +77,30 @@ func ErrResp(code int, err error) *ApiResponse {
 
 func Wrap(action interface{}) macaron.Handler {
 	return func(c *middleware.Context) {
+		pre := time.Now()
 		var res *ApiResponse
 		val, err := c.Invoke(action)
-		if err == nil && val != nil && len(val) > 0 {
+		if err != nil {
+			log.Error(3, "request handler error: %s", err.Error())
+			c.JSON(500, err.Error())
+		} else if val != nil && len(val) > 0 {
 			res = val[0].Interface().(*ApiResponse)
 		} else {
-			res = ServerError
+			log.Error(3, "request handler error: No response generated")
+			c.JSON(500, "No response generated.")
 		}
 
 		if res.Meta.Code == 500 {
-			log.Error(3, "server error: %s", res.Meta.Message)
+			log.Error(3, "internal server error: %s", res.Meta.Message)
 		}
-
+		log.Debug("request handled.")
+		timer(c, time.Since(pre))
 		c.JSON(200, res)
+
 	}
+}
+
+func timer(c *middleware.Context, duration time.Duration) {
+	path := strings.Replace(strings.Trim(c.Req.URL.Path, "/"), "/", ".", -1)
+	log.Debug("%s.%s took %s.", path, c.Req.Method, duration)
 }

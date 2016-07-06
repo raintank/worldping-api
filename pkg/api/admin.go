@@ -9,7 +9,7 @@ import (
 func GetUsage(c *middleware.Context) *rbody.ApiResponse {
 	usage, err := sqlstore.GetUsage()
 	if err != nil {
-		return rbody.ErrResp(500, err)
+		return rbody.ErrResp(err)
 	}
 
 	return rbody.OkResp("usage", usage)

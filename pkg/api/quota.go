@@ -42,7 +42,7 @@ func GetQuotas(c *middleware.Context) *rbody.ApiResponse {
 	if setting.Quota.Enabled {
 		quotas, err = sqlstore.GetOrgQuotas(c.OrgId)
 		if err != nil {
-			return rbody.ErrResp(500, err)
+			return rbody.ErrResp(err)
 		}
 	} else {
 		quotas = []m.OrgQuotaDTO{
@@ -71,7 +71,7 @@ func GetOrgQuotas(c *middleware.Context) *rbody.ApiResponse {
 	if setting.Quota.Enabled {
 		quotas, err = sqlstore.GetOrgQuotas(org)
 		if err != nil {
-			return rbody.ErrResp(500, err)
+			return rbody.ErrResp(err)
 		}
 	} else {
 		quotas = []m.OrgQuotaDTO{
@@ -99,7 +99,7 @@ func UpdateOrgQuota(c *middleware.Context) *rbody.ApiResponse {
 	limit := c.ParamsInt64(":limit")
 
 	if _, ok := setting.Quota.Org.ToMap()[target]; !ok {
-		return rbody.NotFound
+		return rbody.ErrResp(m.NewNotFoundError("quota target not found"))
 	}
 
 	quota := m.OrgQuotaDTO{
@@ -109,7 +109,7 @@ func UpdateOrgQuota(c *middleware.Context) *rbody.ApiResponse {
 	}
 	err := sqlstore.UpdateOrgQuota(&quota)
 	if err != nil {
-		return rbody.ErrResp(500, err)
+		return rbody.ErrResp(err)
 	}
 	return rbody.OkResp("quota", quota)
 }
