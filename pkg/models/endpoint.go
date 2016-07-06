@@ -2,7 +2,7 @@ package models
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -10,8 +10,7 @@ import (
 
 // Typed errors
 var (
-	ErrEndpointNotFound   = errors.New("Endpoint not found")
-	ErrWithMonitorsDelete = errors.New("Endpoint can't be deleted as it still has monitors")
+	ErrEndpointNotFound = NewNotFoundError("Endpoint not found")
 )
 
 type Endpoint struct {
@@ -76,6 +75,49 @@ type Check struct {
 	Updated        time.Time              `json:"updated"`
 }
 
+func (c Check) Validate() error {
+	// check route config
+	if err := c.Route.Validate(); err != nil {
+		return err
+	}
+
+	//check frequency
+	validFreq := map[int64]bool{
+		10:  true,
+		30:  true,
+		60:  true,
+		120: true,
+		300: true,
+		600: true,
+	}
+	if _, ok := validFreq[c.Frequency]; !ok {
+		return NewValidationError("Invalid frequency specified.")
+	}
+
+	//validate Settings.
+	switch c.Type {
+	case HTTP_CHECK:
+		if err := validateHTTPSettings(c.Settings); err != nil {
+			return err
+		}
+	case HTTPS_CHECK:
+		if err := validateHTTPSSettings(c.Settings); err != nil {
+			return err
+		}
+	case PING_CHECK:
+		if err := validatePINGSettings(c.Settings); err != nil {
+			return err
+		}
+	case DNS_CHECK:
+		if err := validateDNSSettings(c.Settings); err != nil {
+			return err
+		}
+	default:
+		return NewValidationError(fmt.Sprintf("unknown check type. %s", c.Type))
+	}
+	return nil
+}
+
 type CheckHealthSettings struct {
 	NumProbes     int                      `json:"num_collectors" binding:"Required"`
 	Steps         int                      `json:"steps" binding:"Required"`
@@ -109,8 +151,8 @@ type RouteByTagIndex struct {
 }
 
 var (
-	InvalidRouteConfig = errors.New("Invlid route config")
-	UnknownRouteType   = errors.New("unknown route type")
+	InvalidRouteConfig = NewValidationError("Invlid route config")
+	UnknownRouteType   = NewValidationError("unknown route type")
 )
 
 type CheckRoute struct {
@@ -162,26 +204,26 @@ func (t *CheckRoute) UnmarshalJSON(body []byte) error {
 	return err
 }
 
-func (r *CheckRoute) Validate() (bool, error) {
+func (r *CheckRoute) Validate() error {
 	switch r.Type {
 	case RouteByTags:
 		if len(r.Config) != 1 {
-			return false, InvalidRouteConfig
+			return InvalidRouteConfig
 		}
 		if _, ok := r.Config["tags"]; !ok {
-			return false, InvalidRouteConfig
+			return InvalidRouteConfig
 		}
 	case RouteByIds:
 		if len(r.Config) != 1 {
-			return false, InvalidRouteConfig
+			return InvalidRouteConfig
 		}
 		if _, ok := r.Config["ids"]; !ok {
-			return false, InvalidRouteConfig
+			return InvalidRouteConfig
 		}
 	default:
-		return false, UnknownRouteType
+		return UnknownRouteType
 	}
-	return true, nil
+	return nil
 }
 
 // ----------------------
@@ -225,4 +267,261 @@ type CheckForAlertDTO struct {
 	HealthSettings *CheckHealthSettings   `xorm:"JSON"`
 	Created        time.Time
 	Updated        time.Time
+}
+
+func validateHTTPSettings(settings map[string]interface{}) error {
+	requiredFields := map[string]string{
+		"host": "string",
+		"path": "string",
+	}
+	optFields := map[string]string{
+		"port":        "number",
+		"method":      "string",
+		"headers":     "string",
+		"expectRegex": "string",
+		"body":        "string",
+		"timeout":     "number",
+	}
+	for field, dataType := range requiredFields {
+		rawVal, ok := settings[field]
+		if !ok {
+			return NewValidationError(fmt.Sprintf("%s field missing from HTTP check", field))
+		}
+		switch dataType {
+		case "string":
+			value, ok := rawVal.(string)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected string", field))
+			}
+			if value == "" {
+				return NewValidationError(fmt.Sprintf("%s field missing from HTTP check", field))
+			}
+		}
+	}
+
+	for field, dataType := range optFields {
+		rawVal, ok := settings[field]
+		if !ok {
+			continue
+		}
+		switch dataType {
+		case "string":
+			_, ok := rawVal.(string)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected string", field))
+			}
+		case "number":
+			value, ok := rawVal.(float64)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected number", field))
+			}
+			if field == "timeout" {
+				if value <= 0.0 || value > 10.0 {
+					return NewValidationError(fmt.Sprintf("%s field is invalid. must be between 1 and 10", field))
+				}
+			}
+			if field == "port" {
+				settings[field] = int(value)
+				if value < 1 || value > 65535 {
+					return NewValidationError(fmt.Sprintf("%s field is invalid. must be between 1 and 65535", field))
+				}
+			}
+		}
+	}
+	return nil
+
+}
+func validateHTTPSSettings(settings map[string]interface{}) error {
+	requiredFields := map[string]string{
+		"host": "string",
+		"path": "string",
+	}
+	optFields := map[string]string{
+		"port":         "number",
+		"method":       "string",
+		"headers":      "string",
+		"expectRegex":  "string",
+		"validateCert": "bool",
+		"body":         "string",
+		"timeout":      "number",
+	}
+	for field, dataType := range requiredFields {
+		rawVal, ok := settings[field]
+		if !ok {
+			return NewValidationError(fmt.Sprintf("%s field missing from HTTPS check", field))
+		}
+		switch dataType {
+		case "string":
+			value, ok := rawVal.(string)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected string", field))
+			}
+			if value == "" {
+				return NewValidationError(fmt.Sprintf("%s field missing from HTTPS check", field))
+			}
+		}
+	}
+
+	for field, dataType := range optFields {
+		rawVal, ok := settings[field]
+		if !ok {
+			continue
+		}
+		switch dataType {
+		case "string":
+			_, ok := rawVal.(string)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected string", field))
+			}
+		case "number":
+			value, ok := rawVal.(float64)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected number", field))
+			}
+			if field == "timeout" {
+				if value <= 0.0 || value > 10.0 {
+					return NewValidationError(fmt.Sprintf("%s field is invalid. must be between 1 and 10", field))
+				}
+			}
+			if field == "port" {
+				settings[field] = int(value)
+				if value < 1 || value > 65535 {
+					return NewValidationError(fmt.Sprintf("%s field is invalid. must be between 1 and 65535", field))
+				}
+			}
+		case "bool":
+			_, ok := rawVal.(bool)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected boolean", field))
+			}
+
+		}
+	}
+	return nil
+}
+
+func validatePINGSettings(settings map[string]interface{}) error {
+	requiredFields := map[string]string{
+		"hostname": "string",
+	}
+	optFields := map[string]string{
+		"timeout": "number",
+	}
+	for field, dataType := range requiredFields {
+		rawVal, ok := settings[field]
+		if !ok {
+			return NewValidationError(fmt.Sprintf("%s field missing from Ping check", field))
+		}
+		switch dataType {
+		case "string":
+			value, ok := rawVal.(string)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected string", field))
+			}
+			if value == "" {
+				return NewValidationError(fmt.Sprintf("%s field missing from Ping check", field))
+			}
+		}
+	}
+
+	for field, dataType := range optFields {
+		rawVal, ok := settings[field]
+		if !ok {
+			continue
+		}
+		switch dataType {
+		case "number":
+			value, ok := rawVal.(float64)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected number", field))
+			}
+			if field == "timeout" {
+				if value <= 0.0 || value > 10.0 {
+					return NewValidationError(fmt.Sprintf("%s field is invalid. must be between 1 and 10", field))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func validateDNSSettings(settings map[string]interface{}) error {
+	requiredFields := map[string]string{
+		"name":   "string",
+		"type":   "string",
+		"server": "string",
+	}
+	optFields := map[string]string{
+		"timeout":  "float",
+		"protocol": "string",
+		"port":     "integer",
+	}
+	validRecordTypes := map[string]bool{
+		"A":     true,
+		"AAAA":  true,
+		"CNAME": true,
+		"MX":    true,
+		"NS":    true,
+		"PTR":   true,
+		"SOA":   true,
+		"SRV":   true,
+		"TXT":   true,
+	}
+	for field, dataType := range requiredFields {
+		rawVal, ok := settings[field]
+		if !ok {
+			return NewValidationError(fmt.Sprintf("%s field missing from Ping check", field))
+		}
+		switch dataType {
+		case "string":
+			value, ok := rawVal.(string)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected string", field))
+			}
+			if value == "" {
+				return NewValidationError(fmt.Sprintf("%s field missing from Ping check", field))
+			}
+			if field == "type" {
+				if _, ok := validRecordTypes[value]; !ok {
+					return NewValidationError(fmt.Sprintf("unknown dns record type: %s", value))
+				}
+			}
+		}
+	}
+
+	for field, dataType := range optFields {
+		rawVal, ok := settings[field]
+		if !ok {
+			continue
+		}
+		switch dataType {
+		case "string":
+			value, ok := rawVal.(string)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected string", field))
+			}
+			if field == "protocol" {
+				if strings.ToLower(value) != "udp" && strings.ToLower(value) != "tcp" {
+					return NewValidationError("protocol field is invalid must be tcp or udp")
+				}
+			}
+		case "number":
+			value, ok := rawVal.(float64)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected number", field))
+			}
+			if field == "timeout" {
+				if value <= 0.0 || value > 10.0 {
+					return NewValidationError(fmt.Sprintf("%s field is invalid. must be between 1 and 10", field))
+				}
+			}
+			if field == "port" {
+				settings[field] = int(value)
+				if value < 1 || value > 65535 {
+					return NewValidationError(fmt.Sprintf("%s field is invalid. must be between 1 and 65535", field))
+				}
+			}
+		}
+	}
+	return nil
 }
