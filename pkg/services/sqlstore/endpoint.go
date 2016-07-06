@@ -345,7 +345,7 @@ func updateEndpoint(sess *session, e *m.EndpointDTO) error {
 			ecjson, err := json.Marshal(ec)
 			if !bytes.Equal(ecjson, cjson) {
 				c.Created = ec.Created
-				checkUpdates = append(checkAdds, c)
+				checkUpdates = append(checkUpdates, c)
 			}
 		} else {
 			return m.NewValidationError(fmt.Sprintf("an existing %s check is already defined for this endpoint.", c.Type))
