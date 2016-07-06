@@ -40,7 +40,7 @@ func Register(r *macaron.Macaron) {
 		r.Group("/endpoints", func() {
 			r.Combo("/").
 				Get(bind(m.GetEndpointsQuery{}), wrap(GetEndpoints)).
-				Post(reqEditorRole, bind(m.EndpointDTO{}), wrap(AddEndpoint)).
+				Post(reqEditorRole, quota("endpoint"), bind(m.EndpointDTO{}), wrap(AddEndpoint)).
 				Put(reqEditorRole, bind(m.EndpointDTO{}), wrap(UpdateEndpoint))
 			r.Delete("/:id", reqEditorRole, wrap(DeleteEndpoint))
 			r.Get("/discover", reqEditorRole, bind(m.DiscoverEndpointCmd{}), wrap(DiscoverEndpoint))
@@ -50,7 +50,7 @@ func Register(r *macaron.Macaron) {
 		r.Group("/probes", func() {
 			r.Combo("/").
 				Get(bind(m.GetProbesQuery{}), wrap(GetProbes)).
-				Post(reqEditorRole, bind(m.ProbeDTO{}), wrap(AddProbe)).
+				Post(reqEditorRole, quota("probe"), bind(m.ProbeDTO{}), wrap(AddProbe)).
 				Put(reqEditorRole, bind(m.ProbeDTO{}), wrap(UpdateProbe))
 			r.Delete("/:id", reqEditorRole, wrap(DeleteProbe))
 			r.Get("/locations", V1GetCollectorLocations)
