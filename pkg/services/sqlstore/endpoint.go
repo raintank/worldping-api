@@ -432,6 +432,7 @@ func deleteEndpoint(sess *session, orgId, id int64) error {
 func addCheck(sess *session, c *m.Check) error {
 	c.State = -1
 	c.StateCheck = time.Now()
+	c.StateChange = time.Now()
 	c.Offset = c.EndpointId % c.Frequency
 	c.Created = time.Now()
 	c.Updated = time.Now()
@@ -500,6 +501,10 @@ func updateCheck(sess *session, c *m.Check) error {
 	c.Offset = c.EndpointId % c.Frequency
 	sess.Table("check")
 	sess.UseBool("enabled")
+	if !c.enabled && existing.enabled {
+		c.StateChange = time.Now()
+		c.State = -1
+	}
 	_, err = sess.Id(c.Id).Update(c)
 	if err != nil {
 		return err
