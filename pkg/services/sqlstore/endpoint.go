@@ -501,7 +501,7 @@ func updateCheck(sess *session, c *m.Check) error {
 	c.Offset = c.EndpointId % c.Frequency
 	sess.Table("check")
 	sess.UseBool("enabled")
-	if !c.enabled && existing.enabled {
+	if !c.Enabled && existing.Enabled {
 		c.StateChange = time.Now()
 		c.State = -1
 	}
