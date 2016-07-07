@@ -46,7 +46,7 @@ func AddEndpoint(c *middleware.Context, endpoint m.EndpointDTO) *rbody.ApiRespon
 	if endpoint.Name == "" {
 		return rbody.ErrResp(m.NewValidationError("Endpoint name not set."))
 	}
-	for i, _ := range endpoint.Checks {
+	for i := range endpoint.Checks {
 		check := endpoint.Checks[i]
 		check.OrgId = c.OrgId
 		if err := check.Validate(); err != nil {
@@ -76,7 +76,7 @@ func UpdateEndpoint(c *middleware.Context, endpoint m.EndpointDTO) *rbody.ApiRes
 		return rbody.ErrResp(m.NewValidationError("Endpoint id not set."))
 	}
 
-	for i, _ := range endpoint.Checks {
+	for i := range endpoint.Checks {
 		check := endpoint.Checks[i]
 		if err := check.Validate(); err != nil {
 			return rbody.ErrResp(err)
