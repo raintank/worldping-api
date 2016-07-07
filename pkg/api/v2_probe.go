@@ -21,7 +21,7 @@ func GetProbes(c *middleware.Context, query m.GetProbesQuery) *rbody.ApiResponse
 func GetProbeById(c *middleware.Context) *rbody.ApiResponse {
 	id := c.ParamsInt64(":id")
 
-	probe, err := sqlstore.GetProbeById(c.OrgId, id)
+	probe, err := sqlstore.GetProbeById(id, c.OrgId)
 	if err != nil {
 		return rbody.ErrResp(err)
 	}
