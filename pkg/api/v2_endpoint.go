@@ -33,7 +33,7 @@ func GetEndpointById(c *middleware.Context) *rbody.ApiResponse {
 func DeleteEndpoint(c *middleware.Context) *rbody.ApiResponse {
 	id := c.ParamsInt64(":id")
 
-	err := sqlstore.DeleteEndpoint(id, c.OrgId)
+	err := sqlstore.DeleteEndpoint(c.OrgId, id)
 	if err != nil {
 		return rbody.ErrResp(err)
 	}
