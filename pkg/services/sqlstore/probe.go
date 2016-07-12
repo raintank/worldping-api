@@ -108,6 +108,16 @@ func getProbes(sess *session, query *m.GetProbesQuery) ([]m.ProbeDTO, error) {
 		whereArgs = append(whereArgs, enabled)
 		prefix = "AND"
 	}
+	if query.Online != "" {
+		online, err := strconv.ParseBool(query.Online)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Fprintf(&where, "%s probe.online=? ", prefix)
+		whereArgs = append(whereArgs, online)
+		prefix = "AND"
+	}
+
 	if query.Public != "" {
 		public, err := strconv.ParseBool(query.Public)
 		if err != nil {
@@ -141,6 +151,23 @@ func getProbes(sess *session, query *m.GetProbesQuery) ([]m.ProbeDTO, error) {
 		return nil, err
 	}
 	return a.ToProbeDTO(), nil
+}
+
+func GetOnlineProbes() ([]m.Probe, error) {
+	sess, err := newSession(false, "probe")
+	if err != nil {
+		return nil, err
+	}
+	return getOnlineProbes(sess)
+}
+
+func getOnlineProbes(sess *session) ([]m.Probe, error) {
+	probes := make([]m.Probe, 0)
+	err := sess.Where("probe.online=1").Find(&probes)
+	if err != nil {
+		return nil, err
+	}
+	return probes, nil
 }
 
 func onlineProbesWithNoSession(sess *session) ([]m.ProbeDTO, error) {
