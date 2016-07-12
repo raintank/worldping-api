@@ -66,3 +66,8 @@ func NewUsage() *Usage {
 		},
 	}
 }
+
+type BillingUsage struct {
+	OrgId           int64
+	ChecksPerMinute float64
+}

@@ -34,5 +34,16 @@ func GetBilling(c *middleware.Context) *rbody.ApiResponse {
 			usage[check.OrgId] += (60.0 / float64(check.Frequency))
 		}
 	}
-	return rbody.OkResp("billing", usage)
+
+	resp := make([]m.BillingUsage, len(usage))
+	counter := 0
+	for org, checks := range usage {
+		resp[counter] = m.BillingUsage{
+			OrgId:           org,
+			ChecksPerMinute: checks,
+		}
+		counter++
+	}
+
+	return rbody.OkResp("billing", resp)
 }
