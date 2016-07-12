@@ -709,7 +709,7 @@ func getProbeChecks(sess *session, probe *m.ProbeDTO) ([]m.Check, error) {
 		cid[i] = c.CheckId
 	}
 	sess.Table("check")
-	sess.In("id", cid)
+	sess.In("id", cid).And("`check`.enabled=1")
 	err = sess.Find(&checks)
 	return checks, err
 }
@@ -754,7 +754,7 @@ func getProbeChecksWithEndpointSlug(sess *session, probe *m.ProbeDTO) ([]m.Check
 	}
 	sess.Table("check")
 	sess.Join("INNER", "endpoint", "`check`.endpoint_id=endpoint.id")
-	sess.In("`check`.id", cid)
+	sess.In("`check`.id", cid).And("`check`.enabled=1")
 	sess.Cols("`check`.*", "endpoint.slug")
 	err = sess.Find(&checks)
 	return checks, err
