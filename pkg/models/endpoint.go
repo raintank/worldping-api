@@ -75,6 +75,11 @@ type Check struct {
 	Updated        time.Time              `json:"updated"`
 }
 
+type CheckWithSlug struct {
+	Check `xorm:"extends"`
+	Slug  string `json:"endpointSlug"`
+}
+
 func (c Check) Validate() error {
 	// check route config
 	if err := c.Route.Validate(); err != nil {

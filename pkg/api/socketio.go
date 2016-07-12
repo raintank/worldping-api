@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/fiorix/freegeoip"
 	"github.com/googollee/go-socket.io"
+	"github.com/hashicorp/go-version"
 	"github.com/raintank/met"
 	"github.com/raintank/raintank-apps/pkg/auth"
 	"github.com/raintank/raintank-metric/schema"
@@ -223,27 +223,19 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	if versionStr == "" {
 		return nil, errors.New("version number not provided.")
 	}
-	versionParts := strings.SplitN(versionStr, ".", 2)
-	if len(versionParts) != 2 {
-		return nil, errors.New("could not parse version number")
-	}
-	versionMajor, err := strconv.ParseInt(versionParts[0], 10, 64)
+	v, err := version.NewVersion(versionStr)
 	if err != nil {
-		return nil, errors.New("could not parse version number")
-	}
-	versionMinor, err := strconv.ParseFloat(versionParts[1], 64)
-	if err != nil {
-		return nil, errors.New("could not parse version number.")
+		return nil, err
 	}
 
 	//--------- set required version of collector.------------//
-	//
-	if versionMajor < 0 || versionMinor < 1.3 {
+	minVersion, _ := version.NewVersion("0.1.3")
+	if v.LessThan(minVersion) {
 		return nil, errors.New("invalid probe version. Please upgrade.")
+
 	}
-	//
 	//--------- set required version of collector.------------//
-	log.Info("probe %s with version %s connected", name, versionStr)
+	log.Info("probe %s with version %s connected", name, v.String())
 
 	// lookup collector
 	probe, err := sqlstore.GetProbeByName(name, user.OrgId)
@@ -535,17 +527,31 @@ func (c *CollectorContext) Refresh() {
 		}
 
 		//step 5. send to socket.
+		v, _ := version.NewVersion(c.Session.Version)
+		newVer, _ := version.NewVersion("0.9.1")
+
 		monitors := make([]m.MonitorDTO, 0, len(checks))
+		activeChecks := make([]m.CheckWithSlug, 0)
 		for _, check := range checks {
 			if !check.Enabled {
 				continue
 			}
 			if check.Check.Id%totalSessions == int64(pos) {
-				monitors = append(monitors, m.MonitorDTOFromCheck(check.Check, check.Slug))
+				if v.LessThan(newVer) {
+					monitors = append(monitors, m.MonitorDTOFromCheck(check.Check, check.Slug))
+				} else {
+					activeChecks = append(activeChecks, check)
+				}
 			}
+
 		}
-		log.Info("sending refresh to socket %s, probeId=%d,  %d checks", sess.SocketId, sess.ProbeId, len(monitors))
-		c.Socket.Emit("refresh", monitors)
+		if v.LessThan(newVer) {
+			log.Info("sending refresh to socket %s, probeId=%d,  %d checks", sess.SocketId, sess.ProbeId, len(monitors))
+			c.Socket.Emit("refresh", monitors)
+		} else {
+			log.Info("sending refresh to socket %s, probeId=%d,  %d checks", sess.SocketId, sess.ProbeId, len(activeChecks))
+			c.Socket.Emit("refresh", activeChecks)
+		}
 		break
 	}
 	RefreshDuration.Value(time.Since(pre))
@@ -595,7 +601,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 		for _, probe := range probeIds {
 			seenProbes[probe] = struct{}{}
 			log.Debug("notifying probeId=%d about updated %s check for %s", probe, check.Type, event.Payload.Current.Slug)
-			if err := EmitCheckEvent(probe, check.Id, "updated", m.MonitorDTOFromCheck(check, event.Payload.Current.Slug)); err != nil {
+			if err := EmitCheckEvent(probe, check.Id, "updated", m.CheckWithSlug{check, event.Payload.Current.Slug}); err != nil {
 				return err
 			}
 		}
@@ -607,7 +613,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 		for _, probe := range oldProbes {
 			if _, ok := seenProbes[probe]; !ok {
 				log.Debug("%s check for %s should no longer be running on probeId=%d", check.Type, event.Payload.Current.Slug, probe)
-				if err := EmitCheckEvent(probe, check.Id, "removed", m.MonitorDTOFromCheck(check, event.Payload.Last.Slug)); err != nil {
+				if err := EmitCheckEvent(probe, check.Id, "removed", m.CheckWithSlug{check, event.Payload.Last.Slug}); err != nil {
 					return err
 				}
 			}
@@ -621,7 +627,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 		}
 		for _, probe := range probeIds {
 			log.Debug("notifying probeId=%d about new %s check for %s", probe, check.Type, event.Payload.Current.Slug)
-			if err := EmitCheckEvent(probe, check.Id, "created", m.MonitorDTOFromCheck(check, event.Payload.Current.Slug)); err != nil {
+			if err := EmitCheckEvent(probe, check.Id, "created", m.CheckWithSlug{check, event.Payload.Current.Slug}); err != nil {
 				return err
 			}
 		}
@@ -635,7 +641,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 			}
 			for _, probe := range oldProbes {
 				log.Debug("%s check for %s should no longer be running on probeId=%d", check.Type, event.Payload.Current.Slug, probe)
-				if err := EmitCheckEvent(probe, check.Id, "removed", m.MonitorDTOFromCheck(check, event.Payload.Last.Slug)); err != nil {
+				if err := EmitCheckEvent(probe, check.Id, "removed", m.CheckWithSlug{check, event.Payload.Last.Slug}); err != nil {
 					return err
 				}
 			}
@@ -657,7 +663,7 @@ func HandleEndpointCreated(event *events.EndpointCreated) error {
 		}
 		for _, probe := range probeIds {
 			log.Debug("notifying probeId=%d about new %s check for %s", probe, check.Type, event.Payload.Slug)
-			if err := EmitCheckEvent(probe, check.Id, "created", m.MonitorDTOFromCheck(check, event.Payload.Slug)); err != nil {
+			if err := EmitCheckEvent(probe, check.Id, "created", m.CheckWithSlug{check, event.Payload.Slug}); err != nil {
 				return err
 			}
 		}
@@ -678,7 +684,7 @@ func HandleEndpointDeleted(event *events.EndpointDeleted) error {
 		}
 		for _, probe := range probeIds {
 			log.Debug("notifying probeId=%d about deleted %s check for %s", probe, check.Type, event.Payload.Slug)
-			if err := EmitCheckEvent(probe, check.Id, "removed", m.MonitorDTOFromCheck(check, event.Payload.Slug)); err != nil {
+			if err := EmitCheckEvent(probe, check.Id, "removed", m.CheckWithSlug{check, event.Payload.Slug}); err != nil {
 				return err
 			}
 		}
@@ -700,6 +706,16 @@ func EmitCheckEvent(probeId int64, checkId int64, eventName string, event interf
 	log.Info(fmt.Sprintf("emitting %s event for CheckId %d to probeId:%d totalSessions: %d", eventName, checkId, probeId, totalSessions))
 	pos := checkId % totalSessions
 	if sessions[pos].InstanceId == setting.InstanceId {
+		v, _ := version.NewVersion(sessions[pos].Version)
+		newVer, _ := version.NewVersion("0.9.1")
+		if v.LessThan(newVer) {
+			if check, ok := event.(m.CheckWithSlug); ok {
+				monitor := m.MonitorDTOFromCheckWithSlug(check)
+				socketId := sessions[pos].SocketId
+				contextCache.Emit(socketId, eventName, monitor)
+				return nil
+			}
+		}
 		socketId := sessions[pos].SocketId
 		contextCache.Emit(socketId, eventName, event)
 	}

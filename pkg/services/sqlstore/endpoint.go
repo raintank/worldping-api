@@ -714,12 +714,7 @@ func getProbeChecks(sess *session, probe *m.ProbeDTO) ([]m.Check, error) {
 	return checks, err
 }
 
-type CheckWithSlug struct {
-	m.Check `xorm:"extends"`
-	Slug    string
-}
-
-func GetProbeChecksWithEndpointSlug(probe *m.ProbeDTO) ([]CheckWithSlug, error) {
+func GetProbeChecksWithEndpointSlug(probe *m.ProbeDTO) ([]m.CheckWithSlug, error) {
 	sess, err := newSession(false, "check")
 	if err != nil {
 		return nil, err
@@ -727,8 +722,8 @@ func GetProbeChecksWithEndpointSlug(probe *m.ProbeDTO) ([]CheckWithSlug, error) 
 	return getProbeChecksWithEndpointSlug(sess, probe)
 }
 
-func getProbeChecksWithEndpointSlug(sess *session, probe *m.ProbeDTO) ([]CheckWithSlug, error) {
-	checks := make([]CheckWithSlug, 0)
+func getProbeChecksWithEndpointSlug(sess *session, probe *m.ProbeDTO) ([]m.CheckWithSlug, error) {
+	checks := make([]m.CheckWithSlug, 0)
 
 	type checkIdRow struct {
 		CheckId int64

@@ -173,6 +173,40 @@ func MonitorDTOFromCheck(c Check, endpointSlug string) MonitorDTO {
 	return m
 }
 
+func MonitorDTOFromCheckWithSlug(c CheckWithSlug) MonitorDTO {
+	settings := make([]MonitorSettingDTO, 0)
+	for k, v := range c.Settings {
+		settings = append(settings, MonitorSettingDTO{
+			Variable: k,
+			Value:    fmt.Sprintf("%v", v),
+		})
+	}
+
+	m := MonitorDTO{
+		Id:              c.Id,
+		OrgId:           c.OrgId,
+		EndpointId:      c.EndpointId,
+		EndpointSlug:    c.Slug,
+		MonitorTypeId:   CheckTypeToMonitorTypeMap[c.Type],
+		MonitorTypeName: string(c.Type),
+		State:           c.State,
+		StateChange:     c.StateChange,
+		StateCheck:      c.StateCheck,
+		HealthSettings:  c.HealthSettings,
+		Settings:        settings,
+		Frequency:       c.Frequency,
+		Offset:          c.Offset,
+		Enabled:         c.Enabled,
+		Updated:         c.Updated,
+	}
+	if c.Route.Type == RouteByIds {
+		m.CollectorIds = c.Route.Config["ids"].([]int64)
+	} else if c.Route.Type == RouteByTags {
+		m.CollectorTags = c.Route.Config["tags"].([]string)
+	}
+	return m
+}
+
 type MonitorTypeSettingDTO struct {
 	Variable     string                 `json:"variable"`
 	Description  string                 `json:"description"`
