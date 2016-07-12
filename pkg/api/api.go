@@ -35,6 +35,7 @@ func Register(r *macaron.Macaron) {
 				r.Put("/:orgId/:target/:limit", wrap(UpdateOrgQuota))
 			})
 			r.Get("/usage", wrap(GetUsage))
+			r.Get("/billing", wrap(GetBilling))
 		}, middleware.RequireAdmin())
 
 		r.Group("/endpoints", func() {
