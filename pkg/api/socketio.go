@@ -601,7 +601,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 		for _, probe := range probeIds {
 			seenProbes[probe] = struct{}{}
 			log.Debug("notifying probeId=%d about updated %s check for %s", probe, check.Type, event.Payload.Current.Slug)
-			if err := EmitCheckEvent(probe, check.Id, "updated", m.CheckWithSlug{check, event.Payload.Current.Slug}); err != nil {
+			if err := EmitCheckEvent(probe, check.Id, "updated", m.CheckWithSlug{Check: check, Slug: event.Payload.Current.Slug}); err != nil {
 				return err
 			}
 		}
@@ -613,7 +613,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 		for _, probe := range oldProbes {
 			if _, ok := seenProbes[probe]; !ok {
 				log.Debug("%s check for %s should no longer be running on probeId=%d", check.Type, event.Payload.Current.Slug, probe)
-				if err := EmitCheckEvent(probe, check.Id, "removed", m.CheckWithSlug{check, event.Payload.Last.Slug}); err != nil {
+				if err := EmitCheckEvent(probe, check.Id, "removed", m.CheckWithSlug{Check: check, Slug: event.Payload.Last.Slug}); err != nil {
 					return err
 				}
 			}
@@ -627,7 +627,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 		}
 		for _, probe := range probeIds {
 			log.Debug("notifying probeId=%d about new %s check for %s", probe, check.Type, event.Payload.Current.Slug)
-			if err := EmitCheckEvent(probe, check.Id, "created", m.CheckWithSlug{check, event.Payload.Current.Slug}); err != nil {
+			if err := EmitCheckEvent(probe, check.Id, "created", m.CheckWithSlug{Check: check, Slug: event.Payload.Current.Slug}); err != nil {
 				return err
 			}
 		}
@@ -641,7 +641,7 @@ func HandleEndpointUpdated(event *events.EndpointUpdated) error {
 			}
 			for _, probe := range oldProbes {
 				log.Debug("%s check for %s should no longer be running on probeId=%d", check.Type, event.Payload.Current.Slug, probe)
-				if err := EmitCheckEvent(probe, check.Id, "removed", m.CheckWithSlug{check, event.Payload.Last.Slug}); err != nil {
+				if err := EmitCheckEvent(probe, check.Id, "removed", m.CheckWithSlug{Check: check, Slug: event.Payload.Last.Slug}); err != nil {
 					return err
 				}
 			}
@@ -663,7 +663,7 @@ func HandleEndpointCreated(event *events.EndpointCreated) error {
 		}
 		for _, probe := range probeIds {
 			log.Debug("notifying probeId=%d about new %s check for %s", probe, check.Type, event.Payload.Slug)
-			if err := EmitCheckEvent(probe, check.Id, "created", m.CheckWithSlug{check, event.Payload.Slug}); err != nil {
+			if err := EmitCheckEvent(probe, check.Id, "created", m.CheckWithSlug{Check: check, Slug: event.Payload.Slug}); err != nil {
 				return err
 			}
 		}
@@ -684,7 +684,7 @@ func HandleEndpointDeleted(event *events.EndpointDeleted) error {
 		}
 		for _, probe := range probeIds {
 			log.Debug("notifying probeId=%d about deleted %s check for %s", probe, check.Type, event.Payload.Slug)
-			if err := EmitCheckEvent(probe, check.Id, "removed", m.CheckWithSlug{check, event.Payload.Slug}); err != nil {
+			if err := EmitCheckEvent(probe, check.Id, "removed", m.CheckWithSlug{Check: check, Slug: event.Payload.Slug}); err != nil {
 				return err
 			}
 		}
