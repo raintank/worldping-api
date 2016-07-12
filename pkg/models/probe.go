@@ -80,6 +80,7 @@ type GetProbesQuery struct {
 	OrgId   int64  `form:"-"`
 	Public  string `form:"public"`
 	Enabled string `form:"enabled"`
+	Online  string `form:"online"`
 	Name    string `form:"name"`
 	Slug    string `form:"slug"`
 	Tag     string `form:"tag"`
