@@ -6,11 +6,11 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/raintank/raintank-metric/schema"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/metricpublisher"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
+	"gopkg.in/raintank/schema.v0"
 )
 
 func StoreResult(job *m.AlertingJob) {

@@ -6,10 +6,10 @@ import (
 
 	"github.com/nsqio/go-nsq"
 	"github.com/raintank/met"
-	msg "github.com/raintank/raintank-metric/msg"
-	"github.com/raintank/raintank-metric/schema"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/setting"
+	"gopkg.in/raintank/schema.v0"
+	msg "gopkg.in/raintank/schema.v0/msg"
 )
 
 const maxMpubSize = 5 * 1024 * 1024 // nsq errors if more. not sure if can be changed

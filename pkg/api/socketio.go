@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/raintank/met"
 	"github.com/raintank/raintank-apps/pkg/auth"
-	"github.com/raintank/raintank-metric/schema"
 	"github.com/raintank/worldping-api/pkg/events"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
@@ -24,6 +23,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
 	"github.com/raintank/worldping-api/pkg/util"
+	"gopkg.in/raintank/schema.v0"
 )
 
 var server *socketio.Server
