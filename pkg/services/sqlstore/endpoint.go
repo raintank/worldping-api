@@ -343,7 +343,7 @@ func updateEndpoint(sess *session, e *m.EndpointDTO) error {
 				return err
 			}
 			ecjson, err := json.Marshal(ec)
-			if !bytes.Equal(ecjson, cjson) {
+			if !bytes.Equal(ecjson, cjson) || existing.Slug != endpoint.Slug {
 				c.Created = ec.Created
 				checkUpdates = append(checkUpdates, c)
 			}
