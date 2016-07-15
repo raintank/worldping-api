@@ -402,7 +402,6 @@ func ShutdownController() {
 	log.Info("collectorController shutdown.")
 }
 
-
 func (c *CollectorContext) EmitReady() error {
 	log.Info("sending ready event to probeId %d", c.Probe.Id)
 	readyPayload := &m.ProbeReadyPayload{

@@ -74,11 +74,10 @@ type ProbeLocationDTO struct {
 }
 
 type ProbeReadyPayload struct {
-    Collector    *ProbeDTO        `json:"collector"`
-    MonitorTypes []MonitorTypeDTO `json:"monitor_types"`
-    SocketId     string             `json:"socket_id"`
+	Collector    *ProbeDTO        `json:"collector"`
+	MonitorTypes []MonitorTypeDTO `json:"monitor_types"`
+	SocketId     string           `json:"socket_id"`
 }
-
 
 // ---------------------
 // QUERIES
