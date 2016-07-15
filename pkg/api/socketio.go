@@ -402,15 +402,10 @@ func ShutdownController() {
 	log.Info("collectorController shutdown.")
 }
 
-type ReadyPayload struct {
-	Collector    *m.ProbeDTO        `json:"collector"`
-	MonitorTypes []m.MonitorTypeDTO `json:"monitor_types"`
-	SocketId     string             `json:"socket_id"`
-}
 
 func (c *CollectorContext) EmitReady() error {
 	log.Info("sending ready event to probeId %d", c.Probe.Id)
-	readyPayload := &ReadyPayload{
+	readyPayload := &m.ProbeReadyPayload{
 		Collector:    c.Probe,
 		MonitorTypes: m.MonitorTypes,
 		SocketId:     c.Session.SocketId,
