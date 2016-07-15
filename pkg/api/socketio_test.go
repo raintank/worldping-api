@@ -45,7 +45,7 @@ func TestProbeController(t *testing.T) {
 		client.On("refresh", func(c *gosocketio.Channel, checks []m.MonitorDTO) {
 			t.Fatal("received refresh event.")
 		})
-		client.On("ready", func(c *gosocketio.Channel, event ReadyPayload) {
+		client.On("ready", func(c *gosocketio.Channel, event m.ProbeReadyPayload) {
 			t.Fatal("received ready event.")
 		})
 		client.On("error", func(c *gosocketio.Channel, reason string) {
@@ -92,7 +92,7 @@ func TestProbeController(t *testing.T) {
 		client.On("refresh", func(c *gosocketio.Channel, checks []m.MonitorDTO) {
 			t.Fatal("received refresh event.")
 		})
-		client.On("ready", func(c *gosocketio.Channel, event ReadyPayload) {
+		client.On("ready", func(c *gosocketio.Channel, event m.ProbeReadyPayload) {
 			t.Fatal("received ready event.")
 		})
 		client.On("error", func(c *gosocketio.Channel, reason string) {
@@ -135,7 +135,7 @@ func TestProbeController(t *testing.T) {
 		client, err := gosocketio.Dial(addr, transport.GetDefaultWebsocketTransport())
 		So(err, ShouldBeNil)
 		refresh := make(chan []m.MonitorDTO)
-		readyChan := make(chan ReadyPayload)
+		readyChan := make(chan m.ProbeReadyPayload)
 		createChan := make(chan m.MonitorDTO)
 		updateChan := make(chan m.MonitorDTO)
 		removeChan := make(chan m.MonitorDTO)
@@ -143,7 +143,7 @@ func TestProbeController(t *testing.T) {
 			t.Log("received refresh event.")
 			refresh <- checks
 		})
-		client.On("ready", func(c *gosocketio.Channel, event ReadyPayload) {
+		client.On("ready", func(c *gosocketio.Channel, event m.ProbeReadyPayload) {
 			t.Log("received ready event.")
 			readyChan <- event
 		})
@@ -294,7 +294,7 @@ func TestProbeController(t *testing.T) {
 		client, err := gosocketio.Dial(addr, transport.GetDefaultWebsocketTransport())
 		So(err, ShouldBeNil)
 		refresh := make(chan []*m.CheckWithSlug)
-		readyChan := make(chan ReadyPayload)
+		readyChan := make(chan m.ProbeReadyPayload)
 		createChan := make(chan m.CheckWithSlug)
 		updateChan := make(chan m.CheckWithSlug)
 		removeChan := make(chan m.CheckWithSlug)
@@ -302,7 +302,7 @@ func TestProbeController(t *testing.T) {
 			t.Log("received refresh event.")
 			refresh <- checks
 		})
-		client.On("ready", func(c *gosocketio.Channel, event ReadyPayload) {
+		client.On("ready", func(c *gosocketio.Channel, event m.ProbeReadyPayload) {
 			t.Log("received ready event.")
 			readyChan <- event
 		})
