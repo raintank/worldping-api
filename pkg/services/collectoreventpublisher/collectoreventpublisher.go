@@ -8,8 +8,8 @@ import (
 	"github.com/raintank/met"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/setting"
-	"gopkg.in/raintank/schema.v0"
-	"gopkg.in/raintank/schema.v0/msg"
+	"gopkg.in/raintank/schema.v1"
+	"gopkg.in/raintank/schema.v1/msg"
 )
 
 var (

@@ -6,11 +6,11 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/raintank/tsdb-gw/metric_publish"
 	m "github.com/raintank/worldping-api/pkg/models"
-	"github.com/raintank/worldping-api/pkg/services/metricpublisher"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
-	"gopkg.in/raintank/schema.v0"
+	"gopkg.in/raintank/schema.v1"
 )
 
 func StoreResult(job *m.AlertingJob) {
@@ -21,14 +21,14 @@ func StoreResult(job *m.AlertingJob) {
 	metricNames := [3]string{"ok_state", "warn_state", "error_state"}
 	for pos, state := range metricNames {
 		metrics[pos] = &schema.MetricData{
-			OrgId:      int(job.OrgId),
-			Name:       fmt.Sprintf("health.%s.%s.%s", job.EndpointSlug, strings.ToLower(job.CheckType), state),
-			Metric:     fmt.Sprintf("health.%s.%s", strings.ToLower(job.CheckType), state),
-			Interval:   int(job.Freq),
-			Value:      0.0,
-			Unit:       "state",
-			Time:       job.LastPointTs.Unix(),
-			TargetType: "gauge",
+			OrgId:    int(job.OrgId),
+			Name:     fmt.Sprintf("health.%s.%s.%s", job.EndpointSlug, strings.ToLower(job.CheckType), state),
+			Metric:   fmt.Sprintf("health.%s.%s", strings.ToLower(job.CheckType), state),
+			Interval: int(job.Freq),
+			Value:    0.0,
+			Unit:     "state",
+			Time:     job.LastPointTs.Unix(),
+			Mtype:    "gauge",
 			Tags: []string{
 				fmt.Sprintf("endpoint_id:%d", job.EndpointId),
 				fmt.Sprintf("monitor_id:%d", job.CheckId),
@@ -39,7 +39,7 @@ func StoreResult(job *m.AlertingJob) {
 	if int(job.NewState) >= 0 {
 		metrics[int(job.NewState)].Value = 1.0
 	}
-	metricpublisher.Publish(metrics)
+	metric_publish.Publish(metrics)
 }
 
 // getJobs retrieves all jobs for which lastPointAt % their freq == their offset.

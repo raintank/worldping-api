@@ -14,16 +14,16 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/raintank/met"
 	"github.com/raintank/raintank-apps/pkg/auth"
+	"github.com/raintank/tsdb-gw/metric_publish"
 	"github.com/raintank/worldping-api/pkg/events"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/collectoreventpublisher"
-	"github.com/raintank/worldping-api/pkg/services/metricpublisher"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
 	"github.com/raintank/worldping-api/pkg/util"
-	"gopkg.in/raintank/schema.v0"
+	"gopkg.in/raintank/schema.v1"
 )
 
 var server *socketio.Server
@@ -487,7 +487,7 @@ func (c *CollectorContext) OnResults(results []*schema.MetricData) {
 			r.OrgId = int(c.OrgId)
 		}
 	}
-	metricpublisher.Publish(results)
+	metric_publish.Publish(results)
 }
 
 func (c *CollectorContext) Refresh() {
