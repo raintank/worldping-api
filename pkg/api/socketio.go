@@ -228,13 +228,12 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 		return nil, err
 	}
 
-	//--------- set required version of collector.------------//
-	minVersion, _ := version.NewVersion("0.1.3")
+	//--------- set required version of probe.------------//
+	minVersion, _ := version.NewVersion("1.0.0")
 	if v.LessThan(minVersion) {
 		return nil, errors.New("invalid probe version. Please upgrade.")
-
 	}
-	//--------- set required version of collector.------------//
+
 	log.Info("probe %s with version %s connected", name, v.String())
 
 	// lookup collector
@@ -370,11 +369,7 @@ func InitCollectorController(metrics met.Backend) {
 			return
 		}
 		log.Info("binding event handlers for probeId=%d", c.Probe.Id)
-		if c.Session.Version == "0.1.3" {
-			c.Socket.On("event", c.OnEventOld)
-		} else {
-			c.Socket.On("event", c.OnEvent)
-		}
+		c.Socket.On("event", c.OnEvent)
 		c.Socket.On("results", c.OnResults)
 		c.Socket.On("disconnection", c.OnDisconnection)
 
@@ -440,45 +435,6 @@ func (c *CollectorContext) OnEvent(msg *schema.ProbeEvent) {
 	}
 }
 
-/* handle old eventFormat.*/
-type probeEventOld struct {
-	Id        string   `json:"id"`
-	EventType string   `json:"event_type"`
-	OrgId     int64    `json:"org_id"`
-	Severity  string   `json:"severity"`
-	Source    string   `json:"source"`
-	Timestamp int64    `json:"timestamp"`
-	Message   string   `json:"message"`
-	Tags      []string `json:"tags"`
-}
-
-func (c *CollectorContext) OnEventOld(msg *probeEventOld) {
-	log.Debug("received event from probeId=%d", c.Probe.Id)
-	if !c.Probe.Public {
-		msg.OrgId = c.OrgId
-	}
-	//convert our []string of key:valy pairs to
-	// map[string]string
-	tags := make(map[string]string)
-	for _, t := range msg.Tags {
-		parts := strings.SplitN(t, ":", 2)
-		tags[parts[0]] = parts[1]
-	}
-	e := &schema.ProbeEvent{
-		Id:        msg.Id,
-		EventType: msg.EventType,
-		OrgId:     msg.OrgId,
-		Severity:  msg.Severity,
-		Source:    msg.Source,
-		Timestamp: msg.Timestamp,
-		Message:   msg.Message,
-		Tags:      tags,
-	}
-	if err := collectoreventpublisher.Publish(e); err != nil {
-		log.Error(3, "failed to publish event.", err)
-	}
-}
-
 func (c *CollectorContext) OnResults(results []*schema.MetricData) {
 	metricsRecvd.Inc(int64(len(results)))
 	for _, r := range results {
@@ -520,32 +476,19 @@ func (c *CollectorContext) Refresh() {
 			break
 		}
 
-		//step 5. send to socket.
-		v, _ := version.NewVersion(c.Session.Version)
-		newVer, _ := version.NewVersion("0.9.1")
-
-		monitors := make([]m.MonitorDTO, 0, len(checks))
 		activeChecks := make([]m.CheckWithSlug, 0)
 		for _, check := range checks {
 			if !check.Enabled {
 				continue
 			}
 			if check.Check.Id%totalSessions == int64(pos) {
-				if v.LessThan(newVer) {
-					monitors = append(monitors, m.MonitorDTOFromCheck(check.Check, check.Slug))
-				} else {
-					activeChecks = append(activeChecks, check)
-				}
+				activeChecks = append(activeChecks, check)
 			}
 
 		}
-		if v.LessThan(newVer) {
-			log.Info("sending refresh to socket %s, probeId=%d,  %d checks", sess.SocketId, sess.ProbeId, len(monitors))
-			c.Socket.Emit("refresh", monitors)
-		} else {
-			log.Info("sending refresh to socket %s, probeId=%d,  %d checks", sess.SocketId, sess.ProbeId, len(activeChecks))
-			c.Socket.Emit("refresh", activeChecks)
-		}
+
+		log.Info("sending refresh to socket %s, probeId=%d,  %d checks", sess.SocketId, sess.ProbeId, len(activeChecks))
+		c.Socket.Emit("refresh", activeChecks)
 		break
 	}
 	RefreshDuration.Value(time.Since(pre))
@@ -700,16 +643,6 @@ func EmitCheckEvent(probeId int64, checkId int64, eventName string, event interf
 	log.Info(fmt.Sprintf("emitting %s event for CheckId %d to probeId:%d totalSessions: %d", eventName, checkId, probeId, totalSessions))
 	pos := checkId % totalSessions
 	if sessions[pos].InstanceId == setting.InstanceId {
-		v, _ := version.NewVersion(sessions[pos].Version)
-		newVer, _ := version.NewVersion("0.9.1")
-		if v.LessThan(newVer) {
-			if check, ok := event.(m.CheckWithSlug); ok {
-				monitor := m.MonitorDTOFromCheckWithSlug(check)
-				socketId := sessions[pos].SocketId
-				contextCache.Emit(socketId, eventName, monitor)
-				return nil
-			}
-		}
 		socketId := sessions[pos].SocketId
 		contextCache.Emit(socketId, eventName, event)
 	}
