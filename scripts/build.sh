@@ -16,4 +16,4 @@ rm -rf $BUILDDIR/*
 
 # Build binary
 cd ../
-go build -ldflags "-X main.GitHash=$GITVERSION" -o $BUILDDIR/worldping-api
+go build -ldflags "-X main.commit=$GITVERSION" -o $BUILDDIR/worldping-api
