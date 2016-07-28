@@ -20,7 +20,7 @@ conf/custom*
 fig.yml
 profile.cov
 
-rt-pkg/build
+build/
 .notouch
 
 worldping-api

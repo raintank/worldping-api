@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -x
 # Find the directory we exist within
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
@@ -9,4 +9,5 @@ if [ -z ${PACKAGECLOUD_REPO} ] ; then
 fi
 
 # Only do the ubuntu pkg for now.
-package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/artifacts/*.deb
+package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/trusty ${DIR}/../build/upstart/*.deb
+package_cloud push ${PACKAGECLOUD_REPO}/ubuntu/xenial ${DIR}/../build/systemd/*.deb

@@ -16,10 +16,6 @@ fi
 
 export GOPATH
 
-mkdir -p artifacts/bin
-cp -a ../conf artifacts/
-cp -a ../public artifacts/
-
 bundle install
 
 echo "Linking ${GOPATH}/src/${REPO_PATH} to ${CHECKOUT}"
