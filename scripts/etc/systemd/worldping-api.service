@@ -1,0 +1,21 @@
+[Unit]
+Description=Worldping API backend server
+ 
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/usr/share/worldping-api
+Environment=GRAFANA_GROUP=grafana
+Environment=GRAFANA_HOME=/usr/share/worldping-api
+Environment=LOG_DIR=/var/log/worldping-api
+Environment=DATA_DIR=/var/lib/worldping-api
+Environment=MAX_OPEN_FILES=10000
+Environment=CONF_DIR=/etc/raintank
+Environment=CONF_FILE=/etc/raintank/worldping-api.ini
+Environment=RESTART_ON_UPGRADE=false
+ExecStart=/usr/sbin/worldping-api "--config=/etc/raintank/worldping-api.ini" "cfg:default.paths.data=/var/lib/worldping-api" "cfg:default.paths.logs=/var/log/worldping-api"
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
