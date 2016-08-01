@@ -8,9 +8,9 @@ type EventPublishSettings struct {
 }
 
 func readEventPublishSettings() {
-	sec := Cfg.Section("metric_publisher")
-	MetricPublish.Enabled = sec.Key("enabled").MustBool(false)
-	MetricPublish.Topic = sec.Key("topic").MustString("events")
-	MetricPublish.Broker = sec.Key("broker").MustString("localhost:9092")
-	MetricPublish.Compression = sec.Key("compression").MustString("none")
+	sec := Cfg.Section("event_publisher")
+	EventPublish.Enabled = sec.Key("enabled").MustBool(false)
+	EventPublish.Topic = sec.Key("topic").MustString("events")
+	EventPublish.Broker = sec.Key("broker").MustString("localhost:9092")
+	EventPublish.Compression = sec.Key("compression").MustString("none")
 }
