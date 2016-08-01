@@ -111,6 +111,7 @@ var (
 	Rabbitmq RabbitmqSettings
 
 	MetricPublish MetricPublishSettings
+	EventPublish  EventPublishSettings
 )
 
 type CommandLineArgs struct {
@@ -409,6 +410,7 @@ func NewConfigContext(args *CommandLineArgs) error {
 	readQuotaSettings()
 	readRabbitmqSettings()
 	readMetricPublishSettings()
+	readEventPublishSettings()
 	return nil
 }
 
