@@ -18,8 +18,8 @@ mkdir -p ${BUILD}/usr/sbin
 mkdir -p ${BUILD}/etc/init
 mkdir -p ${BUILD}/etc/raintank
 
-cp ${CODE_DIR}/artifacts/conf/sample.ini ${BUILD}/etc/raintank/worldping-api.ini
-cp ${BUILD}/worldping-api ${BUILD}/usr/sbin/
+cp ${CODE_DIR}/conf/sample.ini ${BUILD}/etc/raintank/worldping-api.ini
+cp ${BUILD_ROOT}/worldping-api ${BUILD}/usr/sbin/
 cp -a ${CODE_DIR}/public ${BUILD}/usr/share/${NAME}
 
 PACKAGE_NAME="${BUILD}/${NAME}-${VERSION}_${ARCH}.deb"
@@ -37,8 +37,8 @@ mkdir -p ${BUILD}/usr/sbin
 mkdir -p ${BUILD}/lib/systemd/system/
 mkdir -p ${BUILD}/etc/raintank
 
-cp ${CODE_DIR}/artifacts/conf/sample.ini ${BUILD}/etc/raintank/worldping-api.ini
-cp ${BUILD}/worldping-api ${BUILD}/usr/sbin/
+cp ${CODE_DIR}/conf/sample.ini ${BUILD}/etc/raintank/worldping-api.ini
+cp ${BUILD_ROOT}/worldping-api ${BUILD}/usr/sbin/
 cp -a ${CODE_DIR}/public ${BUILD}/usr/share/${NAME}
 cp ${BASE}/etc/systemd/worldping-api.service ${BUILD}/lib/systemd/system/
 
