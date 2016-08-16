@@ -21,6 +21,7 @@ mkdir -p ${BUILD}/etc/raintank
 cp ${CODE_DIR}/conf/sample.ini ${BUILD}/etc/raintank/worldping-api.ini
 cp ${BUILD_ROOT}/worldping-api ${BUILD}/usr/sbin/
 cp -a ${CODE_DIR}/public ${BUILD}/usr/share/${NAME}
+cp -a ${CODE_DIR}/conf ${BUILD}/usr/share/${NAME}
 
 PACKAGE_NAME="${BUILD}/${NAME}-${VERSION}_${ARCH}.deb"
 fpm -s dir -t deb \
@@ -40,6 +41,7 @@ mkdir -p ${BUILD}/etc/raintank
 cp ${CODE_DIR}/conf/sample.ini ${BUILD}/etc/raintank/worldping-api.ini
 cp ${BUILD_ROOT}/worldping-api ${BUILD}/usr/sbin/
 cp -a ${CODE_DIR}/public ${BUILD}/usr/share/${NAME}
+cp -a ${CODE_DIR}/conf ${BUILD}/usr/share/${NAME}
 cp ${BASE}/etc/systemd/worldping-api.service ${BUILD}/lib/systemd/system/
 
 PACKAGE_NAME="${BUILD}/${NAME}-${VERSION}_${ARCH}.deb"

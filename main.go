@@ -13,13 +13,13 @@ import (
 
 	"github.com/Dieterbe/profiletrigger/heap"
 	"github.com/raintank/met/helper"
+	"github.com/raintank/tsdb-gw/event_publish"
 	"github.com/raintank/tsdb-gw/metric_publish"
 	"github.com/raintank/worldping-api/pkg/alerting"
 	"github.com/raintank/worldping-api/pkg/api"
 	"github.com/raintank/worldping-api/pkg/cmd"
 	"github.com/raintank/worldping-api/pkg/events"
 	"github.com/raintank/worldping-api/pkg/log"
-	"github.com/raintank/worldping-api/pkg/services/collectoreventpublisher"
 	"github.com/raintank/worldping-api/pkg/services/notifications"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
@@ -71,7 +71,7 @@ func main() {
 	events.Init()
 
 	metric_publish.Init(metricsBackend, setting.MetricPublish.Topic, setting.MetricPublish.Broker, setting.MetricPublish.Compression, setting.MetricPublish.Enabled)
-	collectoreventpublisher.Init(metricsBackend)
+	event_publish.Init(metricsBackend, setting.EventPublish.Topic, setting.EventPublish.Broker, setting.EventPublish.Compression, setting.EventPublish.Enabled)
 
 	api.InitCollectorController(metricsBackend)
 	if setting.AlertingEnabled {

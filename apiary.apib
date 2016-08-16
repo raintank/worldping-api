@@ -6,7 +6,7 @@ HOST: https://worldping-api.raintank.io/
 With the worldPing API, you can do everything that's available within the user interface.
 
 ### What is worldPing?  
-worldPing is an app for [Grafana](//www.grafana.org) that continually tests, stores and alerts on the global performance and uptime of your Internet applications. 
+worldPing is an app for [Grafana](http://www.grafana.org) that continually tests, stores and alerts on the global performance and uptime of your Internet applications. 
 
 [Install worldPing at Grafana.net](https://grafana.net/plugins/raintank-worldping-app)
 
@@ -19,528 +19,298 @@ For example:
 curl -H "Authorization: Bearer API_KEY" http://worldping-api.raintank.io/api/{method}
 ```
 
+### General response format
+
+Each API response is comprised of a "meta" section and a "body" section.  The "meta" section provides "code", "message" and "type" fields.
+The code and message fields are used for conveying errors.  A code of 200, is expected and all other code values indicated an error condition which will be explained in the message field.
+
+The Body contains the data returned by the API request. Where no data is exepected, the response body will be "null".
+
+```
+{
+    "meta": {
+        "code": 200,
+        "message": "success",
+        "type": "quotas"
+    },
+    "body": [
+        {
+            "org_id": 2,
+            "target": "endpoint",
+            "limit": 5,
+            "used": 4
+        },
+        {
+            "org_id": 2,
+            "target": "probe",
+            "limit": 3,
+            "used": 1
+        }
+    ]
+}
+```
+
+
 
 #### Getting your API Key
 
 API Keys are generated in Grafana.net in the API Keys tab of the [User Profile](https://grafana.net/profile/api-keys). API Keys may also be revoked in the same location.
 
-## MonitorTypes [/api/monitor_types]
-A monitor is a type of check, which is used in creating and configuring endpoints. Currently supported checks are DNS, Ping, HTTP and HTTPS.
 
-This method returns a list of supported checks that can be performed and the configuration paramaters for each of those checks. 
+# Data Structures
 
-### List MonitorTypes [GET]
+## Endpoint (object)
++ id (number) - Readonly unique identifier of the endpoint
++ orgId (number) - Readonly grafana.net Orginization ID that owns the endpoint, when creating new endpoints, this can be omitted or set to 0.
++ name (string) - endpoint name, usually a hostname
++ slug (string) - Readonly slugified name used in series names.
++ tags (array[string]) - list of tags applied to the endpoint
++ checks (array[Check]) - list of checks to execute.
 
-+ Request
+## Check (object)
++ id (number) - Readonly Id assigned to a check. When creating new checks, this field can be omitted or set to 0.
++ endpointId (number) - Readonly Id of the endpoint that owns the check. When creating new checks, this field can be omitted or set to 0.
++ type (enum[string]) - the type of check. Must be one of "dns", "ping", "http", or "https".  This field should not be changed on existing checks, instead the existing check should be deleted and a new one created.
+    + dns
+    + ping
+    + http
+    + https
++ frequency (number) - value of the number of seconds between each execution of the check.
++ enabled (boolean) - flag for whether the check should be executed or not.
++ state (number) - Readonly the current state of the check.  0=OK, 2=Error
++ route (Check Route) - definition of where the check should run.
++ healthSettings (Check HealthSettings) - definition of alerting rules
++ settings (enum) - configuration settings for the check. These are specific to each check Type.
+    + (DNS Check Settings)
+    + (Ping Check Settings)
+    + (HTTP Check Settings)
+    + (HTTPS Check Settings)
 
-    + Headers
+## Check Route (object)
++ type (string) - type of route. must be one of "byIds" or "byTags"
++ One Of
+    + ids (array[number]) - if type is byIds should be an array of Probe Ids
+    + tags (array[string]) - if type is byTags, should be an array of tags
 
-            Authorization: Bearer API_KEY
-            
-+ Response 200 (application/json)
+## Check HealthSettings (object)
++ num_collectors (number) - minimum number of probe locations the check is failing at for the check to be considered in a error state.
++ steps (number) - numbe of consequutive failures requried from "num_collectors" probes for the check to be considered in a error state.
++ notifications (Check Notifications) - definition of notification rules
 
-        [  
-            {  
-                "id":4,
-                "name":"DNS",
-                "settings":[  
-                    {  
-                        "variable":"name",
-                        "description":"Record Name",
-                        "required":true,
-                        "data_type":"String",
-                        "conditions":{  
-        
-                        },
-                        "default_value":""
-                    },
-                    {  
-                        "variable":"type",
-                        "description":"Record Type",
-                        "required":true,
-                        "data_type":"Enum",
-                        "conditions":{  
-                            "values":[  
-                                "A",
-                                "AAAA",
-                                "CNAME",
-                                "MX",
-                                "NS",
-                                "PTR",
-                                "SOA",
-                                "SRV",
-                                "TXT"
-                            ]
-                        },
-                        "default_value":"A"
-                    },
-                    {  
-                        "variable":"server",
-                        "description":"Server",
-                        "required":false,
-                        "data_type":"String",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"8.8.8.8"
-                    },
-                    {  
-                        "variable":"port",
-                        "description":"Port",
-                        "required":false,
-                        "data_type":"Number",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"53"
-                    },
-                    {  
-                        "variable":"protocol",
-                        "description":"Protocol",
-                        "required":false,
-                        "data_type":"Enum",
-                        "conditions":{  
-                            "values":[  
-                                "tcp",
-                                "udp"
-                            ]
-                        },
-                        "default_value":"udp"
-                    },
-                    {  
-                        "variable":"timeout",
-                        "description":"Timeout",
-                        "required":true,
-                        "data_type":"Number",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"5"
-                    }
-                ]
-            },
-            {  
-                "id":1,
-                "name":"HTTP",
-                "settings":[  
-                    {  
-                        "variable":"host",
-                        "description":"Hostname",
-                        "required":true,
-                        "data_type":"String",
-                        "conditions":{  
-        
-                        },
-                        "default_value":""
-                    },
-                    {  
-                        "variable":"path",
-                        "description":"Path",
-                        "required":true,
-                        "data_type":"String",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"/"
-                    },
-                    {  
-                        "variable":"port",
-                        "description":"Port",
-                        "required":false,
-                        "data_type":"Number",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"80"
-                    },
-                    {  
-                        "variable":"method",
-                        "description":"Method",
-                        "required":false,
-                        "data_type":"Enum",
-                        "conditions":{  
-                            "values":[  
-                                "GET",
-                                "POST",
-                                "PUT",
-                                "DELETE",
-                                "HEAD"
-                            ]
-                        },
-                        "default_value":"GET"
-                    },
-                    {  
-                        "variable":"headers",
-                        "description":"Headers",
-                        "required":false,
-                        "data_type":"Text",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"Accept-Encoding: gzip\nUser-Agent: raintank collector\n"
-                    },
-                    {  
-                        "variable":"expectRegex",
-                        "description":"Content Match",
-                        "required":false,
-                        "data_type":"String",
-                        "conditions":{  
-        
-                        },
-                        "default_value":""
-                    },
-                    {  
-                        "variable":"timeout",
-                        "description":"Timeout",
-                        "required":true,
-                        "data_type":"Number",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"5"
-                    }
-                ]
-            },
-            {  
-                "id":2,
-                "name":"HTTPS",
-                "settings":[  
-                    {  
-                        "variable":"host",
-                        "description":"Hostname",
-                        "required":true,
-                        "data_type":"String",
-                        "conditions":{  
-        
-                        },
-                        "default_value":""
-                    },
-                    {  
-                        "variable":"path",
-                        "description":"Path",
-                        "required":true,
-                        "data_type":"String",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"/"
-                    },
-                    {  
-                        "variable":"validateCert",
-                        "description":"Validate SSL Certificate",
-                        "required":false,
-                        "data_type":"Boolean",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"true"
-                    },
-                    {  
-                        "variable":"port",
-                        "description":"Port",
-                        "required":false,
-                        "data_type":"Number",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"443"
-                    },
-                    {  
-                        "variable":"method",
-                        "description":"Method",
-                        "required":false,
-                        "data_type":"Enum",
-                        "conditions":{  
-                            "values":[  
-                                "GET",
-                                "POST",
-                                "PUT",
-                                "DELETE",
-                                "HEAD"
-                            ]
-                        },
-                        "default_value":"GET"
-                    },
-                    {  
-                        "variable":"headers",
-                        "description":"Headers",
-                        "required":false,
-                        "data_type":"Text",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"Accept-Encoding: gzip\nUser-Agent: raintank collector\n"
-                    },
-                    {  
-                        "variable":"expectRegex",
-                        "description":"Content Match",
-                        "required":false,
-                        "data_type":"String",
-                        "conditions":{  
-        
-                        },
-                        "default_value":""
-                    },
-                    {  
-                        "variable":"timeout",
-                        "description":"Timeout",
-                        "required":true,
-                        "data_type":"Number",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"5"
-                    }
-                ]
-            },
-            {  
-                "id":3,
-                "name":"Ping",
-                "settings":[  
-                    {  
-                        "variable":"hostname",
-                        "description":"Hostname",
-                        "required":true,
-                        "data_type":"String",
-                        "conditions":{  
-        
-                        },
-                        "default_value":""
-                    },
-                    {  
-                        "variable":"timeout",
-                        "description":"Timeout",
-                        "required":true,
-                        "data_type":"Number",
-                        "conditions":{  
-        
-                        },
-                        "default_value":"5"
-                    }
-                ]
-            }
-        ]
+## Check Notifications (object)
++ enabled (boolean) - toggle to enabled/disable alert notifications
++ addresses (string) - comma separated list of email address to send notifications to.
 
-## Monitors [/api/monitors]
+## DNS Check Settings (object) - DNS CHECK
+- name (string) - DNS Record to lookup
+- type (enum[string]) - DNS record type to query
+    - A (string)
+    - AAAA (string)
+    - CNAME (string)
+    - MX (string)
+    - NS (string)
+    - PTR (string)
+    - SOA (string)
+    - SRV (string)
+    - TXT (string)
+- server (string) - comma separated list of DNS servers to query. Check execution stops when the first server responds
+- timeout (number) - time in seconds after which the execution aborts and the check is marked as failed.
 
-A monitor is a check performed on an Endpoint. These methods accepts an Endpoint ID and returns the list of or updates the configured checks on that individual endpoint.  
+## Ping Check Settings (object)
+- hostname (string) - Hostname or IP address to Ping
+- timeout (number) - time in seconds after which the execution aborts and the check is marked as failed.
 
-When you want to update the monitors on a particular endpoint, this method is used, not the *Update Endpoint* method. 
+## HTTP Check Settings (object)
+- host (string) - hostname or IP address of server to send HTTP requests to
+- path (string) - URL path to fetch
+- port (number) - TCP port the server is listening on. Defaults to 80
+- method (enum[string]) - HTTP method
+    - GET (string)
+    - POST (string)
+    - PUT (string)
+    - DELETE (string)
+- headers (string) - new separted headers to include in the HTTP request.
+- expectRegex (string) - regexp expression to match again the response.
+- timeout (number) - time in seconds after which the execution aborts and the check is marked as failed.
 
-### List Monitors [GET /api/monitors{?endpoint_id}]
+## HTTPS Check Settings (object)
+- host (string) - hostname or IP address of server to send HTTPS requests to
+- path (string) - URL path to fetch
+- port (number) - TCP port the server is listening on. Defaults to 443
+- method (enum[string]) - HTTP method
+    - GET (string)
+    - POST (string)
+    - PUT (string)
+    - DELETE (string)
+- validateCert (boolean) - whether the SSL certificate used by the server needs to be valid.
+- headers (string) - new separted headers to include in the HTTP request.
+- expectRegex (string) - regexp expression to match again the response.
+- timeout (number) - time in seconds after which the execution aborts and the check is marked as failed.
 
-+ Request
+## Probe (object)
+- id (number) - Readonly unique identifier of the probe
+- orgId (number) - Readonly grafana.net Orginization ID that owns the probe, when creating new probes this can be omitted or set to 0.
+- slug (string) -  Readonly slugified name used in series names.
+- tags (array[string]) - list of tags applied to the probe
+- public (boolean) - true if the probe can be used by any Org. (Only the server admin can change this flag)
+- latitude (number) - lttitude component of geographical position of the probe. If not already set when the probe connects to the backend, the source IP of the probe is queried in a GEOIP database to automatically populate this field.
+- longitude (number) - longitude component of geographical position of the probe. If not already set when the probe connects to the backend, the source IP of the probe is queried in a GEOIP database to automatically populate this field.
+- online (boolean) - readonly flag to indicated if the probe is connected to the backend
+- enabled (boolean) - flag to control if the probe should execute checks or not
+- online_change (string) - readonly datetime of when the probes online flag was changed.
+- enabled_change (string) - readonly datetime of when the probes enabled flag was changed.
+- created (string) - readonly datetime of when the probes was created.
+- updated (string) - readonly datetime of when the probes was updated.
 
-    + Headers
-
-            Authorization: Bearer API_KEY
-            
-+ Response 200 (application/json)
-
-        [  
-            {  
-                "id":19678,
-                "org_id":1,
-                "endpoint_id":1,
-                "endpoint_slug":"www_raintank_io",
-                "monitor_type_id":1,
-                "monitor_type_name":"HTTP",
-                "collector_ids":[  
-                    1,
-                    2,
-                    3,
-                    4
-                ],
-                "collector_tags":[  
-        
-                ],
-                "collectors":[  
-                    1,
-                    2,
-                    3,
-                    4
-                ],
-                "state":0,
-                "state_change":"2016-04-20T14:09:58Z",
-                "state_check":"2016-04-20T14:14:28Z",
-                "settings":[  
-                    {  
-                        "variable":"host",
-                        "value":"www.raintank.io"
-                    },
-                    {  
-                        "variable":"port",
-                        "value":"80"
-                    },
-                    {  
-                        "variable":"path",
-                        "value":"/"
-                    },
-                    {  
-                        "variable":"timeout",
-                        "value":"5"
-                    },
-                    {  
-                        "variable":"method",
-                        "value":"GET"
-                    },
-                    {  
-                        "variable":"expectRegex",
-                        "value":""
-                    },
-                    {  
-                        "variable":"headers",
-                        "value":"Accept-Encoding: gzip\nUser-Agent: raintank collector\n"
-                    }
-                ],
-                "health_settings":{  
-                    "num_collectors":3,
-                    "steps":3,
-                    "notifications":{  
-                        "enabled":false,
-                        "addresses":""
-                    }
-                },
-                "frequency":60,
-                "enabled":true,
-                "offset":58,
-                "updated":"2016-04-20T14:09:48Z"
-            },
-            {  
-                "id":19684,
-                "org_id":1,
-                "endpoint_id":1,
-                "endpoint_slug":"www_raintank_io",
-                "monitor_type_id":3,
-                "monitor_type_name":"Ping",
-                "collector_ids":[  
-                    1,
-                    2,
-                    3,
-                    4
-                ],
-                "collector_tags":[  
-        
-                ],
-                "collectors":[  
-                    1,
-                    2,
-                    3,
-                    4
-                ],
-                "state":0,
-                "state_change":"2016-04-20T14:09:58Z",
-                "state_check":"2016-04-20T14:15:18Z",
-                "settings":[  
-                    {  
-                        "variable":"hostname",
-                        "value":"www.raintank.io"
-                    },
-                    {  
-                        "variable":"timeout",
-                        "value":"5"
-                    }
-                ],
-                "health_settings":{  
-                    "num_collectors":3,
-                    "steps":3,
-                    "notifications":{  
-                        "enabled":false,
-                        "addresses":""
-                    }
-                },
-                "frequency":10,
-                "enabled":true,
-                "offset":8,
-                "updated":"2016-04-20T14:09:48Z"
-            }
-        ]
-
-### Update Monitor [POST /api/monitors]
-+ Request
-
-    + Headers
-
-            Authorization: Bearer API_KEY
-            
-+ Request (application/json)
-
-        {  
-            "id":19681,
-            "endpoint_id":1,
-            "monitor_type_id":2,
-            "collector_ids":[  
-                1,
-                2,
-                3,
-                4
-            ],
-            "collector_tags":[  
-        
-            ],
-            "settings":[  
-                {  
-                    "variable":"host",
-                    "value":"www.raintank.io"
-                },
-                {  
-                    "variable":"port",
-                    "value":"443"
-                },
-                {  
-                    "variable":"path",
-                    "value":"/about/"
-                },
-                {  
-                    "variable":"timeout",
-                    "value":"5"
-                },
-                {  
-                    "variable":"method",
-                    "value":"GET"
-                },
-                {  
-                    "variable":"expectRegex",
-                    "value":""
-                },
-                {  
-                    "variable":"validateCert",
-                    "value":"true"
-                },
-                {  
-                    "variable":"headers",
-                    "value":"Accept-Encoding: gzip\nUser-Agent: raintank collector\n"
-                }
-            ],
-            "enabled":true,
-            "frequency":60,
-            "health_settings":{  
-                "num_collectors":3,
-                "steps":3,
-                "notifications":{  
-                    "enabled":false,
-                    "addresses":""
-                }
-            }
-        }
-
-+ Response 200 (application/json)
-
-        {
-            "message":"Monitor updated"
-        }
+## Quota (object)
++ org_id (number) - readonly  grafana.net Orginization ID that the quota applys to.
++ target (enum[string]) - the type of quota. One of "endpoint" or "probe"
+    + endpoint
+    + probe
++ limit (number) - the enforced limit
++ used (number) - the number of items the user currently has.
 
 ## Endpoints [/api/endpoints]
 
-An endpoint is anything you want to monitor, and is the primary way of interacting with worldPing. An endpoint can be a fully formed URL or IP address, and when monitored by private probes, does not even need to be accessible to the internet. 
+An endpoint is anything you want to monitor and is the primary way of interacting with worldPing. An endpoint can be a fully formed URL or hostname or an IP address, and when monitored by private probes, does not even need to be accessible to the internet. 
 
 These methods allow you to list, create, update and delete your endpoints. 
 
-**Updating:** The Update Endpoint method only allows you to change the endpoint name, slug and tags. To update the monitors and configuration for an endpoint, use the *Update Monitor* method listed above. 
+Endpoints are comprised of dns, ping, http and or https checks.
 
-**Creating:** The exception to this rule is the *Create Endpoint* method, which accepts the monitor options at the time of creation. 
+### Discover Endpoint [GET /api/v2/endpoints/discover?name]
 
-### List All Endpoints [GET /api/endpoints{?tag}]
++ Request
+
+    + Headers
+
+            Authorization: Bearer API_KEY
+
++ Response 200 (application/json)
+    
+    + Attributes (object)
+    
+        + meta (object)
+            + code (number) -  status code.
+            + message (string) - status message
+            + type (string) - data type of the body.
+        + body (Endpoint)
+    
+    + Body
+
+            {  
+               "meta":{  
+                  "code":200,
+                  "message":"success",
+                  "type":"endpoint"
+               },
+               "body":{  
+                  "id":0,
+                  "orgId":0,
+                  "name":"google.com",
+                  "slug":"",
+                  "checks":[  
+                     {  
+                        "id":0,
+                        "orgId":0,
+                        "endpointId":0,
+                        "route":null,
+                        "type":"dns",
+                        "frequency":60,
+                        "offset":0,
+                        "enabled":true,
+                        "state":0,
+                        "stateChange":"0001-01-01T00:00:00Z",
+                        "stateCheck":"0001-01-01T00:00:00Z",
+                        "settings":{  
+                           "name":"google.com",
+                           "port":53,
+                           "protocol":"udp",
+                           "server":"ns1.google.com,ns3.google.com,ns2.google.com,ns4.google.com",
+                           "timeout":5,
+                           "type":"A"
+                        },
+                        "healthSettings":null,
+                        "created":"0001-01-01T00:00:00Z",
+                        "updated":"0001-01-01T00:00:00Z"
+                     },
+                     {  
+                        "id":0,
+                        "orgId":0,
+                        "endpointId":0,
+                        "route":null,
+                        "type":"https",
+                        "frequency":60,
+                        "offset":0,
+                        "enabled":true,
+                        "state":0,
+                        "stateChange":"0001-01-01T00:00:00Z",
+                        "stateCheck":"0001-01-01T00:00:00Z",
+                        "settings":{  
+                           "headers":"User-Agent: worldping-api\nAccept-Encoding: gzip\n",
+                           "host":"www.google.com",
+                           "method":"GET",
+                           "path":"/",
+                           "port":443,
+                           "timeout":5,
+                           "validateCert":true
+                        },
+                        "healthSettings":null,
+                        "created":"0001-01-01T00:00:00Z",
+                        "updated":"0001-01-01T00:00:00Z"
+                     },
+                     {  
+                        "id":0,
+                        "orgId":0,
+                        "endpointId":0,
+                        "route":null,
+                        "type":"http",
+                        "frequency":60,
+                        "offset":0,
+                        "enabled":true,
+                        "state":0,
+                        "stateChange":"0001-01-01T00:00:00Z",
+                        "stateCheck":"0001-01-01T00:00:00Z",
+                        "settings":{  
+                           "headers":"User-Agent: worldping-api\nAccept-Encoding: gzip\n",
+                           "host":"www.google.com",
+                           "method":"GET",
+                           "path":"/",
+                           "port":80,
+                           "timeout":5
+                        },
+                        "healthSettings":null,
+                        "created":"0001-01-01T00:00:00Z",
+                        "updated":"0001-01-01T00:00:00Z"
+                     },
+                     {  
+                        "id":0,
+                        "orgId":0,
+                        "endpointId":0,
+                        "route":null,
+                        "type":"ping",
+                        "frequency":10,
+                        "offset":0,
+                        "enabled":true,
+                        "state":0,
+                        "stateChange":"0001-01-01T00:00:00Z",
+                        "stateCheck":"0001-01-01T00:00:00Z",
+                        "settings":{  
+                           "hostname":"google.com",
+                           "timeout":5
+                        },
+                        "healthSettings":null,
+                        "created":"0001-01-01T00:00:00Z",
+                        "updated":"0001-01-01T00:00:00Z"
+                     }
+                  ],
+                  "tags":null,
+                  "created":"0001-01-01T00:00:00Z",
+                  "updated":"0001-01-01T00:00:00Z"
+               }
+            }
+
+### List All Endpoints [GET /api/v2/endpoints{?tag}]
 + Request
 
     + Headers
@@ -549,168 +319,758 @@ These methods allow you to list, create, update and delete your endpoints.
             
 + Response 200 (application/json)
 
-        [  
-            {  
-                "id":1,
-                "org_id":1,
-                    "name":"www.raintank.io",
-                    "slug":"www_raintank_io",
-                    "tags":[  
-                        "raintank"
-                    ]
-            },
-            {  
-                "id":2,
-                "org_id":1,
-                "name":"www.google.com",
-                "slug":"www_google_com",
-                "tags":[  
-                    "google",
-                    "external"
+    + Attributes (object)
+    
+        + meta (object)
+            + code (number) -  status code.
+            + message (string) - status message
+            + type (string) - data type of the body.
+        + body (array[Endpoint])
+    
+    + Body
+    
+            {
+                "meta": {
+                    "code": 200,
+                    "message": "success",
+                    "type": "endpoints"
+                },
+                "body": [
+                    {
+                        "id": 10505,
+                        "orgId": 2,
+                        "name": "google.com",
+                        "slug": "google_com",
+                        "checks": [
+                            {
+                                "id": 48581,
+                                "orgId": 2,
+                                "endpointId": 10505,
+                                "route": {
+                                    "type": "byIds",
+                                    "config": {
+                                        "ids": [
+                                            1
+                                        ]
+                                    }
+                                },
+                                "type": "dns",
+                                "frequency": 60,
+                                "offset": 5,
+                                "enabled": true,
+                                "state": -1,
+                                "stateChange": "2016-07-28T15:57:45Z",
+                                "stateCheck": "2016-07-28T15:57:45Z",
+                                "settings": {
+                                    "name": "google.com",
+                                    "port": 53,
+                                    "protocol": "udp",
+                                    "server": "ns3.google.com,ns2.google.com,ns1.google.com,ns4.google.com",
+                                    "timeout": 5,
+                                    "type": "A"
+                                },
+                                "healthSettings": {
+                                    "num_collectors": 3,
+                                    "steps": 3,
+                                    "notifications": {
+                                        "enabled": false,
+                                        "addresses": ""
+                                    }
+                                },
+                                "created": "2016-07-28T15:57:45Z",
+                                "updated": "2016-07-28T15:57:45Z"
+                            },
+                            {
+                                "id": 48584,
+                                "orgId": 2,
+                                "endpointId": 10505,
+                                "route": {
+                                    "type": "byIds",
+                                    "config": {
+                                        "ids": [
+                                            1
+                                        ]
+                                    }
+                                },
+                                "type": "https",
+                                "frequency": 60,
+                                "offset": 5,
+                                "enabled": true,
+                                "state": -1,
+                                "stateChange": "2016-07-28T15:57:45Z",
+                                "stateCheck": "2016-07-28T15:57:45Z",
+                                "settings": {
+                                    "headers": "User-Agent: worldping-api\nAccept-Encoding: gzip\n",
+                                    "host": "www.google.com",
+                                    "method": "GET",
+                                    "path": "/",
+                                    "port": 443,
+                                    "timeout": 5,
+                                    "validateCert": true
+                                },
+                                "healthSettings": {
+                                    "num_collectors": 3,
+                                    "steps": 3,
+                                    "notifications": {
+                                        "enabled": false,
+                                        "addresses": ""
+                                    }
+                                },
+                                "created": "2016-07-28T15:57:45Z",
+                                "updated": "2016-07-28T15:57:45Z"
+                            },
+                            {
+                                "id": 48587,
+                                "orgId": 2,
+                                "endpointId": 10505,
+                                "route": {
+                                    "type": "byIds",
+                                    "config": {
+                                        "ids": [
+                                            1
+                                        ]
+                                    }
+                                },
+                                "type": "http",
+                                "frequency": 60,
+                                "offset": 5,
+                                "enabled": true,
+                                "state": -1,
+                                "stateChange": "2016-07-28T15:57:45Z",
+                                "stateCheck": "2016-07-28T15:57:45Z",
+                                "settings": {
+                                    "headers": "User-Agent: worldping-api\nAccept-Encoding: gzip\n",
+                                    "host": "www.google.com",
+                                    "method": "GET",
+                                    "path": "/",
+                                    "port": 80,
+                                    "timeout": 5
+                                },
+                                "healthSettings": {
+                                    "num_collectors": 3,
+                                    "steps": 3,
+                                    "notifications": {
+                                        "enabled": false,
+                                        "addresses": ""
+                                    }
+                                },
+                                "created": "2016-07-28T15:57:45Z",
+                                "updated": "2016-07-28T15:57:45Z"
+                            },
+                            {
+                                "id": 48590,
+                                "orgId": 2,
+                                "endpointId": 10505,
+                                "route": {
+                                    "type": "byIds",
+                                    "config": {
+                                        "ids": [
+                                            1
+                                        ]
+                                    }
+                                },
+                                "type": "ping",
+                                "frequency": 10,
+                                "offset": 5,
+                                "enabled": true,
+                                "state": -1,
+                                "stateChange": "2016-07-28T15:57:45Z",
+                                "stateCheck": "2016-07-28T15:57:45Z",
+                                "settings": {
+                                    "hostname": "google.com",
+                                    "timeout": 5
+                                },
+                                "healthSettings": {
+                                    "num_collectors": 3,
+                                    "steps": 3,
+                                    "notifications": {
+                                        "enabled": false,
+                                        "addresses": ""
+                                    }
+                                },
+                                "created": "2016-07-28T15:57:45Z",
+                                "updated": "2016-07-28T15:57:45Z"
+                            }
+                        ],
+                        "tags": [
+                            "external",
+                            "demo"
+                        ],
+                        "created": "2016-07-28T15:57:45Z",
+                        "updated": "2016-07-28T15:57:45Z"
+                    }
                 ]
             }
-        ]
 
-### Update Endpoint [POST /api/endpoints]
+### Update Endpoint [PUT /api/v2/endpoints]
 
 + Request
 
     + Headers
 
             Authorization: Bearer API_KEY
+            ContentType: application/json
+    
+    + Attributes (Endpoint)
             
 + Request (application/json)
 
-        { 
-            "id":1,
-            "org_id":1,
-            "name":"www.raintank.io",
-            "tags":[
-                "raintank",
+        {
+            "id": 10505,
+            "orgId": 2,
+            "name": "google.com",
+            "slug": "google_com",
+            "checks": [
+                {
+                    "id": 48587,
+                    "orgId": 2,
+                    "endpointId": 10505,
+                    "route": {
+                        "type": "byIds",
+                        "config": {
+                            "ids": [
+                                1
+                            ]
+                        }
+                    },
+                    "type": "http",
+                    "frequency": 60,
+                    "enabled": true,
+                    "settings": {
+                        "headers": "User-Agent: worldping-api\nAccept-Encoding: gzip\n",
+                        "host": "www.google.com",
+                        "method": "GET",
+                        "path": "/",
+                        "port": 80,
+                        "timeout": 5
+                    },
+                    "healthSettings": {
+                        "num_collectors": 3,
+                        "steps": 3,
+                        "notifications": {
+                            "enabled": false,
+                            "addresses": ""
+                        }
+                    }
+                },
+                {
+                    "id": 48590,
+                    "orgId": 2,
+                    "endpointId": 10505,
+                    "route": {
+                        "type": "byIds",
+                        "config": {
+                            "ids": [
+                                1
+                            ]
+                        }
+                    },
+                    "type": "ping",
+                    "frequency": 10,
+                    "enabled": true,
+                    "settings": {
+                        "hostname": "google.com",
+                        "timeout": 5
+                    },
+                    "healthSettings": {
+                        "num_collectors": 3,
+                        "steps": 3,
+                        "notifications": {
+                            "enabled": false,
+                            "addresses": ""
+                        }
+                    },
+                }
+            ],
+            "tags": [
+                "external",
                 "demo"
             ]
         }
         
 + Response 200 (application/json)
 
-        {
-            "message":"Endpoint updated"
-        }
+    + Attributes (object)
+    
+        + meta (object)
+            + code (number) -  status code.
+            + message (string) - status message
+            + type (string) - data type of the body.
+        + body (Endpoint)
+    
+    + Body
 
-### Create Endpoint [PUT /api/endpoints]
+            {
+                "meta": {
+                    "code": 200,
+                    "message": "success",
+                    "type": "endpoint"
+                },
+                "body": {
+                    "id": 10505,
+                    "orgId": 2,
+                    "name": "google.com",
+                    "slug": "google_com",
+                    "checks": [
+                        {
+                            "id": 48587,
+                            "orgId": 2,
+                            "endpointId": 10505,
+                            "route": {
+                                "type": "byIds",
+                                "config": {
+                                    "ids": [
+                                        1
+                                    ]
+                                }
+                            },
+                            "type": "http",
+                            "frequency": 60,
+                            "offset": 5,
+                            "enabled": true,
+                            "state": -1,
+                            "stateChange": "2016-07-28T15:57:45Z",
+                            "stateCheck": "2016-07-28T15:57:45Z",
+                            "settings": {
+                                "headers": "User-Agent: worldping-api\nAccept-Encoding: gzip\n",
+                                "host": "www.google.com",
+                                "method": "GET",
+                                "path": "/",
+                                "port": 80,
+                                "timeout": 5
+                            },
+                            "healthSettings": {
+                                "num_collectors": 3,
+                                "steps": 3,
+                                "notifications": {
+                                    "enabled": false,
+                                    "addresses": ""
+                                }
+                            },
+                            "created": "2016-07-28T15:57:45Z",
+                            "updated": "2016-07-28T16:04:47.918606739Z"
+                        },
+                        {
+                            "id": 48590,
+                            "orgId": 2,
+                            "endpointId": 10505,
+                            "route": {
+                                "type": "byIds",
+                                "config": {
+                                    "ids": [
+                                        1
+                                    ]
+                                }
+                            },
+                            "type": "ping",
+                            "frequency": 10,
+                            "offset": 5,
+                            "enabled": true,
+                            "state": -1,
+                            "stateChange": "2016-07-28T15:57:45Z",
+                            "stateCheck": "2016-07-28T15:57:45Z",
+                            "settings": {
+                                "hostname": "google.com",
+                                "timeout": 5
+                            },
+                            "healthSettings": {
+                                "num_collectors": 3,
+                                "steps": 3,
+                                "notifications": {
+                                    "enabled": false,
+                                    "addresses": ""
+                                }
+                            },
+                            "created": "2016-07-28T15:57:45Z",
+                            "updated": "2016-07-28T16:04:47.943418334Z"
+                        }
+                    ],
+                    "tags": [
+                        "external",
+                        "demo"
+                    ],
+                    "created": "2016-07-28T15:57:45Z",
+                    "updated": "2016-07-28T16:04:47.906488697Z"
+                }
+            }
+
+
+### Create Endpoint [POST /api/v2/endpoints]
+
 + Request
 
     + Headers
-
+    
             Authorization: Bearer API_KEY
+            ContentType: application/json
+    
+    + Attributes (Endpoint)
             
 + Request (application/json)
 
         {  
-            "name":"www.raintank.io",
-            "tags":[  
-                "raintank"
-            ],
-            "monitors":[  
+            "id":0,
+            "orgId":0,
+            "name":"google.com",
+            "slug":"",
+            "checks":[  
                 {  
-                    "monitor_type_id":1,
-                    "settings":[  
-                        {  
-                            "variable":"host",
-                            "value":"www.raintank.io"
-                        },
-                        {  
-                            "variable":"port",
-                            "value":"80"
-                        },
-                        {  
-                            "variable":"path",
-                            "value":"/"
-                        },
-                        {  
-                            "variable":"timeout",
-                            "value":"5"
-                        },
-                        {  
-                            "variable":"method",
-                            "value":"GET"
-                        },
-                        {  
-                            "variable":"expectRegex",
-                            "value":""
+                    "id":0,
+                    "orgId":0,
+                    "endpointId":0,
+                    "route":{  
+                        "type":"byIds",
+                        "config":{  
+                            "ids":[  
+                                1
+                            ]
                         }
-                    ],
-                    "endpoint_id":-1,
-                    "collector_ids":[  
-                        1,
-                        2,
-                        3,
-                        4
-                    ],
-                    "collector_tags":[  
-        
-                    ],
-                    "enabled":true,
+                    },
+                    "type":"dns",
                     "frequency":60,
-                    "health_settings":{  
-                        "steps":3,
+                    "offset":0,
+                    "enabled":true,
+                    "state":0,
+                    "stateChange":"0001-01-01T00:00:00Z",
+                    "stateCheck":"0001-01-01T00:00:00Z",
+                    "settings":{  
+                        "name":"google.com",
+                        "port":53,
+                        "protocol":"udp",
+                        "server":"ns1.google.com,ns3.google.com,ns2.google.com,ns4.google.com",
+                        "timeout":5,
+                        "type":"A"
+                    },
+                    "healthSettings":{  
                         "num_collectors":3,
-                        "notifications":{  
-                            "enabled":false,
-                            "addresses":""
-                        }
-                    }
+                        "steps":3
+                    },
+                    "created":"0001-01-01T00:00:00Z",
+                    "updated":"0001-01-01T00:00:00Z"
                 },
                 {  
-                    "monitor_type_id":3,
-                    "settings":[  
-                        {  
-                            "variable":"hostname",
-                            "value":"www.raintank.io"
-                        },
-                        {  
-                            "variable":"timeout",
-                            "value":"5"
+                    "id":0,
+                    "orgId":0,
+                    "endpointId":0,
+                    "route":{  
+                        "type":"byIds",
+                        "config":{  
+                            "ids":[  
+                                1
+                            ]
                         }
-                    ],
-                    "endpoint_id":-1,
-                    "collector_ids":[  
-                        1,
-                        2,
-                        3,
-                        4
-                    ],
-                    "collector_tags":[  
-        
-                    ],
+                    },
+                    "type":"https",
+                    "frequency":60,
+                    "offset":0,
                     "enabled":true,
-                    "frequency":10,
-                    "health_settings":{  
-                        "steps":3,
+                    "state":0,
+                    "stateChange":"0001-01-01T00:00:00Z",
+                    "stateCheck":"0001-01-01T00:00:00Z",
+                    "settings":{  
+                        "headers":"User-Agent: worldping-api\nAccept-Encoding: gzip\n",
+                        "host":"www.google.com",
+                        "method":"GET",
+                        "path":"/",
+                        "port":443,
+                        "timeout":5,
+                        "validateCert":true
+                    },
+                    "healthSettings":{  
                         "num_collectors":3,
-                        "notifications":{  
-                            "enabled":false,
-                            "addresses":""
+                        "steps":3
+                    },
+                    "created":"0001-01-01T00:00:00Z",
+                    "updated":"0001-01-01T00:00:00Z"
+                },
+                {  
+                    "id":0,
+                    "orgId":0,
+                    "endpointId":0,
+                    "route":{  
+                        "type":"byIds",
+                        "config":{  
+                            "ids":[  
+                                1
+                            ]
                         }
-                    }
+                    },
+                    "type":"http",
+                    "frequency":60,
+                    "offset":0,
+                    "enabled":true,
+                    "state":0,
+                    "stateChange":"0001-01-01T00:00:00Z",
+                    "stateCheck":"0001-01-01T00:00:00Z",
+                    "settings":{  
+                        "headers":"User-Agent: worldping-api\nAccept-Encoding: gzip\n",
+                        "host":"www.google.com",
+                        "method":"GET",
+                        "path":"/",
+                        "port":80,
+                        "timeout":5
+                    },
+                    "healthSettings":{  
+                        "num_collectors":3,
+                        "steps":3
+                    },
+                    "created":"0001-01-01T00:00:00Z",
+                    "updated":"0001-01-01T00:00:00Z"
+                },
+                {  
+                    "id":0,
+                    "orgId":0,
+                    "endpointId":0,
+                    "route":{  
+                        "type":"byIds",
+                        "config":{  
+                            "ids":[  
+                                1
+                            ]
+                        }
+                    },
+                    "type":"ping",
+                    "frequency":10,
+                    "offset":0,
+                    "enabled":true,
+                    "state":0,
+                    "stateChange":"0001-01-01T00:00:00Z",
+                    "stateCheck":"0001-01-01T00:00:00Z",
+                    "settings":{  
+                        "hostname":"google.com",
+                        "timeout":5
+                    },
+                    "healthSettings":{  
+                        "num_collectors":3,
+                        "steps":3
+                    },
+                    "created":"0001-01-01T00:00:00Z",
+                    "updated":"0001-01-01T00:00:00Z"
                 }
-            ]
+            ],
+            "tags":[  
+                "demo",
+                "external"
+            ],
+            "created":"0001-01-01T00:00:00Z",
+            "updated":"0001-01-01T00:00:00Z"
         }
 
 + Response 200 (application/json)
+    + Attributes (object)
+    
+        + meta (object)
+            + code (number) -  status code.
+            + message (string) - status message
+            + type (string) - data type of the body.
+        + body (Endpoint)
+    
+    + Body
+    
+            {  
+                "meta":{  
+                    "code":200,
+                    "message":"success",
+                    "type":"endpoint"
+                },
+                "body":{  
+                    "id":10509,
+                    "orgId":2,
+                    "name":"google.com",
+                    "slug":"google_com",
+                    "checks":[  
+                        {  
+                            "id":48600,
+                            "orgId":2,
+                            "endpointId":10509,
+                            "route":{  
+                                "type":"byIds",
+                                "config":{  
+                                    "ids":[  
+                                        1
+                                    ]
+                                }
+                            },
+                            "type":"dns",
+                            "frequency":60,
+                            "offset":9,
+                            "enabled":true,
+                            "state":-1,
+                            "stateChange":"2016-07-28T16:18:51.454767023Z",
+                            "stateCheck":"2016-07-28T16:18:51.454766837Z",
+                            "settings":{  
+                                "name":"google.com",
+                                "port":53,
+                                "protocol":"udp",
+                                "server":"ns1.google.com,ns3.google.com,ns2.google.com,ns4.google.com",
+                                "timeout":5,
+                                "type":"A"
+                            },
+                            "healthSettings":{  
+                                "num_collectors":3,
+                                "steps":3,
+                                "notifications":{  
+                                    "enabled":false,
+                                    "addresses":""
+                                }
+                            },
+                            "created":"2016-07-28T16:18:51.454767144Z",
+                            "updated":"2016-07-28T16:18:51.454767265Z"
+                        },
+                        {  
+                            "id":48603,
+                            "orgId":2,
+                            "endpointId":10509,
+                            "route":{  
+                                "type":"byIds",
+                                "config":{  
+                                    "ids":[  
+                                        1
+                                    ]
+                                }
+                            },
+                            "type":"https",
+                            "frequency":60,
+                            "offset":9,
+                            "enabled":true,
+                            "state":-1,
+                            "stateChange":"2016-07-28T16:18:51.456910388Z",
+                            "stateCheck":"2016-07-28T16:18:51.456910225Z",
+                            "settings":{  
+                                "headers":"User-Agent: worldping-api\nAccept-Encoding: gzip\n",
+                                "host":"www.google.com",
+                                "method":"GET",
+                                "path":"/",
+                                "port":443,
+                                "timeout":5,
+                                "validateCert":true
+                            },
+                            "healthSettings":{  
+                                "num_collectors":3,
+                                "steps":3,
+                                "notifications":{  
+                                    "enabled":false,
+                                    "addresses":""
+                                }
+                            },
+                            "created":"2016-07-28T16:18:51.456910507Z",
+                            "updated":"2016-07-28T16:18:51.456910674Z"
+                        },
+                        {  
+                            "id":48606,
+                            "orgId":2,
+                            "endpointId":10509,
+                            "route":{  
+                                "type":"byIds",
+                                "config":{  
+                                    "ids":[  
+                                        1
+                                    ]
+                                }
+                            },
+                            "type":"http",
+                            "frequency":60,
+                            "offset":9,
+                            "enabled":true,
+                            "state":-1,
+                            "stateChange":"2016-07-28T16:18:51.458961028Z",
+                            "stateCheck":"2016-07-28T16:18:51.458960857Z",
+                            "settings":{  
+                                "headers":"User-Agent: worldping-api\nAccept-Encoding: gzip\n",
+                                "host":"www.google.com",
+                                "method":"GET",
+                                "path":"/",
+                                "port":80,
+                                "timeout":5
+                            },
+                            "healthSettings":{  
+                                "num_collectors":3,
+                                "steps":3,
+                                "notifications":{  
+                                    "enabled":false,
+                                    "addresses":""
+                                }
+                            },
+                            "created":"2016-07-28T16:18:51.458961148Z",
+                            "updated":"2016-07-28T16:18:51.458961323Z"
+                        },
+                        {  
+                            "id":48609,
+                            "orgId":2,
+                            "endpointId":10509,
+                            "route":{  
+                                "type":"byIds",
+                                "config":{  
+                                    "ids":[  
+                                        1
+                                    ]
+                                }
+                            },
+                            "type":"ping",
+                            "frequency":10,
+                            "offset":9,
+                            "enabled":true,
+                            "state":-1,
+                            "stateChange":"2016-07-28T16:18:51.461442586Z",
+                            "stateCheck":"2016-07-28T16:18:51.461442398Z",
+                            "settings":{  
+                                "hostname":"google.com",
+                                "timeout":5
+                            },
+                            "healthSettings":{  
+                                "num_collectors":3,
+                                "steps":3,
+                                "notifications":{  
+                                    "enabled":false,
+                                    "addresses":""
+                                }
+                            },
+                            "created":"2016-07-28T16:18:51.461442704Z",
+                            "updated":"2016-07-28T16:18:51.461442824Z"
+                        }
+                    ],
+                    "tags":[  
+                        "demo",
+                        "external"
+                    ],
+                    "created":"2016-07-28T16:18:51.452857477Z",
+                    "updated":"2016-07-28T16:18:51.452857646Z"
+                }
+            }
 
-        {  
-            "id":1,
-            "org_id":1,
-            "name":"www.raintank.io",
-            "slug":"www_raintank_io",
-            "tags":[  
-                "raintank"
-            ]
-        }
+### Delete Endpoint [DELETE /api/v2/endpoints/{id}]
 
++ Parameters
 
-## Probes [/api/collectors]
+    + id (number) - Endpoint Id
+
++ Request
+
+    + Headers
+    
+            Authorization: Bearer API_KEY
+
++ Response 200 (application/json)
+
+    + Attributes
+    
+        + Meta (object)
+            + code (number) -  status code.
+            + message (string) - status message
+            + type (string) - data type of the body.
+    
+    + Body
+    
+            {
+                "meta": {
+                    "code": 200,
+                    "message": "success",
+                    "type": "endpoint"
+                },
+                "body": null
+            }
+
+## Probes [/api/v2/probes]
 
 Probes provide the execution of periodic network performance tests including HTTP checks, DNS and Ping. The results of each test are then transfered back to the worldPing API where they are processed and inserted into a timeseries database.
 
@@ -726,53 +1086,303 @@ This method allows the listing of existing probes, both official worldPing probe
             
 + Response 200 (application/json)
     
-        [  
-            {  
-                "id":1,
-                "org_id":1,
-                "slug":"san-francisco",
-                "name":"San Francisco",
-                "tags":[  
-                    "USA"
-                ],
-                "public":true,
-                "latitude":0,
-                "longitude":0,
-                "online":true,
-                "online_change":"2016-04-20T13:09:42Z",
-                "enabled":true,
-                "enabled_change":"2015-07-10T21:39:02Z"
-            },
-            {  
-                "id":2,
-                "org_id":1,
-                "slug":"amsterdam",
-                "name":"Amsterdam",
-                "tags":[  
+    + Attributes
+        + meta (object)
+            + code (number) -  status code.
+            + message (string) - status message
+            + type (string) - data type of the body.
+        + body (array[Probe])
         
-                ],
-                "public":true,
-                "latitude":0,
-                "longitude":0,
-                "online":true,
-                "online_change":"2016-04-20T07:03:42Z",
-                "enabled":true,
-                "enabled_change":"2015-07-10T21:39:02Z"
-            },
-            {  
-                "id":3,
-                "org_id":1,
-                "slug":"london",
-                "name":"London",
-                "tags":[  
-                    "EMEA"
-                ],
-                "public":true,
-                "latitude":0,
-                "longitude":0,
-                "online":true,
-                "online_change":"2016-04-20T12:02:26Z",
-                "enabled":true,
-                "enabled_change":"2015-07-10T21:39:02Z"
+    + Body
+        
+            {
+                "meta": {
+                    "code": 200,
+                    "message": "success",
+                    "type": "probes"
+                },
+                "body": [
+                    {
+                        "id": 656,
+                        "org_id": 1,
+                        "slug": "south-carolina",
+                        "name": "South Carolina",
+                        "tags": [
+                            "USA"
+                        ],
+                        "public": true,
+                        "latitude": 37.4192008972168,
+                        "longitude": -122.05740356445312,
+                        "online": true,
+                        "online_change": "2016-07-20T08:49:58Z",
+                        "enabled": true,
+                        "enabled_change": "2016-03-04T23:54:52Z",
+                        "created": "2016-03-04T23:54:52Z",
+                        "updated": "2016-05-23T22:46:23Z"
+                    },
+                    {
+                        "id": 2,
+                        "org_id": 1,
+                        "slug": "amsterdam",
+                        "name": "Amsterdam",
+                        "tags": [],
+                        "public": true,
+                        "latitude": 52.349998474121094,
+                        "longitude": 4.9166998863220215,
+                        "online": true,
+                        "online_change": "2016-07-21T04:33:40Z",
+                        "enabled": true,
+                        "enabled_change": "2015-07-10T21:39:02Z",
+                        "created": "2015-04-28T10:30:48Z",
+                        "updated": "2016-05-23T22:45:32Z"
+                    },
+                    {
+                        "id": 89,
+                        "org_id": 1,
+                        "slug": "chicago",
+                        "name": "Chicago",
+                        "tags": [
+                            "USA"
+                        ],
+                        "public": true,
+                        "latitude": 41.86320114135742,
+                        "longitude": -87.61979675292969,
+                        "online": true,
+                        "online_change": "2016-07-22T12:18:28Z",
+                        "enabled": true,
+                        "enabled_change": "2015-07-10T21:39:02Z",
+                        "created": "2015-06-15T22:54:52Z",
+                        "updated": "2016-05-23T22:46:22Z"
+                    },
+                    {
+                        "id": 6,
+                        "org_id": 1,
+                        "slug": "frankfurt",
+                        "name": "Frankfurt",
+                        "tags": [
+                            "EMEA"
+                        ],
+                        "public": true,
+                        "latitude": 50.11669921875,
+                        "longitude": 8.683300018310547,
+                        "online": true,
+                        "online_change": "2016-07-26T04:49:57Z",
+                        "enabled": true,
+                        "enabled_change": "2015-07-10T21:39:02Z",
+                        "created": "2015-04-28T10:37:05Z",
+                        "updated": "2016-05-23T22:45:31Z"
+                    }
+                ]
             }
-        ]
+
+### Create Probe [POST /api/v2/probes]
+
++ Request
+
+    + Headers
+    
+            Authorization: Bearer API_KEY
+            ContentType: application/json
+    
+    + Attributes (Probe)
+         
+         
++ Request (application/json)
+
+        {
+            "name":"awoods test", 
+            "tags": [
+                "private",
+                "test"
+            ],
+            "enabled":true
+        }
+
++ Response  200 (application/json)
+
+    + Attributes
+        + meta (object)
+            + code (number) -  status code.
+            + message (string) - status message
+            + type (string) - data type of the body.
+        + body (Probe)
+        
+    + Body
+
+            {
+                "meta": {
+                    "code": 200,
+                    "message": "success",
+                    "type": "probe"
+                },
+                "body": {
+                    "id": 1916,
+                    "org_id": 2,
+                    "slug": "awoods-test",
+                    "name": "awoods test",
+                    "tags": [
+                        "private",
+                        "test"
+                    ],
+                    "public": false,
+                    "latitude": 0,
+                    "longitude": 0,
+                    "online": false,
+                    "online_change": "2016-08-11T06:08:29.668802752Z",
+                    "enabled": true,
+                    "enabled_change": "2016-08-11T06:08:29.6688026Z",
+                    "created": "2016-08-11T06:08:29.66880293Z",
+                    "updated": "2016-08-11T06:08:29.668803036Z"
+                }
+            }
+
+### Update Probe [PUT /api/v2/probes]
+If a probe is 'public', update calls can still be made, but only the "tags" field can be modified.
+
++ Request
+
+    + Headers
+    
+            Authorization: Bearer API_KEY
+            ContentType: application/json
+    
+    + Attributes (Probe)
+         
+         
++ Request (application/json)
+
+        {
+            "id": 1916,
+            "org_id": 2,
+            "slug": "awoods-test",
+            "name": "awoods test",
+            "tags": [
+                "private",
+                "test",
+                "newTag"
+            ],
+            "public": false,
+            "latitude": 0,
+            "longitude": 0,
+            "online": false,
+            "online_change": "2016-08-11T06:08:29.668802752Z",
+            "enabled": true,
+            "enabled_change": "2016-08-11T06:08:29.6688026Z",
+            "created": "2016-08-11T06:08:29.66880293Z",
+            "updated": "2016-08-11T06:08:29.668803036Z"
+        }
+
++ Response  200 (application/json)
+
+    + Attributes
+        + meta (object)
+            + code (number) -  status code.
+            + message (string) - status message
+            + type (string) - data type of the body.
+        + body (Probe)
+        
+    + Body
+
+            {
+                "meta": {
+                    "code": 200,
+                    "message": "success",
+                    "type": "probe"
+                },
+                "body": {
+                    "id": 1916,
+                    "org_id": 2,
+                    "slug": "awoods-test",
+                    "name": "awoods test",
+                    "tags": [
+                        "private",
+                        "test",
+                        "newTag"
+                    ],
+                    "public": false,
+                    "latitude": 0,
+                    "longitude": 0,
+                    "online": false,
+                    "online_change": "2016-08-11T06:08:29.668802752Z",
+                    "enabled": true,
+                    "enabled_change": "2016-08-11T06:08:29.6688026Z",
+                    "created": "2016-08-11T06:08:29.66880293Z",
+                    "updated": "2016-08-11T06:10:02.030875593Z"
+                }
+            }
+
+### Delete Probe [DELETE /api/v2/probes/{id}]
+
++ Parameters
+
+    + id (number) - Probe Id
+
++ Request
+
+    + Headers
+    
+            Authorization: Bearer API_KEY
+
++ Response 200 (application/json)
+
+    + Attributes
+    
+        + Meta (object)
+            + code (number) -  status code.
+            + message (string) - status message
+            + type (string) - data type of the body.
+    
+    + Body
+    
+            {
+                "meta": {
+                    "code": 200,
+                    "message": "success",
+                    "type": "probe"
+                },
+                "body": null
+            }
+
+## Quotas [/api/v2/quotas]
+
+### Get Quotas [GET /api/v2/quotas]
+
++ Request
+
+    + Headers
+    
+            Authorization: Bearer API_KEY
+
++ Response 200 (application/json)
+
+    + Attributes
+    
+        + Meta (object)
+            + code (number) -  status code.
+            + message (string) - status message
+            + type (string) - data type of the body.
+        + Body (array[Quota])
+    
+    + Body
+    
+            {
+                "meta": {
+                    "code": 200,
+                    "message": "success",
+                    "type": "quotas"
+                },
+                "body": [
+                    {
+                        "org_id": 2,
+                        "target": "endpoint",
+                        "limit": 5,
+                        "used": 5
+                    },
+                    {
+                        "org_id": 2,
+                        "target": "probe",
+                        "limit": 3,
+                        "used": 0
+                    }
+                ]
+            }
