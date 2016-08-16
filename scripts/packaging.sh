@@ -26,7 +26,7 @@ PACKAGE_NAME="${BUILD}/${NAME}-${VERSION}_${ARCH}.deb"
 fpm -s dir -t deb \
   -v ${VERSION} -n ${NAME} -a ${ARCH} --description "Worldping Backend service" \
   --config-files /etc/raintank/ \
-  --deb-upstart ${BASE}/etc/upstart/worldping-api.conf \
+  --deb-upstart ${BASE}/etc/upstart/worldping-api \
   -m "Raintank Inc. <hello@raintank.io>" --vendor "raintank.io" \
   --license "Apache2.0" -C ${BUILD} -p ${PACKAGE_NAME} .
 
