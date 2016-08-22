@@ -8,3 +8,5 @@
 
 Worldping-api is the backend service for the worldPing-app available from [grafana.net](https://grafana.net/plugins/raintank-worldping-app)
 
+Everything that Worldping is capable of doing is exposed through a REST based API. Documentation for this API is available at
+[API Docs](http://docs.worldping.apiary.io/#)
