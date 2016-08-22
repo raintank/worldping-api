@@ -110,7 +110,7 @@ func buildJobForMonitor(check *m.CheckForAlertDTO) *m.AlertingJob {
 	// note: it may look like the end of the queried interval is ambiguous here, and if offset > frequency, may include "too recent" values by accident.
 	// fear not, as when we execute the alert in the executor, we set the lastPointTs as end time
 
-	target := `litmus.{{.EndpointSlug}}.*.{{.CheckType | ToLower }}.error_state`
+	target := `worldping.{{.EndpointSlug}}.*.{{.CheckType | ToLower }}.error_state`
 	tpl := `sum(t(streak(graphite("` + target + `", "{{.Duration}}s", "", "")) == {{.Steps}} , "")) >= {{.NumProbes}}`
 
 	var t = template.Must(template.New("query").Funcs(funcMap).Parse(tpl))
