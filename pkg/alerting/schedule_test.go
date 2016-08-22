@@ -29,7 +29,7 @@ func TestScheduleBuilding(t *testing.T) {
 		if sched.Offset != 37 {
 			t.Errorf("sched.Offset should be 37, not %d", sched.Offset)
 		}
-		critExpr := `sum(t(streak(graphite("litmus.test_endpoint_be.*.smtp.error_state", "300s", "", "")) == 5 , "")) >= 16`
+		critExpr := `sum(t(streak(graphite("worldping.test_endpoint_be.*.smtp.error_state", "300s", "", "")) == 5 , "")) >= 16`
 		if sched.Definition.CritExpr != critExpr {
 			t.Errorf("sched.Definition.CritExpr should be '%s' not '%s'", critExpr, sched.Definition.CritExpr)
 		}
