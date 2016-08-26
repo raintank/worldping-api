@@ -1,7 +1,7 @@
 FROM ubuntu:xenial
 MAINTAINER Anthony Woods awoods@raintank.io
 
-RUN apt-get update && apt-get -y install netcat-traditional
+RUN apt-get update && apt-get -y install netcat-traditional ca-certificates
 
 RUN mkdir -p /etc/raintank
 COPY docker/worldping-api.ini /etc/raintank/worldping-api.ini
