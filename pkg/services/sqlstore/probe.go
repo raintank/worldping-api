@@ -490,6 +490,10 @@ func deleteProbe(sess *session, id int64, orgId int64) error {
 	if err != nil {
 		return err
 	}
+	if existing.OrgId != orgId {
+		return m.ErrProbeNotFound
+	}
+
 	rawSql := "DELETE FROM probe WHERE id=? and org_id=?"
 	if _, err := sess.Exec(rawSql, existing.Id, existing.OrgId); err != nil {
 		return err
