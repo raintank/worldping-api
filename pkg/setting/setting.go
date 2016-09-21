@@ -93,6 +93,7 @@ var (
 	Executors                   int
 	WriteIndividualAlertResults bool
 	AlertingInspect             bool
+	AlertingGraphiteUrl         string
 
 	StatsdEnabled   bool
 	StatsdAddr      string
@@ -397,6 +398,15 @@ func NewConfigContext(args *CommandLineArgs) error {
 	EnableScheduler = alerting.Key("enable_scheduler").MustBool(true)
 	WriteIndividualAlertResults = alerting.Key("write_individual_alert_results").MustBool(false)
 	AlertingInspect = alerting.Key("inspect").MustBool(false)
+	AlertingGraphiteUrl = alerting.Key("graphite_url").MustString("http://localhost:8888/")
+	if AlertingGraphiteUrl[len(AlertingGraphiteUrl)-1] != '/' {
+		AlertingGraphiteUrl += "/"
+	}
+	// Check if has app suburl.
+	_, err = url.Parse(AlertingGraphiteUrl)
+	if err != nil {
+		log.Fatal(4, "Invalid graphite_url(%s): %s", AlertingGraphiteUrl, err)
+	}
 
 	telemetry := Cfg.Section("telemetry")
 	StatsdEnabled = telemetry.Key("statsd_enabled").MustBool(false)

@@ -19,7 +19,7 @@ import (
 type GraphiteReturner func(org_id int64) (bgraphite.Context, error)
 
 func GraphiteAuthContextReturner(org_id int64) (bgraphite.Context, error) {
-	u, err := url.Parse(setting.GraphiteUrl)
+	u, err := url.Parse(setting.AlertingGraphiteUrl)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse graphiteUrl: %q", err)
 	}
