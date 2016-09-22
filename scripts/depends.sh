@@ -24,3 +24,7 @@ ln -s ${CHECKOUT} ${GOPATH}/src/${REPO_PATH}
 
 cd ${GOPATH}/src/${REPO_PATH}
 go get -t ./...
+
+## tempory hack to pin to older version of xorm
+cd ${GOPATH}/src/github.com/go-xorm/xorm
+git checkout v0.5.4
