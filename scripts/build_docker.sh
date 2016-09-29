@@ -5,7 +5,7 @@ set -x
 DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd ${DIR}
 
-VERSION=`git describe --always`
+VERSION=`git describe --always --long`
 
 mkdir build
 cp ../build/worldping-api build/
