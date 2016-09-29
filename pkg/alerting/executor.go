@@ -69,7 +69,12 @@ func inspect(fn GraphiteReturner, job *m.AlertingJob, cache *lru.Cache) {
 		return
 	}
 
-	res, err := evaluator.Eval(job.LastPointTs)
+	checkTs := job.LastPointTs
+	if job.Freq != 0 {
+		//quantize the checkTs due to a bug in metrictank
+		checkTs = time.Unix(job.LastPointTs.Unix()-(job.LastPointTs.Unix()%job.Freq), 0)
+	}
+	res, err := evaluator.Eval(checkTs)
 	if err != nil {
 		log.Debug("Job %s: FATAL: eval failed: %q", job, err)
 		return
@@ -118,8 +123,12 @@ func execute(fn GraphiteReturner, job *m.AlertingJob, cache *lru.Cache) error {
 		// expressions should be validated before they are stored in the db!
 		return fmt.Errorf("fatal: job %q: invalid check definition %q: %q", job, job.Definition, err)
 	}
-
-	res, err := evaluator.Eval(job.LastPointTs)
+	checkTs := job.LastPointTs
+	if job.Freq != 0 {
+		//quantize the checkTs due to a bug in metrictank
+		checkTs = time.Unix(job.LastPointTs.Unix()-(job.LastPointTs.Unix()%job.Freq), 0)
+	}
+	res, err := evaluator.Eval(checkTs)
 	durationExec := time.Since(preExec)
 	log.Debug("job results - job:%v err:%v res:%v", job, err, res)
 
