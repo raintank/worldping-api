@@ -240,6 +240,17 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	// lookup collector
 	probe, err := sqlstore.GetProbeByName(name, user.OrgId)
 	if err == m.ErrProbeNotFound {
+		//check quotas
+		ctx := &middleware.Context{
+			SignedInUser: user,
+		}
+		reached, err := middleware.QuotaReached(ctx, "probe")
+		if err != nil {
+			return nil, err
+		}
+		if reached {
+			return nil, errors.New("Probe cant be created due to quota restriction.")
+		}
 		//collector not found, so lets create a new one.
 		probe = &m.ProbeDTO{
 			OrgId:        user.OrgId,
