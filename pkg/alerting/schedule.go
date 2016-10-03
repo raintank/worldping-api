@@ -30,7 +30,8 @@ func StoreResult(job *m.AlertingJob) {
 			Time:     job.LastPointTs.Unix(),
 			Mtype:    "gauge",
 			Tags: []string{
-				fmt.Sprintf("endpoint_id:%d", job.EndpointId),
+				fmt.Sprintf("endpoint:%s", job.EndpointSlug),
+				fmt.Sprintf("checkType:%s", strings.ToLower(job.CheckType)),
 				fmt.Sprintf("monitor_id:%d", job.CheckId),
 			},
 		}
