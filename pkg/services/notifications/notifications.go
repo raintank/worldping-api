@@ -88,6 +88,7 @@ func SendEmail(cmd *m.SendEmailCommand) error {
 		From:    setting.Smtp.FromAddress,
 		Subject: subjectBuffer.String(),
 		Body:    buffer.String(),
+		Massive: true,
 	})
 
 	return nil

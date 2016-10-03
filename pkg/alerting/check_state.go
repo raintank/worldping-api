@@ -63,11 +63,20 @@ func handleStateChange(c chan *m.AlertingJob) {
 			if len(emails) < 1 {
 				log.Debug("no email addresses provided. OrgId: %d monitorId: %d", job.OrgId, job.CheckId)
 			} else {
+				emailTo := make([]string, 0)
 				for _, email := range emails {
+					email := strings.TrimSpace(email)
+					if email == "" {
+						continue
+					}
 					log.Info("sending email. addr=%s, orgId=%d, monitorId=%d, endpointSlug=%s, state=%s", email, job.OrgId, job.CheckId, job.EndpointSlug, job.NewState.String())
+					emailTo = append(emailTo, email)
+				}
+				if len(emailTo) == 0 {
+					continue
 				}
 				sendCmd := m.SendEmailCommand{
-					To:       emails,
+					To:       emailTo,
 					Template: "alerting_notification.html",
 					Data: map[string]interface{}{
 						"EndpointId":   job.EndpointId,
