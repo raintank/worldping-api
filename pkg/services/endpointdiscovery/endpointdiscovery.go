@@ -127,7 +127,7 @@ func DiscoverPing(endpoint *Endpoint) (*m.Check, error) {
 
 	return &m.Check{
 		Type:      "ping",
-		Frequency: 10,
+		Frequency: 60,
 		Settings: map[string]interface{}{
 			"hostname": endpoint.Host,
 			"timeout":  5,
@@ -164,7 +164,7 @@ func DiscoverHttp(endpoint *Endpoint) (*m.Check, error) {
 
 	return &m.Check{
 		Type:      "http",
-		Frequency: 60,
+		Frequency: 120,
 		Settings: map[string]interface{}{
 			"host":    varHost,
 			"port":    varPort,
@@ -201,7 +201,7 @@ func DiscoverHttps(endpoint *Endpoint) (*m.Check, error) {
 
 	return &m.Check{
 		Type:      "https",
-		Frequency: 60,
+		Frequency: 120,
 		Settings: map[string]interface{}{
 			"host":         varHost,
 			"port":         varPort,
@@ -241,7 +241,7 @@ func DiscoverDNS(endpoint *Endpoint) (*m.Check, error) {
 
 	return &m.Check{
 		Type:      "dns",
-		Frequency: 60,
+		Frequency: 120,
 		Settings: map[string]interface{}{
 			"name":     recordName,
 			"type":     recordType,
