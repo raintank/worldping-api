@@ -13,7 +13,25 @@ import (
 
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 )
+
+var defaultProbes []int64
+
+func InitEndpointDiscovery() error {
+	for _, name := range []string{"New York", "Silicon Valley", "Chicago", "South Carolina", "Los Angeles", "Amsterdam", "London", "Tokyo"} {
+		probe, err := sqlstore.GetProbeByName(name, 1)
+		if err != nil {
+			if err == m.ErrProbeNotFound {
+				log.Warn("DefaultProbe %s not found.", name)
+				continue
+			}
+			return err
+		}
+		defaultProbes = append(defaultProbes, probe.Id)
+	}
+	return nil
+}
 
 type Endpoint struct {
 	Host string
@@ -107,6 +125,14 @@ func Discover(hostname string) (*m.EndpointDTO, error) {
 	}()
 
 	for c := range checkChan {
+		c.HealthSettings = &m.CheckHealthSettings{
+			NumProbes: 3,
+			Steps:     3,
+		}
+		c.Route = &m.CheckRoute{
+			Type:   m.RouteByIds,
+			Config: map[string]interface{}{"ids": defaultProbes},
+		}
 		checks = append(checks, *c)
 	}
 

@@ -99,6 +99,11 @@ func getProbes(sess *session, query *m.GetProbesQuery) ([]m.ProbeDTO, error) {
 		whereArgs = append(whereArgs, query.Name)
 		prefix = "AND"
 	}
+	if query.Slug != "" {
+		fmt.Fprintf(&where, "%s probe.slug=? ", prefix)
+		whereArgs = append(whereArgs, query.Slug)
+		prefix = "AND"
+	}
 	if query.Enabled != "" {
 		enabled, err := strconv.ParseBool(query.Enabled)
 		if err != nil {

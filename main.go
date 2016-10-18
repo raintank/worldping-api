@@ -20,6 +20,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/cmd"
 	"github.com/raintank/worldping-api/pkg/events"
 	"github.com/raintank/worldping-api/pkg/log"
+	"github.com/raintank/worldping-api/pkg/services/endpointdiscovery"
 	"github.com/raintank/worldping-api/pkg/services/notifications"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
@@ -81,6 +82,10 @@ func main() {
 
 	if err := notifications.Init(); err != nil {
 		log.Fatal(3, "Notification service failed to initialize", err)
+	}
+
+	if err := endpointdiscovery.InitEndpointDiscovery(); err != nil {
+		log.Fatal(3, "EndpointDiscovery service failed to initialize.", err)
 	}
 
 	cmd.StartServer(notifyShutdown)
