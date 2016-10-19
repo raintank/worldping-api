@@ -15,6 +15,7 @@ import (
 type probeWithTag struct {
 	m.Probe    `xorm:"extends"`
 	m.ProbeTag `xorm:"extends"`
+	RemoteIp   string
 }
 
 type probeWithTags []probeWithTag
@@ -26,6 +27,7 @@ func (probeWithTags) TableName() string {
 func (rows probeWithTags) ToProbeDTO() []m.ProbeDTO {
 	probesById := make(map[int64]m.ProbeDTO)
 	probeTagsById := make(map[int64]map[string]struct{})
+	addressesById := make(map[int64]map[string]struct{})
 	for _, r := range rows {
 		_, ok := probesById[r.Probe.Id]
 		if !ok {
@@ -44,13 +46,23 @@ func (rows probeWithTags) ToProbeDTO() []m.ProbeDTO {
 				Updated:       r.Probe.Updated,
 				Longitude:     r.Probe.Longitude,
 				Latitude:      r.Probe.Latitude,
+				RemoteIp:      make([]string, 0),
 			}
 			probeTagsById[r.Probe.Id] = make(map[string]struct{})
 			if r.ProbeTag.Tag != "" {
 				probeTagsById[r.Probe.Id][r.ProbeTag.Tag] = struct{}{}
 			}
-		} else if r.ProbeTag.Tag != "" {
-			probeTagsById[r.Probe.Id][r.ProbeTag.Tag] = struct{}{}
+			addressesById[r.Probe.Id] = make(map[string]struct{})
+			if r.RemoteIp != "" {
+				addressesById[r.Probe.Id][r.RemoteIp] = struct{}{}
+			}
+		} else {
+			if r.ProbeTag.Tag != "" {
+				probeTagsById[r.Probe.Id][r.ProbeTag.Tag] = struct{}{}
+			}
+			if r.RemoteIp != "" {
+				addressesById[r.Probe.Id][r.RemoteIp] = struct{}{}
+			}
 		}
 	}
 	probes := make([]m.ProbeDTO, len(probesById))
@@ -58,6 +70,9 @@ func (rows probeWithTags) ToProbeDTO() []m.ProbeDTO {
 	for _, p := range probesById {
 		for t := range probeTagsById[p.Id] {
 			p.Tags = append(p.Tags, t)
+		}
+		for a := range addressesById[p.Id] {
+			p.RemoteIp = append(p.RemoteIp, a)
 		}
 		probes[i] = p
 		i++
@@ -85,7 +100,7 @@ func getProbes(sess *session, query *m.GetProbesQuery) ([]m.ProbeDTO, error) {
 	whereArgs := make([]interface{}, 0)
 	prefix := "WHERE"
 
-	fmt.Fprint(&rawSQL, "SELECT probe.*, probe_tag.* FROM probe LEFT JOIN probe_tag ON  probe.id = probe_tag.probe_id AND probe_tag.org_id=? ")
+	fmt.Fprint(&rawSQL, "SELECT probe.*, probe_tag.*, probe_session.remote_ip FROM probe LEFT JOIN probe_tag ON  probe.id = probe_tag.probe_id AND probe_tag.org_id=? LEFT JOIN probe_session on probe_session.probe_id = probe.id ")
 	args = append(args, query.OrgId)
 	if query.Tag != "" {
 		fmt.Fprint(&rawSQL, "INNER JOIN probe_tag as pt ON probe.id = pt.probe_id ")
@@ -180,7 +195,7 @@ func onlineProbesWithNoSession(sess *session) ([]m.ProbeDTO, error) {
 	sess.Join("LEFT", "probe_tag", "probe.id=probe_tag.probe_id")
 	sess.Join("LEFT", "probe_session", "probe.id = probe_session.probe_id")
 	sess.Where("probe.online=1").And("probe_session.id is NULL")
-	sess.Cols("`probe`.*", "`probe_tag`.*")
+	sess.Cols("`probe`.*", "`probe_tag`.*", "`probe_session`.remote_ip")
 	var a probeWithTags
 	err := sess.Find(&a)
 	if err != nil {
@@ -201,9 +216,10 @@ func GetProbeById(id int64, orgId int64) (*m.ProbeDTO, error) {
 func getProbeById(sess *session, id int64, orgId int64) (*m.ProbeDTO, error) {
 	var a probeWithTags
 	sess.Join("LEFT", "probe_tag", "probe.id = probe_tag.probe_id AND probe_tag.org_id=?", orgId)
+	sess.Join("LEFT", "probe_session", "probe.id = probe_session.probe_id")
 	sess.Where("probe.id=?", id)
 	sess.And("probe.org_id=? OR probe.public=1", orgId)
-
+	sess.Cols("`probe`.*", "`probe_tag`.*", "`probe_session`.remote_ip")
 	err := sess.Find(&a)
 	if err != nil {
 		return nil, err
@@ -225,8 +241,10 @@ func GetProbeByName(name string, orgId int64) (*m.ProbeDTO, error) {
 func getProbeByName(sess *session, name string, orgId int64) (*m.ProbeDTO, error) {
 	var a probeWithTags
 	sess.Where("probe.name=? AND probe.org_id=?", name, orgId)
-
-	err := sess.Join("LEFT", "probe_tag", "probe.id = probe_tag.probe_id AND probe_tag.org_id=?", orgId).Find(&a)
+	sess.Join("LEFT", "probe_tag", "probe.id = probe_tag.probe_id AND probe_tag.org_id=?", orgId)
+	sess.Join("LEFT", "probe_session", "probe.id = probe_session.probe_id")
+	sess.Cols("`probe`.*", "`probe_tag`.*", "`probe_session`.remote_ip")
+	err := sess.Find(&a)
 	if err != nil {
 		return nil, err
 	}

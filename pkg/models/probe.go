@@ -50,10 +50,10 @@ type ProbeSession struct {
 // ----------------------
 // DTO
 type ProbeDTO struct {
-	Id            int64     `json:"id"`
+	Id            int64     `json:"id" binding:"required"`
 	OrgId         int64     `json:"org_id"`
 	Slug          string    `json:"slug"`
-	Name          string    `json:"name"`
+	Name          string    `json:"name" binding:"required"`
 	Tags          []string  `json:"tags"`
 	Public        bool      `json:"public"`
 	Latitude      float64   `json:"latitude"`
@@ -64,6 +64,7 @@ type ProbeDTO struct {
 	EnabledChange time.Time `json:"enabled_change"`
 	Created       time.Time `json:"created"`
 	Updated       time.Time `json:"updated"`
+	RemoteIp      []string  `json:"remoteIp"`
 }
 
 type ProbeLocationDTO struct {
