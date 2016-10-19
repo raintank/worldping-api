@@ -751,8 +751,6 @@ func TestEndpointV2Api(t *testing.T) {
 			So(disabledChecks["www3_google_com"], ShouldHaveLength, 2)
 			So(disabledChecks["www3_google_com"], ShouldContain, "http")
 			So(disabledChecks["www3_google_com"], ShouldContain, "ping")
-
-			t.Log("%q", disabledChecks)
 		})
 		Convey("response should be 200 with empty disabledEndpoints map", func() {
 			So(resp.Code, ShouldEqual, 200)
