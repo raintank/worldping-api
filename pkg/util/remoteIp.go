@@ -67,7 +67,11 @@ func isPrivateSubnet(ipAddress net.IP) bool {
 }
 
 func GetRemoteIp(r *http.Request) string {
-	ipAddress := r.RemoteAddr
+	addr, err := net.ResolveTCPAddr("tcp", r.RemoteAddr)
+	var ipAddress string
+	if err == nil {
+		ipAddress = addr.IP.String()
+	}
 	for _, h := range []string{"X-Forwarded-For", "X-Real-Ip"} {
 		for _, ip := range strings.Split(r.Header.Get(h), ",") {
 			// header can contain spaces too, strip those out.

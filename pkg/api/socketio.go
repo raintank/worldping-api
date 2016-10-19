@@ -277,15 +277,15 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 		err := geoipDB.Lookup(remoteIp, &location)
 		if err != nil {
 			log.Error(3, "Unabled to get location from IP.", err)
-			return nil, err
-		}
-		probe.Latitude = location.Location.Latitude
-		probe.Longitude = location.Location.Longitude
-		log.Debug("probe %s is located at lat:%f, long:%f", probe.Name, location.Location.Latitude, location.Location.Longitude)
-		log.Info("updating location data for probeId=%d,  lat:%f, long:%f", probe.Id, location.Location.Latitude, location.Location.Longitude)
-		if err := sqlstore.UpdateProbe(probe); err != nil {
-			log.Error(3, "could not save Probe location to DB.", err)
-			return nil, err
+		} else {
+			probe.Latitude = location.Location.Latitude
+			probe.Longitude = location.Location.Longitude
+			log.Debug("probe %s is located at lat:%f, long:%f", probe.Name, location.Location.Latitude, location.Location.Longitude)
+			log.Info("updating location data for probeId=%d,  lat:%f, long:%f", probe.Id, location.Location.Latitude, location.Location.Longitude)
+			if err := sqlstore.UpdateProbe(probe); err != nil {
+				log.Error(3, "could not save Probe location to DB.", err)
+				return nil, err
+			}
 		}
 	}
 
