@@ -99,3 +99,32 @@ func DiscoverEndpoint(c *middleware.Context, cmd m.DiscoverEndpointCmd) *rbody.A
 
 	return rbody.OkResp("endpoint", endpoint)
 }
+
+func DisableEndpoints(c *middleware.Context) *rbody.ApiResponse {
+	query := m.GetEndpointsQuery{
+		OrgId: c.OrgId,
+	}
+
+	endpoints, err := sqlstore.GetEndpoints(&query)
+	if err != nil {
+		return rbody.ErrResp(err)
+	}
+	disabledChecks := make(map[string][]string)
+
+	for i := range endpoints {
+		e := &endpoints[i]
+		for j := range e.Checks {
+			c := &e.Checks[j]
+			if c.Enabled {
+				c.Enabled = false
+				disabledChecks[e.Slug] = append(disabledChecks[e.Slug], string(c.Type))
+			}
+		}
+		err := sqlstore.UpdateEndpoint(e)
+		if err != nil {
+			return rbody.ErrResp(err)
+		}
+	}
+
+	return rbody.OkResp("disabledChecks", disabledChecks)
+}

@@ -729,4 +729,42 @@ func TestEndpointV2Api(t *testing.T) {
 			So(resp.Code, ShouldEqual, 403)
 		})
 	})
+	Convey("when requesting to disable all endpoints", t, func() {
+		resp := httptest.NewRecorder()
+		req, err := http.NewRequest("POST", "/api/v2/endpoints/disable", nil)
+		So(err, ShouldBeNil)
+		addAuthHeader(req)
+		addContentTypeHeader(req)
+
+		r.ServeHTTP(resp, req)
+		Convey("response should be 200 with DisabledEndpoints map", func() {
+			So(resp.Code, ShouldEqual, 200)
+			response := rbody.ApiResponse{}
+			err := json.Unmarshal(resp.Body.Bytes(), &response)
+			So(err, ShouldBeNil)
+			So(response.Meta.Code, ShouldEqual, 200)
+			So(response.Meta.Type, ShouldEqual, "disabledChecks")
+			disabledChecks := make(map[string][]string)
+			err = json.Unmarshal(response.Body, &disabledChecks)
+			So(err, ShouldBeNil)
+			So(disabledChecks, ShouldHaveLength, 4)
+			So(disabledChecks["www3_google_com"], ShouldHaveLength, 2)
+			So(disabledChecks["www3_google_com"], ShouldContain, "http")
+			So(disabledChecks["www3_google_com"], ShouldContain, "ping")
+
+			t.Log("%q", disabledChecks)
+		})
+		Convey("response should be 200 with empty disabledEndpoints map", func() {
+			So(resp.Code, ShouldEqual, 200)
+			response := rbody.ApiResponse{}
+			err := json.Unmarshal(resp.Body.Bytes(), &response)
+			So(err, ShouldBeNil)
+			So(response.Meta.Code, ShouldEqual, 200)
+			So(response.Meta.Type, ShouldEqual, "disabledChecks")
+			disabledChecks := make(map[string][]string)
+			err = json.Unmarshal(response.Body, &disabledChecks)
+			So(err, ShouldBeNil)
+			So(disabledChecks, ShouldHaveLength, 0)
+		})
+	})
 }

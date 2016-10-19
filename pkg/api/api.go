@@ -46,6 +46,7 @@ func Register(r *macaron.Macaron) {
 			r.Delete("/:id", reqEditorRole, wrap(DeleteEndpoint))
 			r.Get("/discover", reqEditorRole, bind(m.DiscoverEndpointCmd{}), wrap(DiscoverEndpoint))
 			r.Get("/:id", wrap(GetEndpointById))
+			r.Post("/disable", reqEditorRole, wrap(DisableEndpoints))
 		})
 
 		r.Group("/probes", func() {
