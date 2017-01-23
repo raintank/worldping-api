@@ -129,6 +129,7 @@ API Keys are generated in Grafana.net in the API Keys tab of the [User Profile](
     - POST (string)
     - PUT (string)
     - DELETE (string)
+- body (string) - Request Body. Content Encoding should match a "content-type" header set in Headers.
 - headers (string) - new separted headers to include in the HTTP request.
 - expectRegex (string) - regexp expression to match again the response.
 - timeout (number) - time in seconds after which the execution aborts and the check is marked as failed.
@@ -142,6 +143,7 @@ API Keys are generated in Grafana.net in the API Keys tab of the [User Profile](
     - POST (string)
     - PUT (string)
     - DELETE (string)
+- body (string) - Request Body. Content Encoding should match a "content-type" header set in Headers.
 - validateCert (boolean) - whether the SSL certificate used by the server needs to be valid.
 - headers (string) - new separted headers to include in the HTTP request.
 - expectRegex (string) - regexp expression to match again the response.
