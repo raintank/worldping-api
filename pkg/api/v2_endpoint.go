@@ -49,7 +49,7 @@ func AddEndpoint(c *middleware.Context, endpoint m.EndpointDTO) *rbody.ApiRespon
 
 	quotas, err := sqlstore.GetOrgQuotas(c.OrgId)
 	if err != nil {
-		return rbody.ErrResp(NewValidationError("error checking quota"))
+		return rbody.ErrResp(m.NewValidationError("Error checking quota"))
 	}
 
 	for i := range endpoint.Checks {
