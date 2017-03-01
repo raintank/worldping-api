@@ -31,17 +31,23 @@ func getOrgQuotaByTarget(sess *session, orgId int64, target string, def int64) (
 	}
 
 	//get quota used.
-	rawSql := fmt.Sprintf("SELECT COUNT(*) as count from %s where org_id=?", dialect.Quote(target))
-	var resp targetCount
-	if _, err := sess.Sql(rawSql, orgId).Get(&resp); err != nil {
-		return nil, err
+	var used int64
+	if target == "downloadLimit" {
+		used = int64(0)
+	} else {
+		rawSql := fmt.Sprintf("SELECT COUNT(*) as count from %s where org_id=?", dialect.Quote(target))
+		var resp targetCount
+		if _, err := sess.Sql(rawSql, orgId).Get(&resp); err != nil {
+			return nil, err
+		}
+		used = resp.Count
 	}
 
 	q := &m.OrgQuotaDTO{
 		Target: quota.Target,
 		Limit:  quota.Limit,
 		OrgId:  quota.OrgId,
-		Used:   resp.Count,
+		Used:   used,
 	}
 
 	return q, nil
@@ -81,16 +87,23 @@ func getOrgQuotas(sess *session, orgId int64) ([]m.OrgQuotaDTO, error) {
 	result := make([]m.OrgQuotaDTO, len(quotas))
 	for i, q := range quotas {
 		//get quota used.
-		rawSql := fmt.Sprintf("SELECT COUNT(*) as count from %s where org_id=?", dialect.Quote(q.Target))
-		var resp targetCount
-		if _, err := sess.Sql(rawSql, q.OrgId).Get(&resp); err != nil {
-			return nil, err
+		var used int64
+		if q.Target == "downloadLimit" {
+			used = int64(0)
+		} else {
+			rawSql := fmt.Sprintf("SELECT COUNT(*) as count from %s where org_id=?", dialect.Quote(q.Target))
+			var resp targetCount
+			if _, err := sess.Sql(rawSql, q.OrgId).Get(&resp); err != nil {
+				return nil, err
+			}
+			used = resp.Count
 		}
+
 		result[i] = m.OrgQuotaDTO{
 			Target: q.Target,
 			Limit:  q.Limit,
 			OrgId:  q.OrgId,
-			Used:   resp.Count,
+			Used:   used,
 		}
 	}
 	return result, nil

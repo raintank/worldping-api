@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -80,7 +81,7 @@ type CheckWithSlug struct {
 	Slug  string `json:"endpointSlug"`
 }
 
-func (c Check) Validate() error {
+func (c Check) Validate(quotas []OrgQuotaDTO) error {
 	// check route config
 	if err := c.Route.Validate(); err != nil {
 		return err
@@ -102,19 +103,19 @@ func (c Check) Validate() error {
 	//validate Settings.
 	switch c.Type {
 	case HTTP_CHECK:
-		if err := validateHTTPSettings(c.Settings); err != nil {
+		if err := c.validateHTTPSettings(quotas); err != nil {
 			return err
 		}
 	case HTTPS_CHECK:
-		if err := validateHTTPSSettings(c.Settings); err != nil {
+		if err := c.validateHTTPSSettings(quotas); err != nil {
 			return err
 		}
 	case PING_CHECK:
-		if err := validatePINGSettings(c.Settings); err != nil {
+		if err := c.validatePINGSettings(); err != nil {
 			return err
 		}
 	case DNS_CHECK:
-		if err := validateDNSSettings(c.Settings); err != nil {
+		if err := c.validateDNSSettings(); err != nil {
 			return err
 		}
 	default:
@@ -156,7 +157,7 @@ type RouteByTagIndex struct {
 }
 
 var (
-	InvalidRouteConfig = NewValidationError("Invlid route config")
+	InvalidRouteConfig = NewValidationError("Invalid route config")
 	UnknownRouteType   = NewValidationError("unknown route type")
 )
 
@@ -274,18 +275,21 @@ type CheckForAlertDTO struct {
 	Updated        time.Time
 }
 
-func validateHTTPSettings(settings map[string]interface{}) error {
+func (c Check) validateHTTPSettings(quotas []OrgQuotaDTO) error {
+	settings := c.Settings
+
 	requiredFields := map[string]string{
 		"host": "string",
 		"path": "string",
 	}
 	optFields := map[string]string{
-		"port":        "number",
-		"method":      "string",
-		"headers":     "string",
-		"expectRegex": "string",
-		"body":        "string",
-		"timeout":     "number",
+		"port":          "number",
+		"method":        "string",
+		"headers":       "string",
+		"expectRegex":   "string",
+		"body":          "string",
+		"timeout":       "number",
+		"downloadLimit": "size",
 	}
 	for field, dataType := range requiredFields {
 		rawVal, ok := settings[field]
@@ -331,24 +335,64 @@ func validateHTTPSettings(settings map[string]interface{}) error {
 					return NewValidationError(fmt.Sprintf("%s field is invalid. must be between 1 and 65535", field))
 				}
 			}
+		case "size":
+			value := int64(0)
+
+			switch rawVal.(type) {
+			case float64:
+				value = int64(rawVal.(float64))
+			case int64:
+				value = rawVal.(int64)
+			case string:
+				re, err := regexp.Compile(`^(?i:(\d+)([km]?)b?)$`)
+				if err != nil {
+					return NewValidationError(fmt.Sprintf("%s field is invalid. error compiling size regexp", field))
+				}
+
+				matched := re.FindStringSubmatch(rawVal.(string))
+				if matched == nil {
+					return NewValidationError(fmt.Sprintf("%s field is invalid. must be number or size string", field))
+				}
+
+				value, err = strconv.ParseInt(matched[1], 10, 64)
+				if strings.ToLower(matched[2]) == "m" {
+					value = value * 1024 * 1024
+				} else if strings.ToLower(matched[2]) == "k" {
+					value = value * 1024
+				}
+			default:
+				return NewValidationError(fmt.Sprintf("%s field is invalid. must be number or size string", field))
+			}
+
+			if field == "downloadLimit" {
+				for _, quota := range quotas {
+					if quota.Target == "downloadLimit" && value > int64(quota.Limit) {
+						return NewValidationError(fmt.Sprintf("%s field is invalid. over quota", field))
+					}
+				}
+			}
 		}
 	}
+
 	return nil
 
 }
-func validateHTTPSSettings(settings map[string]interface{}) error {
+func (c Check) validateHTTPSSettings(quotas []OrgQuotaDTO) error {
+	settings := c.Settings
+
 	requiredFields := map[string]string{
 		"host": "string",
 		"path": "string",
 	}
 	optFields := map[string]string{
-		"port":         "number",
-		"method":       "string",
-		"headers":      "string",
-		"expectRegex":  "string",
-		"validateCert": "bool",
-		"body":         "string",
-		"timeout":      "number",
+		"port":          "number",
+		"method":        "string",
+		"headers":       "string",
+		"expectRegex":   "string",
+		"validateCert":  "bool",
+		"body":          "string",
+		"timeout":       "number",
+		"downloadLimit": "size",
 	}
 	for field, dataType := range requiredFields {
 		rawVal, ok := settings[field]
@@ -399,13 +443,50 @@ func validateHTTPSSettings(settings map[string]interface{}) error {
 			if !ok {
 				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected boolean", field))
 			}
+		case "size":
+			value := int64(0)
 
+			switch rawVal.(type) {
+			case float64:
+				value = int64(rawVal.(float64))
+			case int64:
+				value = rawVal.(int64)
+			case string:
+				re, err := regexp.Compile(`^(?i:(\d+)([km]?)b?)$`)
+				if err != nil {
+					return NewValidationError(fmt.Sprintf("%s field is invalid. error compiling size regexp", field))
+				}
+
+				matched := re.FindStringSubmatch(rawVal.(string))
+				if matched == nil {
+					return NewValidationError(fmt.Sprintf("%s field is invalid. must be number or size string", field))
+				}
+
+				value, err = strconv.ParseInt(matched[1], 10, 64)
+				if strings.ToLower(matched[2]) == "m" {
+					value = value * 1024 * 1024
+				} else if strings.ToLower(matched[2]) == "k" {
+					value = value * 1024
+				}
+			default:
+				return NewValidationError(fmt.Sprintf("%s field is invalid. must be number or size string", field))
+			}
+
+			if field == "downloadLimit" {
+				for _, quota := range quotas {
+					if quota.Target == "downloadLimit" && value > int64(quota.Limit) {
+						return NewValidationError(fmt.Sprintf("%s field is invalid. over quota", field))
+					}
+				}
+			}
 		}
 	}
 	return nil
 }
 
-func validatePINGSettings(settings map[string]interface{}) error {
+func (c Check) validatePINGSettings() error {
+	settings := c.Settings
+
 	requiredFields := map[string]string{
 		"hostname": "string",
 	}
@@ -450,7 +531,9 @@ func validatePINGSettings(settings map[string]interface{}) error {
 	return nil
 }
 
-func validateDNSSettings(settings map[string]interface{}) error {
+func (c Check) validateDNSSettings() error {
+	settings := c.Settings
+
 	requiredFields := map[string]string{
 		"name":   "string",
 		"type":   "string",

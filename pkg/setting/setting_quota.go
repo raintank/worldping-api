@@ -5,8 +5,9 @@ import (
 )
 
 type OrgQuota struct {
-	Endpoint int64 `target:"endpoint"`
-	Probe    int64 `target:"probe"`
+	Endpoint      int64 `target:"endpoint"`
+	Probe         int64 `target:"probe"`
+	DownloadLimit int64 `target:"downloadLimit"`
 }
 
 type GlobalQuota struct {
@@ -55,8 +56,9 @@ func readQuotaSettings() {
 
 	// per ORG Limits
 	Quota.Org = &OrgQuota{
-		Endpoint: quota.Key("org_endpoint").MustInt64(10),
-		Probe:    quota.Key("org_probe").MustInt64(10),
+		Endpoint:      quota.Key("org_endpoint").MustInt64(10),
+		Probe:         quota.Key("org_probe").MustInt64(10),
+		DownloadLimit: quota.Key("org_downloadlimit").MustInt64(100 * 1024),
 	}
 
 	// Global Limits
