@@ -344,6 +344,11 @@ func (c Check) validateHTTPSettings(quotas []OrgQuotaDTO) error {
 			case int64:
 				value = rawVal.(int64)
 			case string:
+				if rawVal.(string) == "" {
+					delete(c.Settings, field)
+					continue
+				}
+
 				re, err := regexp.Compile(`^(?i:(\d+)([km]?)b?)$`)
 				if err != nil {
 					return NewValidationError(fmt.Sprintf("%s field is invalid. error compiling size regexp", field))
@@ -452,6 +457,11 @@ func (c Check) validateHTTPSSettings(quotas []OrgQuotaDTO) error {
 			case int64:
 				value = rawVal.(int64)
 			case string:
+				if rawVal.(string) == "" {
+					delete(c.Settings, field)
+					continue
+				}
+
 				re, err := regexp.Compile(`^(?i:(\d+)([km]?)b?)$`)
 				if err != nil {
 					return NewValidationError(fmt.Sprintf("%s field is invalid. error compiling size regexp", field))
