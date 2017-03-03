@@ -367,7 +367,7 @@ func (c Check) validateHTTPSettings(quotas []OrgQuotaDTO) error {
 			if field == "downloadLimit" {
 				for _, quota := range quotas {
 					if quota.Target == "downloadLimit" && value > int64(quota.Limit) {
-						return NewValidationError(fmt.Sprintf("%s field is invalid. over quota", field))
+						return NewValidationError(fmt.Sprintf("%s field is invalid. %d is over limit of %d", field, value, quota.Limit))
 					}
 				}
 			}
@@ -475,7 +475,7 @@ func (c Check) validateHTTPSSettings(quotas []OrgQuotaDTO) error {
 			if field == "downloadLimit" {
 				for _, quota := range quotas {
 					if quota.Target == "downloadLimit" && value > int64(quota.Limit) {
-						return NewValidationError(fmt.Sprintf("%s field is invalid. over quota", field))
+						return NewValidationError(fmt.Sprintf("%s field is invalid. %d is over limit of %d", field, value, quota.Limit))
 					}
 				}
 			}
