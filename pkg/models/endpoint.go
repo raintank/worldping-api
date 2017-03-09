@@ -275,6 +275,16 @@ type CheckForAlertDTO struct {
 	Updated        time.Time
 }
 
+func formatSize(size int64) string {
+	if size > 1024*1024 {
+		return fmt.Sprintf("%.2f MB", float64(size)/1024/1024)
+	}
+	if size > 1024 {
+		return fmt.Sprintf("%.2f KB", float64(size)/1024)
+	}
+	return fmt.Sprintf("%d", size)
+}
+
 func (c Check) validateHTTPSettings(quotas []OrgQuotaDTO) error {
 	settings := c.Settings
 
@@ -372,7 +382,7 @@ func (c Check) validateHTTPSettings(quotas []OrgQuotaDTO) error {
 			if field == "downloadLimit" {
 				for _, quota := range quotas {
 					if quota.Target == "downloadLimit" && value > int64(quota.Limit) {
-						return NewValidationError(fmt.Sprintf("%s field is invalid. %d is over limit of %d", field, value, quota.Limit))
+						return NewValidationError(fmt.Sprintf("%s field is invalid. %s is over limit of %s", field, formatSize(value), formatSize(int64(quota.Limit))))
 					}
 				}
 			}
@@ -485,7 +495,7 @@ func (c Check) validateHTTPSSettings(quotas []OrgQuotaDTO) error {
 			if field == "downloadLimit" {
 				for _, quota := range quotas {
 					if quota.Target == "downloadLimit" && value > int64(quota.Limit) {
-						return NewValidationError(fmt.Sprintf("%s field is invalid. %d is over limit of %d", field, value, quota.Limit))
+						return NewValidationError(fmt.Sprintf("%s field is invalid. %s is over limit of %s", field, formatSize(value), formatSize(int64(quota.Limit))))
 					}
 				}
 			}
