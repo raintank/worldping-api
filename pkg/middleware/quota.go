@@ -3,7 +3,7 @@ package middleware
 import (
 	"fmt"
 
-	"github.com/Unknwon/macaron"
+	"gopkg.in/macaron.v1"
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"

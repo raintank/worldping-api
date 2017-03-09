@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Unknwon/macaron"
+	"gopkg.in/macaron.v1"
 	"github.com/raintank/worldping-api/pkg/api/rbody"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"

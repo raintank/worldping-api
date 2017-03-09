@@ -3,8 +3,8 @@ package api
 import (
 	"fmt"
 
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/binding"
+	"gopkg.in/macaron.v1"
+	"github.com/go-macaron/binding"
 	"github.com/raintank/raintank-apps/pkg/auth"
 	"github.com/raintank/worldping-api/pkg/api/rbody"
 	"github.com/raintank/worldping-api/pkg/log"

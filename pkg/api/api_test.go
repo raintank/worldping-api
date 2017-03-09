@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Unknwon/macaron"
+	"gopkg.in/macaron.v1"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

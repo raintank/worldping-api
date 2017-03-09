@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Unknwon/macaron"
+	"gopkg.in/macaron.v1"
 	"github.com/graarh/golang-socketio"
 	"github.com/graarh/golang-socketio/transport"
 	"github.com/raintank/met/helper"
