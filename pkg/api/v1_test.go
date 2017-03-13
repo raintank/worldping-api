@@ -645,10 +645,10 @@ func TestEndpointV1Api(t *testing.T) {
 					CollectorTags: []string{"test"},
 					Settings: []m.MonitorSettingDTO{
 						{Variable: "host", Value: "www6.google.com"},
-						{"path", "/foo"},
-						{"port", "80"},
-						{"method", "GET"},
-						{"timeout", "5"},
+						{Variable: "path", Value: "/foo"},
+						{Variable: "port", Value: "80"},
+						{Variable: "method", Value: "GET"},
+						{Variable: "timeout", Value: "5"},
 					},
 					HealthSettings: &m.CheckHealthSettings{
 						NumProbes: 1,
@@ -662,8 +662,8 @@ func TestEndpointV1Api(t *testing.T) {
 					Enabled:       true,
 					CollectorIds:  []int64{1, 2, 4},
 					Settings: []m.MonitorSettingDTO{
-						{"hostname", "www6.google.com"},
-						{"timeout", "5"},
+						{Variable: "hostname", Value: "www6.google.com"},
+						{Variable: "timeout", Value: "5"},
 					},
 					HealthSettings: &m.CheckHealthSettings{
 						NumProbes: 1,
@@ -823,10 +823,10 @@ func TestMonitorV1Api(t *testing.T) {
 			CollectorIds:  []int64{1, 5},
 			Settings: []m.MonitorSettingDTO{
 				{Variable: "host", Value: "www1.google.com"},
-				{"path", "/foo"},
-				{"port", "8080"},
-				{"method", "GET"},
-				{"timeout", "5"},
+				{Variable: "path", Value: "/foo"},
+				{Variable: "port", Value: "8080"},
+				{Variable: "method", Value: "GET"},
+				{Variable: "timeout", Value: "5"},
 			},
 			HealthSettings: &m.CheckHealthSettings{
 				NumProbes: 1,
@@ -867,10 +867,10 @@ func TestMonitorV1Api(t *testing.T) {
 			CollectorIds:  []int64{1, 5},
 			Settings: []m.MonitorSettingDTO{
 				{Variable: "host", Value: "www7.google.com"},
-				{"path", "/foo"},
-				{"port", "8080"},
-				{"method", "GET"},
-				{"timeout", "5"},
+				{Variable: "path", Value: "/foo"},
+				{Variable: "port", Value: "8080"},
+				{Variable: "method", Value: "GET"},
+				{Variable: "timeout", Value: "5"},
 			},
 			HealthSettings: &m.CheckHealthSettings{
 				NumProbes: 1,
