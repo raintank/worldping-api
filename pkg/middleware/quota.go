@@ -3,11 +3,11 @@ package middleware
 import (
 	"fmt"
 
-	"github.com/Unknwon/macaron"
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
+	"gopkg.in/macaron.v1"
 )
 
 func Quota(target string) macaron.Handler {

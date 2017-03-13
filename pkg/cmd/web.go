@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Unknwon/macaron"
-	"github.com/macaron-contrib/toolbox"
+	"github.com/go-macaron/toolbox"
+	"gopkg.in/macaron.v1"
 
 	"github.com/raintank/worldping-api/pkg/api"
 	"github.com/raintank/worldping-api/pkg/log"

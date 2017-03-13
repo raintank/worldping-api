@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Unknwon/macaron"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
+	"gopkg.in/macaron.v1"
 )
 
 type ApiError struct {

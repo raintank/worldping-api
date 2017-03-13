@@ -51,6 +51,11 @@ func GetQuotaScopes(target string) ([]QuotaScope, error) {
 			QuotaScope{Name: "org", Target: target, DefaultLimit: setting.Quota.Org.Probe},
 		)
 		return scopes, nil
+	case "downloadLimit":
+		scopes = append(scopes,
+			QuotaScope{Name: "org", Target: target, DefaultLimit: setting.Quota.Org.DownloadLimit},
+		)
+		return scopes, nil
 	default:
 		return scopes, ErrInvalidQuotaTarget
 	}

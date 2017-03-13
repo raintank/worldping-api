@@ -33,8 +33,9 @@ func TestQuotaCommandsAndQueries(t *testing.T) {
 	setting.Quota = setting.QuotaSettings{
 		Enabled: true,
 		Org: &setting.OrgQuota{
-			Endpoint: 5,
-			Probe:    5,
+			Endpoint:      5,
+			Probe:         5,
+			DownloadLimit: 102400,
 		},
 		Global: &setting.GlobalQuota{
 			Endpoint: 5,
@@ -102,13 +103,16 @@ func TestQuotaCommandsAndQueries(t *testing.T) {
 		Convey("When getting quota list for org", func() {
 			quotas, err := GetOrgQuotas(1)
 			So(err, ShouldBeNil)
-			So(len(quotas), ShouldEqual, 2)
+			So(len(quotas), ShouldEqual, 3)
 			for _, res := range quotas {
 				limit := 5 //default quota limit
 				used := 1
 				if res.Target == "probe" {
 					limit = 10 //customized quota limit.
-
+				}
+				if res.Target == "downloadLimit" {
+					limit = 102400 //customized quota limit.
+					used = 0
 				}
 
 				So(res.Limit, ShouldEqual, limit)

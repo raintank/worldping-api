@@ -71,7 +71,7 @@ func main() {
 	// only local events supported.
 	events.Init()
 
-	metric_publish.Init(metricsBackend, setting.MetricPublish.Topic, setting.MetricPublish.Broker, setting.MetricPublish.Compression, setting.MetricPublish.Enabled)
+	metric_publish.Init(metricsBackend, setting.MetricPublish.Topic, setting.MetricPublish.Broker, setting.MetricPublish.Compression, setting.MetricPublish.Enabled, "byOrg")
 	event_publish.Init(metricsBackend, setting.EventPublish.Topic, setting.EventPublish.Broker, setting.EventPublish.Compression, setting.EventPublish.Enabled)
 
 	api.InitCollectorController(metricsBackend)

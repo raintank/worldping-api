@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Unknwon/macaron"
 	. "github.com/smartystreets/goconvey/convey"
+	"gopkg.in/macaron.v1"
 )
 
 func TestHttpApi(t *testing.T) {

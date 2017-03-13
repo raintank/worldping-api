@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Unknwon/macaron"
 	"github.com/go-xorm/xorm"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore/sqlutil"
 	"github.com/raintank/worldping-api/pkg/setting"
 	. "github.com/smartystreets/goconvey/convey"
+	"gopkg.in/macaron.v1"
 )
 
 func InitTestDB(t *testing.T) {
@@ -50,8 +50,9 @@ func TestQuotasV1Api(t *testing.T) {
 	setting.Quota = setting.QuotaSettings{
 		Enabled: false,
 		Org: &setting.OrgQuota{
-			Endpoint: 10,
-			Probe:    10,
+			Endpoint:      10,
+			Probe:         10,
+			DownloadLimit: 102400,
 		},
 		Global: &setting.GlobalQuota{
 			Endpoint: -1,
@@ -76,12 +77,12 @@ func TestQuotasV1Api(t *testing.T) {
 					err := json.Unmarshal(resp.Body.Bytes(), &quota)
 					So(err, ShouldBeNil)
 
-					So(len(quota), ShouldEqual, 2)
+					So(len(quota), ShouldEqual, 3)
 					So(quota[0].OrgId, ShouldEqual, 1)
 					So(quota[0].Limit, ShouldEqual, -1)
 					So(quota[0].Used, ShouldEqual, -10)
 					for _, q := range quota {
-						So(q.Target, ShouldBeIn, "endpoint", "probe")
+						So(q.Target, ShouldBeIn, "endpoint", "probe", "downloadLimit")
 					}
 				})
 			})
@@ -106,7 +107,7 @@ func TestQuotasV1Api(t *testing.T) {
 					err := json.Unmarshal(resp.Body.Bytes(), &quota)
 					So(err, ShouldBeNil)
 
-					So(len(quota), ShouldEqual, 2)
+					So(len(quota), ShouldEqual, 3)
 
 					for i := range []int{1, 2, 3} {
 						Convey(fmt.Sprintf("when %d endpoints", i), func() {
@@ -117,9 +118,13 @@ func TestQuotasV1Api(t *testing.T) {
 							endpointCount = i
 							So(err, ShouldBeNil)
 							for _, q := range quota {
-								So(quota[0].OrgId, ShouldEqual, 1)
-								So(quota[0].Limit, ShouldEqual, 10)
-								So(q.Target, ShouldBeIn, "endpoint", "probe")
+								So(q.OrgId, ShouldEqual, 1)
+								if q.Target == "downloadLimit" {
+									So(q.Limit, ShouldEqual, 102400)
+								} else {
+									So(q.Limit, ShouldEqual, 10)
+								}
+								So(q.Target, ShouldBeIn, "endpoint", "probe", "downloadLimit")
 								if q.Target == "endpoint" {
 									So(q.Used, ShouldEqual, endpointCount)
 								}
@@ -135,9 +140,13 @@ func TestQuotasV1Api(t *testing.T) {
 							probeCount = i
 							So(err, ShouldBeNil)
 							for _, q := range quota {
-								So(quota[0].OrgId, ShouldEqual, 1)
-								So(quota[0].Limit, ShouldEqual, 10)
-								So(q.Target, ShouldBeIn, "endpoint", "probe")
+								So(q.OrgId, ShouldEqual, 1)
+								if q.Target == "downloadLimit" {
+									So(q.Limit, ShouldEqual, 102400)
+								} else {
+									So(q.Limit, ShouldEqual, 10)
+								}
+								So(q.Target, ShouldBeIn, "endpoint", "probe", "downloadLimit")
 								if q.Target == "probe" {
 									So(q.Used, ShouldEqual, probeCount)
 								}
@@ -645,10 +654,10 @@ func TestEndpointV1Api(t *testing.T) {
 					CollectorTags: []string{"test"},
 					Settings: []m.MonitorSettingDTO{
 						{Variable: "host", Value: "www6.google.com"},
-						{"path", "/foo"},
-						{"port", "80"},
-						{"method", "GET"},
-						{"timeout", "5"},
+						{Variable: "path", Value: "/foo"},
+						{Variable: "port", Value: "80"},
+						{Variable: "method", Value: "GET"},
+						{Variable: "timeout", Value: "5"},
 					},
 					HealthSettings: &m.CheckHealthSettings{
 						NumProbes: 1,
@@ -662,8 +671,8 @@ func TestEndpointV1Api(t *testing.T) {
 					Enabled:       true,
 					CollectorIds:  []int64{1, 2, 4},
 					Settings: []m.MonitorSettingDTO{
-						{"hostname", "www6.google.com"},
-						{"timeout", "5"},
+						{Variable: "hostname", Value: "www6.google.com"},
+						{Variable: "timeout", Value: "5"},
 					},
 					HealthSettings: &m.CheckHealthSettings{
 						NumProbes: 1,
@@ -823,10 +832,10 @@ func TestMonitorV1Api(t *testing.T) {
 			CollectorIds:  []int64{1, 5},
 			Settings: []m.MonitorSettingDTO{
 				{Variable: "host", Value: "www1.google.com"},
-				{"path", "/foo"},
-				{"port", "8080"},
-				{"method", "GET"},
-				{"timeout", "5"},
+				{Variable: "path", Value: "/foo"},
+				{Variable: "port", Value: "8080"},
+				{Variable: "method", Value: "GET"},
+				{Variable: "timeout", Value: "5"},
 			},
 			HealthSettings: &m.CheckHealthSettings{
 				NumProbes: 1,
@@ -867,10 +876,10 @@ func TestMonitorV1Api(t *testing.T) {
 			CollectorIds:  []int64{1, 5},
 			Settings: []m.MonitorSettingDTO{
 				{Variable: "host", Value: "www7.google.com"},
-				{"path", "/foo"},
-				{"port", "8080"},
-				{"method", "GET"},
-				{"timeout", "5"},
+				{Variable: "path", Value: "/foo"},
+				{Variable: "port", Value: "8080"},
+				{Variable: "method", Value: "GET"},
+				{Variable: "timeout", Value: "5"},
 			},
 			HealthSettings: &m.CheckHealthSettings{
 				NumProbes: 1,
