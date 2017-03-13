@@ -50,8 +50,9 @@ func TestQuotasV1Api(t *testing.T) {
 	setting.Quota = setting.QuotaSettings{
 		Enabled: false,
 		Org: &setting.OrgQuota{
-			Endpoint: 10,
-			Probe:    10,
+			Endpoint:      10,
+			Probe:         10,
+			DownloadLimit: 102400,
 		},
 		Global: &setting.GlobalQuota{
 			Endpoint: -1,
@@ -76,12 +77,12 @@ func TestQuotasV1Api(t *testing.T) {
 					err := json.Unmarshal(resp.Body.Bytes(), &quota)
 					So(err, ShouldBeNil)
 
-					So(len(quota), ShouldEqual, 2)
+					So(len(quota), ShouldEqual, 3)
 					So(quota[0].OrgId, ShouldEqual, 1)
 					So(quota[0].Limit, ShouldEqual, -1)
 					So(quota[0].Used, ShouldEqual, -10)
 					for _, q := range quota {
-						So(q.Target, ShouldBeIn, "endpoint", "probe")
+						So(q.Target, ShouldBeIn, "endpoint", "probe", "downloadLimit")
 					}
 				})
 			})
@@ -106,7 +107,7 @@ func TestQuotasV1Api(t *testing.T) {
 					err := json.Unmarshal(resp.Body.Bytes(), &quota)
 					So(err, ShouldBeNil)
 
-					So(len(quota), ShouldEqual, 2)
+					So(len(quota), ShouldEqual, 3)
 
 					for i := range []int{1, 2, 3} {
 						Convey(fmt.Sprintf("when %d endpoints", i), func() {
@@ -117,9 +118,13 @@ func TestQuotasV1Api(t *testing.T) {
 							endpointCount = i
 							So(err, ShouldBeNil)
 							for _, q := range quota {
-								So(quota[0].OrgId, ShouldEqual, 1)
-								So(quota[0].Limit, ShouldEqual, 10)
-								So(q.Target, ShouldBeIn, "endpoint", "probe")
+								So(q.OrgId, ShouldEqual, 1)
+								if q.Target == "downloadLimit" {
+									So(q.Limit, ShouldEqual, 102400)
+								} else {
+									So(q.Limit, ShouldEqual, 10)
+								}
+								So(q.Target, ShouldBeIn, "endpoint", "probe", "downloadLimit")
 								if q.Target == "endpoint" {
 									So(q.Used, ShouldEqual, endpointCount)
 								}
@@ -135,9 +140,13 @@ func TestQuotasV1Api(t *testing.T) {
 							probeCount = i
 							So(err, ShouldBeNil)
 							for _, q := range quota {
-								So(quota[0].OrgId, ShouldEqual, 1)
-								So(quota[0].Limit, ShouldEqual, 10)
-								So(q.Target, ShouldBeIn, "endpoint", "probe")
+								So(q.OrgId, ShouldEqual, 1)
+								if q.Target == "downloadLimit" {
+									So(q.Limit, ShouldEqual, 102400)
+								} else {
+									So(q.Limit, ShouldEqual, 10)
+								}
+								So(q.Target, ShouldBeIn, "endpoint", "probe", "downloadLimit")
 								if q.Target == "probe" {
 									So(q.Used, ShouldEqual, probeCount)
 								}

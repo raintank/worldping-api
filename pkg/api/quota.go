@@ -31,6 +31,12 @@ func V1GetOrgQuotas(c *middleware.Context) {
 				Limit:  -1,
 				Used:   -10,
 			},
+			{
+				OrgId:  c.OrgId,
+				Target: "downloadLimit",
+				Limit:  -1,
+				Used:   -1,
+			},
 		}
 	}
 	c.JSON(200, quotas)
@@ -55,6 +61,12 @@ func GetQuotas(c *middleware.Context) *rbody.ApiResponse {
 			{
 				OrgId:  c.OrgId,
 				Target: "probe",
+				Limit:  -1,
+				Used:   -1,
+			},
+			{
+				OrgId:  c.OrgId,
+				Target: "downloadLimit",
 				Limit:  -1,
 				Used:   -1,
 			},
@@ -84,6 +96,12 @@ func GetOrgQuotas(c *middleware.Context) *rbody.ApiResponse {
 			{
 				OrgId:  org,
 				Target: "probe",
+				Limit:  -1,
+				Used:   -1,
+			},
+			{
+				OrgId:  c.OrgId,
+				Target: "downloadLimit",
 				Limit:  -1,
 				Used:   -1,
 			},
