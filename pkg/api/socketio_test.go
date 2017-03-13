@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/macaron.v1"
 	"github.com/graarh/golang-socketio"
 	"github.com/graarh/golang-socketio/transport"
 	"github.com/raintank/met/helper"
@@ -18,6 +17,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
 	. "github.com/smartystreets/goconvey/convey"
+	"gopkg.in/macaron.v1"
 )
 
 func TestProbeController(t *testing.T) {

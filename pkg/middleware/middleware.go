@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/macaron.v1"
 	"github.com/raintank/raintank-apps/pkg/auth"
+	"gopkg.in/macaron.v1"
 )
 
 type Context struct {

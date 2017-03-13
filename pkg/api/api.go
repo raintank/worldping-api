@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 
-	"gopkg.in/macaron.v1"
 	"github.com/go-macaron/binding"
 	"github.com/raintank/raintank-apps/pkg/auth"
 	"github.com/raintank/worldping-api/pkg/api/rbody"
@@ -12,6 +11,7 @@ import (
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
+	"gopkg.in/macaron.v1"
 )
 
 // Register adds http routes
