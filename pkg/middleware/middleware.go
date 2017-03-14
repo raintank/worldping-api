@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"encoding/base64"
 	"strconv"
 	"strings"
 
@@ -48,11 +49,16 @@ func RoleAuth(roles ...auth.RoleType) macaron.Handler {
 
 func Auth(adminKey string) macaron.Handler {
 	return func(ctx *Context) {
-		key := getApiKey(ctx)
+		key, err := getApiKey(ctx)
+		if err != nil {
+			ctx.JSON(401, "Invalid Authentication header.")
+			return
+		}
 		if key == "" {
 			ctx.JSON(401, "Unauthorized")
 			return
 		}
+
 		user, err := auth.Auth(adminKey, key)
 		if err != nil {
 			if err == auth.ErrInvalidApiKey {
@@ -76,13 +82,24 @@ func Auth(adminKey string) macaron.Handler {
 	}
 }
 
-func getApiKey(c *Context) string {
+func getApiKey(c *Context) (string, error) {
 	header := c.Req.Header.Get("Authorization")
 	parts := strings.SplitN(header, " ", 2)
 	if len(parts) == 2 && parts[0] == "Bearer" {
 		key := parts[1]
-		return key
+		return key, nil
 	}
 
-	return ""
+	if len(parts) == 2 && parts[0] == "Basic" {
+		decoded, err := base64.StdEncoding.DecodeString(parts[1])
+		if err != nil {
+			return "", err
+		}
+		userAndPass := strings.SplitN(string(decoded), ":", 2)
+		if userAndPass[0] == "api_key" {
+			return userAndPass[1], nil
+		}
+	}
+
+	return "", nil
 }
