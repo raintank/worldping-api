@@ -47,3 +47,7 @@ func GetBilling(c *middleware.Context) *rbody.ApiResponse {
 
 	return rbody.OkResp("billing", resp)
 }
+
+func GetApiKey(ctx *middleware.Context) *rbody.ApiResponse {
+	return rbody.OkResp("apiKey", map[string]string{"apiKey": ctx.ApiKey})
+}

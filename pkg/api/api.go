@@ -61,6 +61,8 @@ func Register(r *macaron.Macaron) {
 
 	}, middleware.Auth(setting.AdminKey))
 
+	r.Get("/_key", middleware.Auth(setting.AdminKey), wrap(GetApiKey))
+
 	// Old v1 api endpoint.
 	r.Group("/api", func() {
 		// org information available to all users.

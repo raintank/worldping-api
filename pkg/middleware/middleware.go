@@ -12,6 +12,7 @@ import (
 type Context struct {
 	*macaron.Context
 	*auth.SignedInUser
+	ApiKey string
 }
 
 func GetContextHandler() macaron.Handler {
@@ -79,6 +80,7 @@ func Auth(adminKey string) macaron.Handler {
 			}
 		}
 		ctx.SignedInUser = user
+		ctx.ApiKey = key
 	}
 }
 
