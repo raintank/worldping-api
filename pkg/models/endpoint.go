@@ -578,7 +578,7 @@ func (c Check) validateDNSSettings() error {
 	for field, dataType := range requiredFields {
 		rawVal, ok := settings[field]
 		if !ok {
-			return NewValidationError(fmt.Sprintf("%s field missing from Ping check", field))
+			return NewValidationError(fmt.Sprintf("%s field missing from DNS check", field))
 		}
 		switch dataType {
 		case "string":
@@ -587,7 +587,7 @@ func (c Check) validateDNSSettings() error {
 				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected string", field))
 			}
 			if value == "" {
-				return NewValidationError(fmt.Sprintf("%s field missing from Ping check", field))
+				return NewValidationError(fmt.Sprintf("%s field missing from DNS check", field))
 			}
 			if field == "type" {
 				if _, ok := validRecordTypes[value]; !ok {
