@@ -356,6 +356,8 @@ func updateProbe(sess *session, p *m.ProbeDTO) error {
 			Name:          p.Name,
 			Enabled:       p.Enabled,
 			EnabledChange: p.EnabledChange,
+			Latitude:      p.Latitude,
+			Longitude:     p.Longitude,
 			OrgId:         p.OrgId,
 			Public:        p.Public,
 			Created:       existing.Created,
