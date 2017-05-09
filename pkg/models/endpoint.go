@@ -300,6 +300,7 @@ func (c Check) validateHTTPSettings(quotas []OrgQuotaDTO) error {
 		"body":          "string",
 		"timeout":       "number",
 		"downloadLimit": "size",
+		"ipversion":     "ipversion",
 	}
 	for field, dataType := range requiredFields {
 		rawVal, ok := settings[field]
@@ -386,6 +387,14 @@ func (c Check) validateHTTPSettings(quotas []OrgQuotaDTO) error {
 					}
 				}
 			}
+		case "ipversion":
+			version, ok := rawVal.(string)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected ip version", field))
+			}
+			if !(version == "v4" || version == "v6" || version == "any") {
+				return NewValidationError(fmt.Sprintf("%s field is invalid. Expected v4, v6 or any", field))
+			}
 		}
 	}
 
@@ -408,6 +417,7 @@ func (c Check) validateHTTPSSettings(quotas []OrgQuotaDTO) error {
 		"body":          "string",
 		"timeout":       "number",
 		"downloadLimit": "size",
+		"ipversion":     "ipversion",
 	}
 	for field, dataType := range requiredFields {
 		rawVal, ok := settings[field]
@@ -499,6 +509,14 @@ func (c Check) validateHTTPSSettings(quotas []OrgQuotaDTO) error {
 					}
 				}
 			}
+		case "ipversion":
+			version, ok := rawVal.(string)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected ip version", field))
+			}
+			if !(version == "v4" || version == "v6" || version == "any") {
+				return NewValidationError(fmt.Sprintf("%s field is invalid. Expected v4, v6 or any", field))
+			}
 		}
 	}
 	return nil
@@ -512,6 +530,7 @@ func (c Check) validatePINGSettings() error {
 	}
 	optFields := map[string]string{
 		"timeout": "number",
+		"ipversion":     "ipversion",
 	}
 	for field, dataType := range requiredFields {
 		rawVal, ok := settings[field]
@@ -545,6 +564,14 @@ func (c Check) validatePINGSettings() error {
 				if value <= 0.0 || value > 10.0 {
 					return NewValidationError(fmt.Sprintf("%s field is invalid. must be between 1 and 10", field))
 				}
+			}
+		case "ipversion":
+			version, ok := rawVal.(string)
+			if !ok {
+				return NewValidationError(fmt.Sprintf("%s field is invalid type. Expected ip version", field))
+			}
+			if !(version == "v4" || version == "v6" || version == "any") {
+				return NewValidationError(fmt.Sprintf("%s field is invalid. Expected v4, v6 or any", field))
 			}
 		}
 	}
