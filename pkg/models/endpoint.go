@@ -529,8 +529,8 @@ func (c Check) validatePINGSettings() error {
 		"hostname": "string",
 	}
 	optFields := map[string]string{
-		"timeout": "number",
-		"ipversion":     "ipversion",
+		"timeout":   "number",
+		"ipversion": "ipversion",
 	}
 	for field, dataType := range requiredFields {
 		rawVal, ok := settings[field]
