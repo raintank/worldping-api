@@ -5,7 +5,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/grafana/grafana/pkg/util"
@@ -15,9 +14,25 @@ import (
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
+var (
+	GraphiteUrl *url.URL
+	gProxy      httputil.ReverseProxy
+)
+
+func initGraphiteProxy() error {
+	GraphiteUrl, err := url.Parse(setting.TsdbUrl + "graphite/")
+	if err != nil {
+		return err
+	}
+	gProxy.Director = func(req *http.Request) {
+		req.URL.Scheme = GraphiteUrl.Scheme
+		req.URL.Host = GraphiteUrl.Host
+	}
+	return nil
+}
+
 func V1GraphiteProxy(c *middleware.Context) {
 	proxyPath := c.Params("*")
-	target, _ := url.Parse(setting.GraphiteUrl)
 
 	// check if this is a special raintank_db requests
 	if proxyPath == "metrics/find" {
@@ -33,16 +48,8 @@ func V1GraphiteProxy(c *middleware.Context) {
 		}
 	}
 
-	director := func(req *http.Request) {
-		req.URL.Scheme = target.Scheme
-		req.URL.Host = target.Host
-		req.Header.Add("X-Org-Id", strconv.FormatInt(c.OrgId, 10))
-		req.URL.Path = util.JoinUrlFragments(target.Path, proxyPath)
-	}
-
-	proxy := &httputil.ReverseProxy{Director: director}
-
-	proxy.ServeHTTP(c.Resp, c.Req.Request)
+	// forward to tsdb-gw
+	gProxy.ServeHTTP(c.Resp, c.Req.Request)
 }
 
 func executeRaintankDbQuery(query string, orgId int64) (interface{}, error) {

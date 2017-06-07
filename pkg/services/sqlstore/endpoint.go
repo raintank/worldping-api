@@ -779,7 +779,7 @@ func batchUpdateCheckState(sess *session, jobs []*m.AlertingJob) ([]*m.AlertingJ
 	lastCheckSql := "UPDATE `check` SET state_check=? WHERE id=?"
 	jobsWithStateChange := make([]*m.AlertingJob, 0)
 	for _, j := range jobs {
-		res, err := sess.Exec(stateSql, int(j.NewState), j.TimeExec, j.CheckId, int(j.NewState), j.TimeExec)
+		res, err := sess.Exec(stateSql, int(j.NewState), j.TimeExec, j.Id, int(j.NewState), j.TimeExec)
 		if err != nil {
 			return nil, err
 		}
@@ -790,7 +790,7 @@ func batchUpdateCheckState(sess *session, jobs []*m.AlertingJob) ([]*m.AlertingJ
 			jobsWithStateChange = append(jobsWithStateChange, j)
 		}
 
-		res, err = sess.Exec(lastCheckSql, j.TimeExec, j.CheckId)
+		res, err = sess.Exec(lastCheckSql, j.TimeExec, j.Id)
 		if err != nil {
 			return nil, err
 		}

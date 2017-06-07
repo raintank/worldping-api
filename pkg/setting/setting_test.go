@@ -19,7 +19,7 @@ func TestLoadingSettings(t *testing.T) {
 		})
 
 		Convey("Should be able to override via environment variables", func() {
-			os.Setenv("GF_SERVER_ADMIN_KEY", "superduper")
+			os.Setenv("WP_SERVER_ADMIN_KEY", "superduper")
 			NewConfigContext(&CommandLineArgs{HomePath: "../../"})
 
 			So(AdminKey, ShouldEqual, "superduper")
@@ -49,12 +49,12 @@ func TestLoadingSettings(t *testing.T) {
 			NewConfigContext(&CommandLineArgs{
 				HomePath: "../../",
 				Args: []string{
-					"cfg:default.server.domain=test2",
+					"cfg:default.server.enable_gzip=true",
 				},
 				Config: filepath.Join(HomePath, "tests/config-files/override.ini"),
 			})
 
-			So(Domain, ShouldEqual, "test2")
+			So(EnableGzip, ShouldEqual, true)
 		})
 
 		Convey("Defaults can be overriden in specified config file", func() {
@@ -78,10 +78,10 @@ func TestLoadingSettings(t *testing.T) {
 		})
 
 		Convey("Can use environment variables in config values", func() {
-			os.Setenv("GF_DATA_PATH", "/tmp/env_override")
+			os.Setenv("WP_DATA_PATH", "/tmp/env_override")
 			NewConfigContext(&CommandLineArgs{
 				HomePath: "../../",
-				Args:     []string{"cfg:paths.data=${GF_DATA_PATH}"},
+				Args:     []string{"cfg:paths.data=${WP_DATA_PATH}"},
 			})
 
 			So(DataPath, ShouldEqual, "/tmp/env_override")

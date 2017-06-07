@@ -2,6 +2,7 @@ package events
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	m "github.com/raintank/worldping-api/pkg/models"
@@ -10,6 +11,10 @@ import (
 type EndpointCreated struct {
 	Ts      time.Time
 	Payload *m.EndpointDTO
+}
+
+func (a *EndpointCreated) Id() string {
+	return fmt.Sprintf("%d", a.Payload.Id)
 }
 
 func (a *EndpointCreated) Type() string {
@@ -27,6 +32,10 @@ func (a *EndpointCreated) Body() ([]byte, error) {
 type EndpointDeleted struct {
 	Ts      time.Time
 	Payload *m.EndpointDTO
+}
+
+func (a *EndpointDeleted) Id() string {
+	return fmt.Sprintf("%d", a.Payload.Id)
 }
 
 func (a *EndpointDeleted) Type() string {
@@ -47,6 +56,10 @@ type EndpointUpdated struct {
 		Last    *m.EndpointDTO `json:"last"`
 		Current *m.EndpointDTO `json:"current"`
 	}
+}
+
+func (a *EndpointUpdated) Id() string {
+	return fmt.Sprintf("%d", a.Payload.Current.Id)
 }
 
 func (a *EndpointUpdated) Type() string {

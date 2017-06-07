@@ -2,6 +2,7 @@ package events
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	m "github.com/raintank/worldping-api/pkg/models"
@@ -10,6 +11,10 @@ import (
 type ProbeCreated struct {
 	Ts      time.Time
 	Payload *m.ProbeDTO
+}
+
+func (a *ProbeCreated) Id() string {
+	return fmt.Sprintf("%d", a.Payload.Id)
 }
 
 func (a *ProbeCreated) Type() string {
@@ -27,6 +32,10 @@ func (a *ProbeCreated) Body() ([]byte, error) {
 type ProbeDeleted struct {
 	Ts      time.Time
 	Payload *m.ProbeDTO
+}
+
+func (a *ProbeDeleted) Id() string {
+	return fmt.Sprintf("%d", a.Payload.Id)
 }
 
 func (a *ProbeDeleted) Type() string {
@@ -49,6 +58,10 @@ type ProbeUpdated struct {
 	}
 }
 
+func (a *ProbeUpdated) Id() string {
+	return fmt.Sprintf("%d", a.Payload.Current.Id)
+}
+
 func (a *ProbeUpdated) Type() string {
 	return "Probe.updated"
 }
@@ -64,6 +77,10 @@ func (a *ProbeUpdated) Body() ([]byte, error) {
 type ProbeOnline struct {
 	Ts      time.Time
 	Payload *m.ProbeDTO
+}
+
+func (a *ProbeOnline) Id() string {
+	return fmt.Sprintf("%d", a.Payload.Id)
 }
 
 func (a *ProbeOnline) Type() string {
@@ -83,6 +100,10 @@ type ProbeOffline struct {
 	Payload *m.ProbeDTO
 }
 
+func (a *ProbeOffline) Id() string {
+	return fmt.Sprintf("%d", a.Payload.Id)
+}
+
 func (a *ProbeOffline) Type() string {
 	return "Probe.offline"
 }
@@ -100,6 +121,10 @@ type ProbeSessionCreated struct {
 	Payload *m.ProbeSession
 }
 
+func (a *ProbeSessionCreated) Id() string {
+	return fmt.Sprintf("%d", a.Payload.Id)
+}
+
 func (a *ProbeSessionCreated) Type() string {
 	return "ProbeSession.created"
 }
@@ -115,6 +140,10 @@ func (a *ProbeSessionCreated) Body() ([]byte, error) {
 type ProbeSessionDeleted struct {
 	Ts      time.Time
 	Payload *m.ProbeSession
+}
+
+func (a *ProbeSessionDeleted) Id() string {
+	return fmt.Sprintf("%d", a.Payload.Id)
 }
 
 func (a *ProbeSessionDeleted) Type() string {

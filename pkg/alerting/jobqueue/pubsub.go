@@ -1,194 +1,158 @@
 package jobqueue
 
 import (
+	"encoding/json"
+	"fmt"
+	"strings"
+	"sync"
 	"time"
 
+	"github.com/Shopify/sarama"
+	"github.com/bsm/sarama-cluster"
 	"github.com/raintank/worldping-api/pkg/log"
-	"github.com/streadway/amqp"
-	"golang.org/x/net/context"
+	m "github.com/raintank/worldping-api/pkg/models"
+	"github.com/raintank/worldping-api/pkg/setting"
 )
 
-// session composes an amqp.Connection with an amqp.Channel
-type session struct {
-	*amqp.Connection
-	*amqp.Channel
+type KafkaPubSub struct {
+	instance string
+	consumer *cluster.Consumer
+	producer sarama.SyncProducer
+	topic    string
+	pub      <-chan *m.AlertingJob
+	sub      chan<- *m.AlertingJob
+	wg       sync.WaitGroup
+	shutdown chan struct{}
 }
 
-// Close tears the connection down, taking the channel with it.
-func (s session) Close() error {
-	if s.Connection == nil {
-		return nil
+func NewKafkaPubSub(brokersStr, topic string, pub <-chan *m.AlertingJob, sub chan<- *m.AlertingJob) *KafkaPubSub {
+	brokers := strings.Split(brokersStr, ",")
+	config := cluster.NewConfig()
+	config.Consumer.Offsets.Initial = sarama.OffsetNewest
+	config.Group.Return.Notifications = true
+	config.ClientID = setting.InstanceId + "_alerting"
+	config.Version = sarama.V0_10_0_0
+	config.Producer.RequiredAcks = sarama.WaitForAll // Wait for all in-sync replicas to ack the message
+	config.Producer.Retry.Max = 10                   // Retry up to 10 times to produce the message
+	config.Producer.Compression = sarama.CompressionSnappy
+	config.Producer.Return.Successes = true
+	err := config.Validate()
+	if err != nil {
+		log.Fatal(2, "JobQueue: invalid kafka consumer config: %s", err)
 	}
-	return s.Connection.Close()
+
+	consumer, err := cluster.NewConsumer(brokers, "worldping-alerts", []string{topic}, config)
+	if err != nil {
+		log.Fatal(4, "JobQueue: failed to initialize kafka consumer: %s", err)
+	}
+
+	producer, err := sarama.NewSyncProducer(brokers, &config.Config)
+	if err != nil {
+		log.Fatal(4, "JobQueue: failed to initialize kafka producer: %s", err)
+	}
+
+	pubSub := &KafkaPubSub{
+		instance: setting.InstanceId,
+		consumer: consumer,
+		producer: producer,
+		topic:    topic,
+		pub:      pub,
+		sub:      sub,
+		shutdown: make(chan struct{}),
+	}
+	return pubSub
 }
 
-// redial continually connects to the URL, exiting the program when no longer possible
-func redial(ctx context.Context, url, exchange string) chan chan session {
-	sessions := make(chan chan session)
-
-	go func() {
-		sess := make(chan session)
-		defer close(sessions)
-
-		for {
-			select {
-			case sessions <- sess:
-			case <-ctx.Done():
-				log.Info("shutting down session factory")
-				return
-			}
-
-			connected := false
-			var conn *amqp.Connection
-			var ch *amqp.Channel
-			var err error
-			for !connected {
-				log.Debug("dialing amqp url: %s", url)
-				conn, err = amqp.Dial(url)
-				if err != nil {
-					log.Error(3, "cannot (re)dial: %v: %q", err, url)
-					time.Sleep(time.Second)
-					continue
-				}
-				log.Debug("connected to %s", url)
-
-				log.Debug("creating new channel on AMQP connection.")
-				ch, err = conn.Channel()
-				if err != nil {
-					log.Error(3, "cannot create channel: %v", err)
-					conn.Close()
-					time.Sleep(time.Second)
-					continue
-				}
-				log.Debug("Ensuring that %s x-consistent-hash exchange exists on AMQP server.", exchange)
-				if err := ch.ExchangeDeclare(exchange, "x-consistent-hash", true, false, false, false, nil); err != nil {
-					log.Error(3, "cannot declare x-consistent-hash exchange: %v", err)
-					conn.Close()
-					time.Sleep(time.Second)
-				}
-				log.Debug("Successfully connected to RabbitMQ.")
-				connected = true
-			}
-
-			select {
-			case sess <- session{conn, ch}:
-			case <-ctx.Done():
-				log.Info("shutting down new session")
-				return
-			}
-		}
-	}()
-
-	return sessions
+func (ps *KafkaPubSub) Run() {
+	go ps.consume(ps.sub)
+	go ps.produce(ps.pub)
 }
 
-// publish publishes messages to a reconnecting session to a topic exchange.
-// It receives from the application specific source of messages.
-func publish(sessions chan chan session, exchange string, messages <-chan Message) {
-	var (
-		running bool
-		reading = messages
-		pending = make(chan Message, 1)
-		confirm = make(chan amqp.Confirmation, 1)
-	)
+func (ps *KafkaPubSub) Close() {
+	close(ps.shutdown)
+	ps.wg.Wait()
+}
 
-	for session := range sessions {
-		log.Debug("waiting for new session to be established.")
-		pub := <-session
+func (ps *KafkaPubSub) consume(sub chan<- *m.AlertingJob) {
+	ps.wg.Add(1)
+	defer ps.wg.Done()
+	log.Info("JobQueue: consuming from %s", ps.topic)
 
-		// publisher confirms for this channel/connection
-		if err := pub.Confirm(false); err != nil {
-			log.Info("publisher confirms not supported")
-			close(confirm) // confirms not supported, simulate by always nacking
-		} else {
-			pub.NotifyPublish(confirm)
+	for {
+		select {
+		case msg, ok := <-ps.consumer.Messages():
+			if !ok {
+				continue
+			}
+			log.Debug("JobQueue: kafka consumer received message: Topic %s, Partition: %d, Offset: %d, Key: %s", msg.Topic, msg.Partition, msg.Offset, msg.Key)
+			job := new(m.AlertingJob)
+			err := json.Unmarshal(msg.Value, job)
+			if err != nil {
+				log.Error(3, "JobQueue: kafka consumer failed to unmarshal job. %s", err)
+			} else {
+				sub <- job
+			}
+			ps.consumer.MarkOffset(msg, "")
+		case notification, ok := <-ps.consumer.Notifications():
+			if !ok {
+				continue
+			}
+			claimed := ""
+			for topic, partitions := range notification.Current {
+				claimed += fmt.Sprintf("%s:%v ", topic, partitions)
+			}
+			log.Info("JobQueue: kafaka consumer rebalancing. claimed partitions: %s", claimed)
+		case <-ps.shutdown:
+			ps.consumer.Close()
+			log.Info("JobQueue: kafka consumer for %s", ps.topic)
+			return
 		}
+	}
+}
 
-		log.Info("Event publisher started...")
-
-		for {
-			var body Message
-			select {
-			case confirmed := <-confirm:
-				if !confirmed.Ack {
-					log.Error(3, "nack message %d, body: %q", confirmed.DeliveryTag, string(body.Payload))
-				}
-				reading = messages
-
-			case body = <-pending:
-				err := pub.Publish(exchange, body.RoutingKey, false, false, amqp.Publishing{
-					Body: body.Payload,
-				})
-				// Retry failed delivery on the next session
+func (ps *KafkaPubSub) produce(pub <-chan *m.AlertingJob) {
+	ps.wg.Add(1)
+	defer ps.wg.Done()
+	done := make(chan struct{})
+	for {
+		select {
+		case job, ok := <-pub:
+			if !ok {
+				log.Info("jobQueue: pub channel has closed.")
+				go func() {
+					ps.producer.Close()
+					close(done)
+				}()
+				<-done
+				return
+			}
+			data, err := json.Marshal(job)
+			if err != nil {
+				log.Error(3, "JobQueue: kafka producer failed to marshal job to json. %s", err)
+				continue
+			}
+			pm := &sarama.ProducerMessage{
+				Topic: ps.topic,
+				Value: sarama.ByteEncoder(data),
+				Key:   sarama.StringEncoder(fmt.Sprintf("%d-%s", job.Id, job.LastPointTs.String())),
+			}
+			for {
+				partition, offset, err := ps.producer.SendMessage(pm)
 				if err != nil {
-					pending <- body
-					pub.Close()
+					log.Error(3, "jobQueue: failed to publish message. %s", err)
+					time.Sleep(time.Second)
+				} else {
+					log.Debug("jobQueue: message published to partition %d with offset %d", partition, offset)
 					break
 				}
-
-			case body, running = <-reading:
-				// all messages consumed
-				if !running {
-					return
-				}
-				// work on pending delivery until ack'd
-				pending <- body
-				reading = nil
 			}
+		case <-ps.shutdown:
+			go func() {
+				ps.producer.Close()
+				close(done)
+			}()
+			<-done
+			return
 		}
 	}
-}
-
-// subscribe consumes deliveries from an exclusive queue from a fanout exchange and sends to the application specific messages chan.
-func subscribe(sessions chan chan session, exchange string, messages chan<- Message) {
-	for session := range sessions {
-		log.Debug("alerting: waiting for new session to be established.")
-		sub := <-session
-
-		log.Debug("alerting: declaring new ephemeral Queue %v", sub)
-		q, err := sub.QueueDeclare("", false, true, true, false, nil)
-		if err != nil {
-			log.Error(3, "cannot consume from exclusive: %v", err)
-			sub.Close()
-			continue
-		}
-
-		log.Debug("alerting: binding queue %s to routingKey 10", q.Name)
-		routingKey := "10"
-		if err := sub.QueueBind(q.Name, routingKey, exchange, false, nil); err != nil {
-			log.Error(3, "alerting: cannot consume without a binding to exchange: %q, %v", exchange, err)
-			sub.Close()
-			continue
-		}
-
-		deliveries, err := sub.Consume(q.Name, "", false, true, false, false, nil)
-		if err != nil {
-			log.Error(3, "alerting: cannot consume from queue: %q, %v", q.Name, err)
-			sub.Close()
-			continue
-		}
-
-		log.Info("alerting: subscribed to rabbitmq %s exchange...", exchange)
-
-		for msg := range deliveries {
-			log.Debug("alerting: new message received from rabbitmq")
-			messages <- Message{RoutingKey: msg.RoutingKey, Payload: msg.Body}
-			sub.Ack(msg.DeliveryTag, false)
-		}
-	}
-}
-
-func Run(rabbitmqUrl, exchange string, pub, sub chan Message) {
-	ctx, done := context.WithCancel(context.Background())
-	go func() {
-		publish(redial(ctx, rabbitmqUrl, exchange), exchange, pub)
-		done()
-	}()
-
-	go func() {
-		subscribe(redial(ctx, rabbitmqUrl, exchange), exchange, sub)
-		done()
-	}()
-
-	<-ctx.Done()
 }

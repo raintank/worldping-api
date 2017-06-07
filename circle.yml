@@ -1,16 +1,17 @@
 machine:
   services:
     - docker
-  node:
-    version: 4.0
   environment:
     GOPATH: "/home/ubuntu/.go_workspace"
-    ORG_PATH: "github.com/raintank"
-    REPO_PATH: "${ORG_PATH}/worldping-api"
+    IMPORTPATH: "/home/ubuntu/.go_workspace/src/github.com/raintank/worldping-api"
+    GODIST: "go1.8.1.linux-amd64.tar.gz"
+  post:
+    - mkdir -p download
+    - test -e download/$GODIST || curl -o download/$GODIST https://storage.googleapis.com/golang/$GODIST
+    - sudo rm -rf /usr/local/go
+    - sudo tar -C /usr/local -xzf download/$GODIST
 
 dependencies:
-  pre:
-    - if [[ ! -e /usr/local/go-1.8 ]]; then sudo mv /usr/local/go /usr/local/go-1.5.1; wget https://storage.googleapis.com/golang/go1.8.linux-amd64.tar.gz && sudo tar -C /usr/local -zxf go1.8.linux-amd64.tar.gz && sudo mv /usr/local/go /usr/local/go-1.8 && sudo ln -s /usr/local/go-1.8 /usr/local/go; fi
   override:
     - scripts/depends.sh
     - scripts/build.sh
@@ -21,12 +22,9 @@ general:
 
 test:
   override:
-     # FMT
-     - test -z "$(gofmt -s -l . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
-     # GO VET
-     - go vet ./pkg/...
-     # Go test
-     - go test ./pkg/...
+     - cd $IMPORTPATH && test -z "$(gofmt -s -l main.go ./pkg/* | tee /dev/stderr)"
+     - cd $IMPORTPATH && go test -v $(go list ./... | grep -v /vendor/)
+     - cd $IMPORTPATH && go vet $(go list ./... | grep -v /vendor/)
   post:
      - scripts/packaging.sh 
 deployment:

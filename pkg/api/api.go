@@ -114,6 +114,10 @@ func Register(r *macaron.Macaron) {
 	r.Any("/socket.io/", SocketIO)
 
 	r.NotFound(NotFoundHandler)
+
+	if err := initGraphiteProxy(); err != nil {
+		log.Fatal(4, "API: failed to initialize Graphite Proxy. %s", err)
+	}
 }
 
 func NotFoundHandler(c *middleware.Context) {

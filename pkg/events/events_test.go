@@ -16,6 +16,10 @@ type TestEvent struct {
 	Payload map[string]string
 }
 
+func (a *TestEvent) Id() string {
+	return "test"
+}
+
 func (t *TestEvent) Type() string {
 	return "test.event"
 }
@@ -51,7 +55,7 @@ func TestEventPublish(t *testing.T) {
 		msg := <-pubChan
 
 		So(msg, ShouldHaveSameTypeAs, Message{})
-		So(msg.RoutingKey, ShouldEqual, e.Type())
+		So(msg.Id, ShouldEqual, e.Id())
 		t.Log(string(msg.Payload))
 		// make sure the message sent to the Publish channel is
 		// correct.
@@ -97,7 +101,7 @@ func TestEventHandler(t *testing.T) {
 }
 
 func TestEventSubcribe(t *testing.T) {
-	setting.Rabbitmq = setting.RabbitmqSettings{
+	setting.Kafka = setting.KafkaSettings{
 		Enabled: false,
 	}
 	Init()

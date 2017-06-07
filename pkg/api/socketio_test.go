@@ -18,7 +18,19 @@ import (
 	"github.com/raintank/worldping-api/pkg/setting"
 	. "github.com/smartystreets/goconvey/convey"
 	"gopkg.in/macaron.v1"
+	"gopkg.in/raintank/schema.v1"
 )
+
+type mockPublisher struct {
+}
+
+func (m *mockPublisher) Add(metrics []*schema.MetricData) {
+	return
+}
+
+func (m *mockPublisher) AddEvent(event *schema.ProbeEvent) {
+	return
+}
 
 func TestProbeController(t *testing.T) {
 	setting.AdminKey = "test"
@@ -26,7 +38,7 @@ func TestProbeController(t *testing.T) {
 
 	backend, _ := helper.New(false, "", "standard", "", "")
 	events.Init()
-	InitCollectorController(backend)
+	InitCollectorController(backend, &mockPublisher{})
 	r := macaron.Classic()
 	Register(r)
 	srv := httptest.NewServer(r)

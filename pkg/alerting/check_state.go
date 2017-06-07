@@ -57,11 +57,11 @@ func ProcessResult(job *m.AlertingJob) {
 
 func handleStateChange(c chan *m.AlertingJob) {
 	for job := range c {
-		log.Debug("state change: orgId=%d, monitorId=%d, endpointSlug=%s, state=%s", job.OrgId, job.CheckId, job.EndpointSlug, job.NewState.String())
-		if job.Notifications.Enabled {
-			emails := strings.Split(job.Notifications.Addresses, ",")
+		log.Debug("state change: orgId=%d, monitorId=%d, endpointSlug=%s, state=%s", job.OrgId, job.Id, job.Slug, job.NewState.String())
+		if job.HealthSettings.Notifications.Enabled {
+			emails := strings.Split(job.HealthSettings.Notifications.Addresses, ",")
 			if len(emails) < 1 {
-				log.Debug("no email addresses provided. OrgId: %d monitorId: %d", job.OrgId, job.CheckId)
+				log.Debug("no email addresses provided. OrgId: %d monitorId: %d", job.OrgId, job.Id)
 			} else {
 				emailTo := make([]string, 0)
 				for _, email := range emails {
@@ -69,7 +69,7 @@ func handleStateChange(c chan *m.AlertingJob) {
 					if email == "" {
 						continue
 					}
-					log.Info("sending email. addr=%s, orgId=%d, monitorId=%d, endpointSlug=%s, state=%s", email, job.OrgId, job.CheckId, job.EndpointSlug, job.NewState.String())
+					log.Info("sending email. addr=%s, orgId=%d, monitorId=%d, endpointSlug=%s, state=%s", email, job.OrgId, job.Id, job.Slug, job.NewState.String())
 					emailTo = append(emailTo, email)
 				}
 				if len(emailTo) == 0 {
@@ -80,10 +80,10 @@ func handleStateChange(c chan *m.AlertingJob) {
 					Template: "alerting_notification.html",
 					Data: map[string]interface{}{
 						"EndpointId":   job.EndpointId,
-						"EndpointName": job.EndpointName,
-						"EndpointSlug": job.EndpointSlug,
+						"EndpointName": job.Name,
+						"EndpointSlug": job.Slug,
 						"Settings":     job.Settings,
-						"CheckType":    job.CheckType,
+						"CheckType":    job.Type,
 						"State":        job.NewState.String(),
 						"TimeLastData": job.LastPointTs, // timestamp of the most recent data used
 						"TimeExec":     job.TimeExec,    // when we executed the alerting rule and made the determination
@@ -91,7 +91,7 @@ func handleStateChange(c chan *m.AlertingJob) {
 				}
 				go func(sendCmd *m.SendEmailCommand, job *m.AlertingJob) {
 					if err := notifications.SendEmail(sendCmd); err != nil {
-						log.Error(3, "failed to send email to %s. OrgId: %d monitorId: %d due to: %s", sendCmd.To, job.OrgId, job.CheckId, err)
+						log.Error(3, "failed to send email to %s. OrgId: %d monitorId: %d due to: %s", sendCmd.To, job.OrgId, job.Id, err)
 					}
 				}(&sendCmd, job)
 			}
