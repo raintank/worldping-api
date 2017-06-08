@@ -49,6 +49,7 @@ func V1ElasticsearchProxy(c *middleware.Context) {
 			req.URL.Scheme = target.Scheme
 			req.URL.Host = target.Host
 			req.URL.Path = util.JoinUrlFragments(target.Path, proxyPath)
+			req.URL.User = target.User
 
 			req.Body = ioutil.NopCloser(bytes.NewReader(searchBody))
 			req.ContentLength = int64(len(searchBody))
