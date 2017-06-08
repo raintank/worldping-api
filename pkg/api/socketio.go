@@ -14,12 +14,11 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/raintank/met"
 	"github.com/raintank/raintank-apps/pkg/auth"
-	"github.com/raintank/tsdb-gw/event_publish"
-	"github.com/raintank/tsdb-gw/metric_publish"
 	"github.com/raintank/worldping-api/pkg/events"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"
+	"github.com/raintank/worldping-api/pkg/services"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
 	"github.com/raintank/worldping-api/pkg/util"
@@ -30,6 +29,7 @@ import (
 var server *socketio.Server
 var contextCache *ContextCache
 var geoipDB *freegeoip.DB
+var publisher services.MetricsEventsPublisher
 
 var (
 	metricsRecvd                  met.Count
@@ -319,7 +319,8 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	return sess, nil
 }
 
-func InitCollectorController(metrics met.Backend) {
+func InitCollectorController(metrics met.Backend, pub services.MetricsEventsPublisher) {
+	publisher = pub
 	if err := sqlstore.ClearProbeSessions(setting.InstanceId); err != nil {
 		log.Fatal(4, "failed to clear collectorSessions", err)
 	}
@@ -369,7 +370,7 @@ func InitCollectorController(metrics met.Backend) {
 			if err == auth.ErrInvalidApiKey {
 				log.Info("probe failed to authenticate.")
 			} else if err.Error() == "invalid probe version. Please upgrade." {
-				log.Info("probeIdis wrong version")
+				log.Info("probeId is wrong version")
 			} else {
 				log.Error(3, "Failed to initialize probe.", err)
 			}
@@ -441,11 +442,7 @@ func (c *CollectorContext) OnEvent(msg *schema.ProbeEvent) {
 	if !c.Probe.Public {
 		msg.OrgId = c.OrgId
 	}
-	err := event_publish.Publish(msg)
-	if err != nil {
-		log.Error(3, "failed to publush Event. %s", err)
-		return
-	}
+	publisher.AddEvent(msg)
 }
 
 func (c *CollectorContext) OnResults(results []*schemaV0.MetricData) {
@@ -469,7 +466,7 @@ func (c *CollectorContext) OnResults(results []*schemaV0.MetricData) {
 			metrics[i].OrgId = int(c.OrgId)
 		}
 	}
-	metric_publish.Publish(metrics)
+	publisher.Add(metrics)
 }
 
 func (c *CollectorContext) Refresh() {

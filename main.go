@@ -2,19 +2,16 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
+	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
-	"runtime"
 	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/Dieterbe/profiletrigger/heap"
 	"github.com/raintank/met/helper"
-	"github.com/raintank/tsdb-gw/event_publish"
-	"github.com/raintank/tsdb-gw/metric_publish"
+	"github.com/raintank/raintank-probe/publisher"
 	"github.com/raintank/worldping-api/pkg/alerting"
 	"github.com/raintank/worldping-api/pkg/api"
 	"github.com/raintank/worldping-api/pkg/cmd"
@@ -32,12 +29,7 @@ var buildstamp string
 
 var configFile = flag.String("config", "", "path to config file")
 var homePath = flag.String("homepath", "", "path to grafana install/home path, defaults to working directory")
-var pidFile = flag.String("pidfile", "", "path to pid file")
 var exitChan = make(chan int)
-
-func init() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-}
 
 func main() {
 	buildstampInt64, _ := strconv.ParseInt(buildstamp, 10, 64)
@@ -49,7 +41,6 @@ func main() {
 	go listenToSystemSignels(notifyShutdown)
 
 	flag.Parse()
-	writePIDFile()
 	initRuntime()
 
 	if setting.ProfileHeapMB > 0 {
@@ -68,15 +59,12 @@ func main() {
 		log.Error(3, "Statsd client:", err)
 	}
 
-	// only local events supported.
 	events.Init()
-
-	metric_publish.Init(metricsBackend, setting.MetricPublish.Topic, setting.MetricPublish.Broker, setting.MetricPublish.Compression, setting.MetricPublish.Enabled, "byOrg")
-	event_publish.Init(metricsBackend, setting.EventPublish.Topic, setting.EventPublish.Broker, setting.EventPublish.Compression, setting.EventPublish.Enabled)
-
-	api.InitCollectorController(metricsBackend)
-	if setting.AlertingEnabled {
-		alerting.Init(metricsBackend)
+	tsdbUrl, _ := url.Parse(setting.TsdbUrl)
+	tsdbPublisher := publisher.NewTsdb(tsdbUrl, setting.AdminKey, 1)
+	api.InitCollectorController(metricsBackend, tsdbPublisher)
+	if setting.Alerting.Enabled {
+		alerting.Init(metricsBackend, tsdbPublisher)
 		alerting.Construct()
 	}
 
@@ -110,24 +98,6 @@ func initRuntime() {
 	sqlstore.NewEngine()
 }
 
-func writePIDFile() {
-	if *pidFile == "" {
-		return
-	}
-
-	// Ensure the required directory structure exists.
-	err := os.MkdirAll(filepath.Dir(*pidFile), 0700)
-	if err != nil {
-		log.Fatal(3, "Failed to verify pid directory", err)
-	}
-
-	// Retrieve the PID and write it.
-	pid := strconv.Itoa(os.Getpid())
-	if err := ioutil.WriteFile(*pidFile, []byte(pid), 0644); err != nil {
-		log.Fatal(3, "Failed to write pidfile", err)
-	}
-}
-
 func listenToSystemSignels(notifyShutdown chan struct{}) {
 	signalChan := make(chan os.Signal, 1)
 	code := 0
@@ -149,6 +119,7 @@ func listenToSystemSignels(notifyShutdown chan struct{}) {
 	}
 	close(notifyShutdown)
 
+	publisher.Publisher.Close()
 	api.ShutdownController()
 	log.Close()
 	os.Exit(code)

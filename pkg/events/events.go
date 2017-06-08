@@ -10,13 +10,21 @@ import (
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
+var hostname string
+
+func init() {
+	hostname, _ = os.Hostname()
+}
+
 type Event interface {
 	Type() string
 	Timestamp() time.Time
 	Body() ([]byte, error)
+	Id() string
 }
 
 type RawEvent struct {
+	Id        string          `json:"id"`
 	Type      string          `json:"type"`
 	Timestamp time.Time       `json:"timestamp"`
 	Body      json.RawMessage `json:"payload"`
@@ -29,8 +37,9 @@ func NewRawEventFromEvent(e Event) (*RawEvent, error) {
 	if err != nil {
 		return nil, err
 	}
-	hostname, _ := os.Hostname()
+
 	raw := &RawEvent{
+		Id:        e.Id(),
 		Type:      e.Type(),
 		Timestamp: e.Timestamp(),
 		Source:    hostname,
@@ -78,10 +87,10 @@ func Init() {
 	}
 	pubChan = make(chan Message, 100)
 
-	if setting.Rabbitmq.Enabled {
+	if setting.Kafka.Enabled {
 		// use rabbitmq for message distribution.
 		subChan = make(chan Message, 10)
-		go Run(setting.Rabbitmq.Url, setting.Rabbitmq.EventsExchange, pubChan, subChan)
+		go Run(setting.Kafka.Brokers, setting.Kafka.Topic, pubChan, subChan)
 		go handleMessages(subChan)
 	} else {
 		// handle all message written to the publish chan.
@@ -110,8 +119,8 @@ func Publish(e Event, attempts int) error {
 		return err
 	}
 	msg := Message{
-		RoutingKey: e.Type(),
-		Payload:    body,
+		Id:      e.Id(),
+		Payload: body,
 	}
 	ticker := time.NewTicker(2 * time.Second)
 	pre := time.Now()

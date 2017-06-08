@@ -12,7 +12,6 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"gopkg.in/ini.v1"
@@ -57,14 +56,12 @@ var (
 
 	// Http server options
 	Protocol           Scheme
-	Domain             string
 	HttpAddr, HttpPort string
 	SshPort            int
 	CertFile, KeyFile  string
 	RouterLogging      bool
 	StaticRootPath     string
 	EnableGzip         bool
-	EnforceDomain      bool
 
 	// Http auth
 	AdminKey string
@@ -72,28 +69,15 @@ var (
 	// Global setting objects.
 	Cfg          *ini.File
 	ConfRootPath string
-	IsWindows    bool
 
 	//Raintank Graphite Backend
-	GraphiteUrl      string
 	ElasticsearchUrl string
+	TsdbUrl          string
 
 	// for logging purposes
 	configFiles                  []string
 	appliedCommandLineProperties []string
 	appliedEnvOverrides          []string
-
-	AlertingEnabled             bool
-	AlertingHandler             string
-	TickQueueSize               int
-	InternalJobQueueSize        int
-	PreAMQPJobQueueSize         int
-	ExecutorLRUSize             int
-	EnableScheduler             bool
-	Executors                   int
-	WriteIndividualAlertResults bool
-	AlertingInspect             bool
-	AlertingGraphiteUrl         string
 
 	StatsdEnabled   bool
 	StatsdAddr      string
@@ -102,17 +86,15 @@ var (
 	ProfileHeapWait int
 	ProfileHeapDir  string
 
+	Kafka KafkaSettings
+
+	Alerting AlertingSettings
+
 	// SMTP email settings
 	Smtp SmtpSettings
 
 	// QUOTA
 	Quota QuotaSettings
-
-	//rabbitmq
-	Rabbitmq RabbitmqSettings
-
-	MetricPublish MetricPublishSettings
-	EventPublish  EventPublishSettings
 )
 
 type CommandLineArgs struct {
@@ -122,7 +104,6 @@ type CommandLineArgs struct {
 }
 
 func init() {
-	IsWindows = runtime.GOOS == "windows"
 	log.NewLogger(0, "console", `{"level": 0, "formatting":true}`)
 }
 
@@ -152,7 +133,7 @@ func applyEnvVariableOverrides() {
 		for _, key := range section.Keys() {
 			sectionName := strings.ToUpper(strings.Replace(section.Name(), ".", "_", -1))
 			keyName := strings.ToUpper(strings.Replace(key.Name(), ".", "_", -1))
-			envKey := fmt.Sprintf("GF_%s_%s", sectionName, keyName)
+			envKey := fmt.Sprintf("WP_%s_%s", sectionName, keyName)
 			envValue := os.Getenv(envKey)
 
 			if len(envValue) > 0 {
@@ -359,53 +340,30 @@ func NewConfigContext(args *CommandLineArgs) error {
 		KeyFile = server.Key("cert_key").String()
 	}
 
-	Domain = server.Key("domain").MustString("localhost")
 	HttpAddr = server.Key("http_addr").MustString("0.0.0.0")
 	HttpPort = server.Key("http_port").MustString("3000")
 	RouterLogging = server.Key("router_logging").MustBool(false)
 	EnableGzip = server.Key("enable_gzip").MustBool(false)
-	EnforceDomain = server.Key("enforce_domain").MustBool(false)
 	StaticRootPath = makeAbsolute(server.Key("static_root_path").String(), HomePath)
 
 	AdminKey = server.Key("admin_key").String()
-
-	GraphiteUrl = Cfg.Section("raintank").Key("graphite_url").MustString("http://localhost:8888/")
-	if GraphiteUrl[len(GraphiteUrl)-1] != '/' {
-		GraphiteUrl += "/"
-	}
-	// Check if has app suburl.
-	_, err := url.Parse(GraphiteUrl)
-	if err != nil {
-		log.Fatal(4, "Invalid graphite_url(%s): %s", GraphiteUrl, err)
-	}
 
 	ElasticsearchUrl = Cfg.Section("raintank").Key("elasticsearch_url").MustString("http://localhost:9200/")
 	if ElasticsearchUrl[len(ElasticsearchUrl)-1] != '/' {
 		ElasticsearchUrl += "/"
 	}
-	// Check if has app suburl.
-	_, err = url.Parse(ElasticsearchUrl)
+	_, err := url.Parse(ElasticsearchUrl)
 	if err != nil {
 		log.Fatal(4, "Invalid elasticsearch_url(%s): %s", ElasticsearchUrl, err)
 	}
 
-	alerting := Cfg.Section("alerting")
-	AlertingEnabled = alerting.Key("enabled").MustBool(false)
-	TickQueueSize = alerting.Key("tickqueue_size").MustInt(0)
-	InternalJobQueueSize = alerting.Key("internal_jobqueue_size").MustInt(0)
-	PreAMQPJobQueueSize = alerting.Key("pre_amqp_jobqueue_size").MustInt(0)
-	ExecutorLRUSize = alerting.Key("executor_lru_size").MustInt(0)
-	EnableScheduler = alerting.Key("enable_scheduler").MustBool(true)
-	WriteIndividualAlertResults = alerting.Key("write_individual_alert_results").MustBool(false)
-	AlertingInspect = alerting.Key("inspect").MustBool(false)
-	AlertingGraphiteUrl = alerting.Key("graphite_url").MustString("http://localhost:8888/")
-	if AlertingGraphiteUrl[len(AlertingGraphiteUrl)-1] != '/' {
-		AlertingGraphiteUrl += "/"
+	TsdbUrl = Cfg.Section("raintank").Key("tsdb_url").MustString("http://tsdb-gw/")
+	if TsdbUrl[len(TsdbUrl)-1] != '/' {
+		TsdbUrl += "/"
 	}
-	// Check if has app suburl.
-	_, err = url.Parse(AlertingGraphiteUrl)
+	_, err = url.Parse(TsdbUrl)
 	if err != nil {
-		log.Fatal(4, "Invalid graphite_url(%s): %s", AlertingGraphiteUrl, err)
+		log.Fatal(4, "Invalid tsdb_url(%s): %s", TsdbUrl, err)
 	}
 
 	telemetry := Cfg.Section("telemetry")
@@ -416,11 +374,10 @@ func NewConfigContext(args *CommandLineArgs) error {
 	ProfileHeapWait = telemetry.Key("profile_heap_wait").MustInt(3600)
 	ProfileHeapDir = telemetry.Key("profile_heap_dir").MustString("/tmp")
 
+	readKafkaSettings()
+	readAlertingSettings()
 	readSmtpSettings()
 	readQuotaSettings()
-	readRabbitmqSettings()
-	readMetricPublishSettings()
-	readEventPublishSettings()
 	return nil
 }
 
