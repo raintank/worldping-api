@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-macaron/binding"
 	"github.com/raintank/raintank-apps/pkg/auth"
+	"github.com/raintank/tsdb-gw/elasticsearch"
 	"github.com/raintank/worldping-api/pkg/api/rbody"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
@@ -118,6 +119,11 @@ func Register(r *macaron.Macaron) {
 	if err := initGraphiteProxy(); err != nil {
 		log.Fatal(4, "API: failed to initialize Graphite Proxy. %s", err)
 	}
+
+	if err := elasticsearch.Init(setting.ElasticsearchUrl, "events"); err != nil {
+		log.Fatal(4, "API: failed to initialize Elasticsearch Proxy. %s", err)
+	}
+
 }
 
 func NotFoundHandler(c *middleware.Context) {

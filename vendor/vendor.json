@@ -357,6 +357,18 @@
 			"revisionTime": "2017-05-09T15:33:14Z"
 		},
 		{
+			"checksumSHA1": "k7+ef3zu7YisGZQNTtkimZgWSfc=",
+			"path": "github.com/raintank/tsdb-gw/elasticsearch",
+			"revision": "206aa0c0147c1ee774c303405349e52dbcfad41b",
+			"revisionTime": "2017-06-12T19:14:00Z"
+		},
+		{
+			"checksumSHA1": "+bZrhJoVcq/Se7ij8MTBxMV47p0=",
+			"path": "github.com/raintank/tsdb-gw/util",
+			"revision": "206aa0c0147c1ee774c303405349e52dbcfad41b",
+			"revisionTime": "2017-06-12T19:14:00Z"
+		},
+		{
 			"checksumSHA1": "KAzbLjI9MzW2tjfcAsK75lVRp6I=",
 			"path": "github.com/rcrowley/go-metrics",
 			"revision": "1f30fe9094a513ce4c700b9a54458bbb0c96996c",
