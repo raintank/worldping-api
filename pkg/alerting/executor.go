@@ -111,12 +111,12 @@ func eval(res graphite.Response, healthSettings *m.CheckHealthSettings) (m.Check
 		curStreak := 0
 		maxStreak := 0
 		for _, dp := range ep.Datapoints {
-			if dp[0].String() == "null" {
+			if dp[0].String() == "null" || dp[0].String() == "" {
 				continue
 			}
 			val, err := dp[0].Float64()
 			if err != nil {
-				log.Error(3, "Alerting: failed to parse graphite response. value '%s' not a number. %s", dp[0].String(), err.Error())
+				log.Error(3, "Alerting: failed to parse graphite response. value %s=[%s, %s] not a number. %s", ep.Target, dp[0].String(), dp[1].String(), err.Error())
 				return m.EvalResultUnknown, err
 			}
 			if val > 0.0 {

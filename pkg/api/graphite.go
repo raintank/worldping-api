@@ -27,6 +27,7 @@ func initGraphiteProxy() error {
 	gProxy.Director = func(req *http.Request) {
 		req.URL.Scheme = GraphiteUrl.Scheme
 		req.URL.Host = GraphiteUrl.Host
+		req.URL.Path = strings.TrimPrefix(req.URL.Path, "/api")
 	}
 	return nil
 }
