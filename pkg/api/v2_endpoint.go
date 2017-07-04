@@ -55,6 +55,9 @@ func AddEndpoint(c *middleware.Context, endpoint m.EndpointDTO) *rbody.ApiRespon
 	for i := range endpoint.Checks {
 		check := endpoint.Checks[i]
 		check.OrgId = c.OrgId
+		if !check.Enabled {
+			continue
+		}
 		if err := check.Validate(quotas); err != nil {
 			return rbody.ErrResp(err)
 		}
@@ -89,6 +92,9 @@ func UpdateEndpoint(c *middleware.Context, endpoint m.EndpointDTO) *rbody.ApiRes
 
 	for i := range endpoint.Checks {
 		check := endpoint.Checks[i]
+		if !check.Enabled {
+			continue
+		}
 		if err := check.Validate(quotas); err != nil {
 			return rbody.ErrResp(err)
 		}
