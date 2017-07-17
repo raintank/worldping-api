@@ -14,6 +14,7 @@ type AlertingSettings struct {
 	InternalJobQueueSize int
 	ExecutorLRUSize      int
 	EnableScheduler      bool
+	EnableWorker         bool
 	Executors            int
 	GraphiteUrl          string
 }
@@ -28,6 +29,7 @@ func readAlertingSettings() {
 
 	Alerting.ExecutorLRUSize = alerting.Key("executor_lru_size").MustInt(0)
 	Alerting.EnableScheduler = alerting.Key("enable_scheduler").MustBool(true)
+	Alerting.EnableWorker = alerting.Key("enable_worker").MustBool(true)
 
 	Alerting.GraphiteUrl = alerting.Key("graphite_url").MustString("http://localhost:8888/")
 	if Alerting.GraphiteUrl[len(Alerting.GraphiteUrl)-1] != '/' {

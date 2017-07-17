@@ -83,8 +83,12 @@ func Construct() {
 		panic(fmt.Sprintf("Can't create LRU: %s", err.Error()))
 	}
 
-	if !setting.Alerting.Distributed && !setting.Alerting.EnableScheduler {
-		log.Fatal(3, "Alerting in standalone mode requires a scheduler (enable_scheduler = true)")
+	if !setting.Alerting.Distributed && (!setting.Alerting.EnableScheduler && !setting.Alerting.EnableWorker) {
+		log.Fatal(3, "Alerting in standalone mode requires a scheduler and a worker (enable_scheduler = true and enabled_worker = true)")
+	}
+
+	if !setting.Alerting.EnableScheduler && !setting.Alerting.EnableWorker {
+		log.Fatal(3, "Alerting requires a scheduler or a worker (enable_scheduler = true or enable_worker = true)")
 	}
 
 	jobQ := jobqueue.NewJobQueue()

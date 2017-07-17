@@ -39,12 +39,14 @@ func NewKafkaPubSub(brokersStr, topic string, pub <-chan *m.AlertingJob, sub cha
 	config.Producer.Return.Successes = true
 	err := config.Validate()
 	if err != nil {
-		log.Fatal(2, "JobQueue: invalid kafka consumer config: %s", err)
+		log.Fatal(2, "JobQueue: invalid kafka config: %s", err)
 	}
-
-	consumer, err := cluster.NewConsumer(brokers, "worldping-alerts", []string{topic}, config)
-	if err != nil {
-		log.Fatal(4, "JobQueue: failed to initialize kafka consumer: %s", err)
+	var consumer *cluster.Consumer
+	if setting.Alerting.EnableWorker {
+		consumer, err = cluster.NewConsumer(brokers, "worldping-alerts", []string{topic}, config)
+		if err != nil {
+			log.Fatal(4, "JobQueue: failed to initialize kafka consumer: %s", err)
+		}
 	}
 
 	producer, err := sarama.NewSyncProducer(brokers, &config.Config)
@@ -65,7 +67,9 @@ func NewKafkaPubSub(brokersStr, topic string, pub <-chan *m.AlertingJob, sub cha
 }
 
 func (ps *KafkaPubSub) Run() {
-	go ps.consume(ps.sub)
+	if ps.consumer != nil {
+		go ps.consume(ps.sub)
+	}
 	go ps.produce(ps.pub)
 }
 
@@ -102,7 +106,7 @@ func (ps *KafkaPubSub) consume(sub chan<- *m.AlertingJob) {
 			for topic, partitions := range notification.Current {
 				claimed += fmt.Sprintf("%s:%v ", topic, partitions)
 			}
-			log.Info("JobQueue: kafaka consumer rebalancing. claimed partitions: %s", claimed)
+			log.Info("JobQueue: kafka consumer rebalancing. claimed partitions: %s", claimed)
 		case <-ps.shutdown:
 			ps.consumer.Close()
 			log.Info("JobQueue: kafka consumer for %s", ps.topic)
