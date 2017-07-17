@@ -32,8 +32,9 @@ func NewKafkaPubSub(brokersStr, topic string, pub <-chan *m.AlertingJob, sub cha
 	config.Group.Return.Notifications = true
 	config.ClientID = setting.InstanceId + "_alerting"
 	config.Version = sarama.V0_10_0_0
-	config.Producer.RequiredAcks = sarama.WaitForAll // Wait for all in-sync replicas to ack the message
-	config.Producer.Retry.Max = 10                   // Retry up to 10 times to produce the message
+	config.Producer.Flush.Frequency = time.Millisecond * time.Duration(100)
+	config.Producer.RequiredAcks = sarama.WaitForLocal // Wait for all in-sync replicas to ack the message
+	config.Producer.Retry.Max = 10                     // Retry up to 10 times to produce the message
 	config.Producer.Compression = sarama.CompressionSnappy
 	config.Producer.Return.Successes = true
 	err := config.Validate()
@@ -136,16 +137,7 @@ func (ps *KafkaPubSub) produce(pub <-chan *m.AlertingJob) {
 				Value: sarama.ByteEncoder(data),
 				Key:   sarama.StringEncoder(fmt.Sprintf("%d-%s", job.Id, job.LastPointTs.String())),
 			}
-			for {
-				partition, offset, err := ps.producer.SendMessage(pm)
-				if err != nil {
-					log.Error(3, "jobQueue: failed to publish message. %s", err)
-					time.Sleep(time.Second)
-				} else {
-					log.Debug("jobQueue: message published to partition %d with offset %d", partition, offset)
-					break
-				}
-			}
+			go ps.sendMessage(pm)
 		case <-ps.shutdown:
 			go func() {
 				ps.producer.Close()
@@ -153,6 +145,19 @@ func (ps *KafkaPubSub) produce(pub <-chan *m.AlertingJob) {
 			}()
 			<-done
 			return
+		}
+	}
+}
+
+func (ps *KafkaPubSub) sendMessage(pm *sarama.ProducerMessage) {
+	for {
+		partition, offset, err := ps.producer.SendMessage(pm)
+		if err != nil {
+			log.Error(3, "jobQueue: failed to publish message. %s", err)
+			time.Sleep(time.Second)
+		} else {
+			log.Debug("jobQueue: message published to partition %d with offset %d", partition, offset)
+			break
 		}
 	}
 }
