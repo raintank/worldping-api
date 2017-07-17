@@ -36,6 +36,7 @@ func dispatchJobs(jobQ *jobqueue.JobQueue) {
 	offsetTicker := time.NewTicker(time.Minute)
 	newOffsetChan := make(chan int)
 	offset := LoadOrSetOffset()
+	log.Info("Alerting using offset %d", offset)
 	next := time.Now().Unix() - int64(offset)
 	for {
 		select {
@@ -48,10 +49,10 @@ func dispatchJobs(jobQ *jobqueue.JobQueue) {
 				dispatcherGetSchedules.Value(time.Since(pre))
 
 				if err != nil {
-					log.Error(0, "getJobs() failed: %q", err)
+					log.Error(0, "Alerting failed to get jobs from DB: %q", err)
 					continue
 				}
-
+				log.Debug("%d jobs found for TS: %d", len(jobs), next)
 				dispatcherJobSchedulesSeen.Inc(int64(len(jobs)))
 				for _, job := range jobs {
 					job.GeneratedAt = time.Now()
@@ -69,6 +70,7 @@ func dispatchJobs(jobQ *jobqueue.JobQueue) {
 				}
 			}()
 		case newOffset := <-newOffsetChan:
+			log.Info("Alerting offset updated to %d", offset)
 			offset = newOffset
 		}
 	}
