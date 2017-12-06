@@ -555,6 +555,7 @@ func updateCheck(sess *session, c *m.Check) error {
 						CheckId: c.Id,
 						Tag:     tag,
 						Created: time.Now(),
+						OrgId:   c.OrgId,
 					}
 				}
 				_, err := sess.Insert(&tagRoutes)
