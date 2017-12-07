@@ -107,13 +107,16 @@ func eval(res graphite.Response, healthSettings *m.CheckHealthSettings) (m.Check
 		return m.EvalResultUnknown, fmt.Errorf("fatal: no data returned for job")
 	}
 	badEndpoints := 0
+	endpointsWithData := 0
 	for _, ep := range res {
 		curStreak := 0
 		maxStreak := 0
+		nonNullPoints := 0
 		for _, dp := range ep.Datapoints {
 			if dp[0].String() == "null" || dp[0].String() == "" {
 				continue
 			}
+			nonNullPoints++
 			val, err := dp[0].Float64()
 			if err != nil {
 				log.Error(3, "Alerting: failed to parse graphite response. value %s=[%s, %s] not a number. %s", ep.Target, dp[0].String(), dp[1].String(), err.Error())
@@ -128,6 +131,9 @@ func eval(res graphite.Response, healthSettings *m.CheckHealthSettings) (m.Check
 				curStreak = 0
 			}
 		}
+		if nonNullPoints > 0 {
+			endpointsWithData++
+		}
 		if curStreak > maxStreak {
 			maxStreak = curStreak
 		}
@@ -135,6 +141,10 @@ func eval(res graphite.Response, healthSettings *m.CheckHealthSettings) (m.Check
 		if maxStreak >= healthSettings.Steps {
 			badEndpoints++
 		}
+	}
+
+	if endpointsWithData == 0 {
+		return m.EvalResultUnknown, nil
 	}
 
 	if badEndpoints >= healthSettings.NumProbes {
