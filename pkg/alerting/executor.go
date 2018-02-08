@@ -161,17 +161,13 @@ func StoreResult(job *m.AlertingJob) {
 		metrics[pos] = &schema.MetricData{
 			OrgId:    int(job.OrgId),
 			Name:     fmt.Sprintf("health.%s.%s.%s", job.Slug, strings.ToLower(job.CheckForAlertDTO.Type), state),
-			Metric:   fmt.Sprintf("health.%s.%s", strings.ToLower(job.CheckForAlertDTO.Type), state),
+			Metric:   fmt.Sprintf("health.%s.%s.%s", job.Slug, strings.ToLower(job.CheckForAlertDTO.Type), state),
 			Interval: int(job.Frequency),
 			Value:    0.0,
 			Unit:     "state",
 			Time:     job.LastPointTs.Unix(),
 			Mtype:    "gauge",
-			Tags: []string{
-				fmt.Sprintf("endpoint:%s", job.Slug),
-				fmt.Sprintf("checkType:%s", strings.ToLower(job.CheckForAlertDTO.Type)),
-				fmt.Sprintf("monitor_id:%d", job.Id),
-			},
+			Tags:     nil,
 		}
 		metrics[pos].SetId()
 	}
