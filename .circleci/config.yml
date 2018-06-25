@@ -1,0 +1,52 @@
+version: 2
+jobs:
+  build:
+    working_directory: /go/src/github.com/raintank/worldping-api
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - checkout
+      - run: scripts/build.sh
+      - persist_to_workspace:
+          root: .
+          paths:
+            - build
+
+  test:
+    working_directory: /go/src/github.com/raintank/worldping-api
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - checkout
+      - run: test -z "$(gofmt -s -l main.go ./pkg/* | tee /dev/stderr)"
+      - run: go test -v $(go list ./... | grep -v /vendor/)
+      - run: go vet $(go list ./... | grep -v /vendor/)
+
+  deploy:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - setup_remote_docker
+      - run:
+          name: build docker image
+          command: scripts/build_docker.sh
+      - deploy:
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              docker login -u $DOCKER_USER -p $DOCKER_PASS
+              scripts/deploy_docker.sh
+            fi
+
+workflows:
+  version: 2
+  build_accept_deploy:
+    jobs:
+      - build
+      - test
+      - deploy:
+          requires:
+            - build
+            - test
