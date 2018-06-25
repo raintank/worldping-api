@@ -587,9 +587,10 @@ func (c Check) validateDNSSettings() error {
 		"server": "string",
 	}
 	optFields := map[string]string{
-		"timeout":  "float",
-		"protocol": "string",
-		"port":     "integer",
+		"timeout":     "float",
+		"protocol":    "string",
+		"port":        "integer",
+		"expectRegex": "string",
 	}
 	validRecordTypes := map[string]bool{
 		"A":     true,
