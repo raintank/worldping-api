@@ -15,5 +15,5 @@ mkdir -p $BUILDDIR
 rm -rf $BUILDDIR/*
 
 # Build binary
-cd $GOPATH/src/github.com/raintank/worldping-api
+cd $SOURCEDIR
 go build -ldflags "-X main.commit=$GITVERSION" -o $BUILDDIR/worldping-api
