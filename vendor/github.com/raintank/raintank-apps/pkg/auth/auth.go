@@ -169,8 +169,7 @@ func Auth(adminKey, keyString string) (*SignedInUser, error) {
 			cache.Set(keyString, user, validTTL)
 			return user, nil
 		}
-
-		return nil, err
+		return nil, fmt.Errorf("Auth request failed. status %d", res.StatusCode)
 	}
 
 	if res.StatusCode != 200 {
