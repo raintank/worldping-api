@@ -56,7 +56,7 @@ func QuotaReached(c *Context, target string) (bool, error) {
 				return true, nil
 			}
 		case "org":
-			quota, err := sqlstore.GetOrgQuotaByTarget(c.OrgId, scope.Target, scope.DefaultLimit)
+			quota, err := sqlstore.GetOrgQuotaByTarget(int64(c.User.ID), scope.Target, scope.DefaultLimit)
 			if err != nil {
 				return true, err
 			}

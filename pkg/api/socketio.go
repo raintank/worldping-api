@@ -13,7 +13,7 @@ import (
 	"github.com/googollee/go-socket.io"
 	"github.com/hashicorp/go-version"
 	"github.com/raintank/met"
-	"github.com/raintank/raintank-apps/pkg/auth"
+	"github.com/raintank/tsdb-gw/auth"
 	"github.com/raintank/worldping-api/pkg/events"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
@@ -188,7 +188,7 @@ func NewContextCache() *ContextCache {
 }
 
 type CollectorContext struct {
-	*auth.SignedInUser
+	*auth.User
 	Probe       *m.ProbeDTO
 	Socket      socketio.Socket
 	Session     *m.ProbeSession
@@ -196,11 +196,11 @@ type CollectorContext struct {
 	LastRefresh time.Time
 }
 
-func authenticate(keyString string) (*auth.SignedInUser, error) {
+func authenticate(keyString string) (*auth.User, error) {
 	if keyString != "" {
-		return auth.Auth(setting.AdminKey, keyString)
+		return middleware.GetUser(setting.AdminKey, keyString)
 	}
-	return nil, auth.ErrInvalidApiKey
+	return nil, auth.ErrInvalidCredentials
 }
 
 func register(so socketio.Socket) (*CollectorContext, error) {
@@ -238,11 +238,11 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	log.Info("probe %s with version %s connected", name, v.String())
 
 	// lookup collector
-	probe, err := sqlstore.GetProbeByName(name, user.OrgId)
+	probe, err := sqlstore.GetProbeByName(name, int64(user.ID))
 	if err == m.ErrProbeNotFound {
 		//check quotas
 		ctx := &middleware.Context{
-			SignedInUser: user,
+			User: user,
 		}
 		reached, err := middleware.QuotaReached(ctx, "probe")
 		if err != nil {
@@ -253,7 +253,7 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 		}
 		//collector not found, so lets create a new one.
 		probe = &m.ProbeDTO{
-			OrgId:        user.OrgId,
+			OrgId:        int64(user.ID),
 			Name:         name,
 			Enabled:      true,
 			Online:       true,
@@ -290,11 +290,11 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	}
 
 	sess := &CollectorContext{
-		SignedInUser: user,
-		Probe:        probe,
-		Socket:       so,
+		User:   user,
+		Probe:  probe,
+		Socket: so,
 		Session: &m.ProbeSession{
-			OrgId:      user.OrgId,
+			OrgId:      int64(user.ID),
 			ProbeId:    probe.Id,
 			SocketId:   so.Id(),
 			Version:    versionStr,
@@ -303,9 +303,9 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 		},
 	}
 
-	log.Info("probe %s with probeId=%d owned by %d authenticated successfully from %s.", name, probe.Id, user.OrgId, remoteIp.String())
+	log.Info("probe %s with probeId=%d owned by %d authenticated successfully from %s.", name, probe.Id, user.ID, remoteIp.String())
 	if lastSocketId != "" {
-		if err := sqlstore.DeleteProbeSession(&m.ProbeSession{OrgId: sess.OrgId, SocketId: lastSocketId, ProbeId: sess.Probe.Id}); err != nil {
+		if err := sqlstore.DeleteProbeSession(&m.ProbeSession{OrgId: int64(sess.User.ID), SocketId: lastSocketId, ProbeId: sess.Probe.Id}); err != nil {
 			log.Error(3, "failed to remove lastSocketId for probeId=%d", probe.Id, err)
 			return nil, err
 		}
@@ -367,7 +367,7 @@ func InitCollectorController(metrics met.Backend, pub services.MetricsEventsPubl
 	server.On("connection", func(so socketio.Socket) {
 		c, err := register(so)
 		if err != nil {
-			if err == auth.ErrInvalidApiKey {
+			if err == auth.ErrInvalidCredentials {
 				log.Info("probe failed to authenticate.")
 			} else if err.Error() == "invalid probe version. Please upgrade." {
 				log.Info("probeId is wrong version")
@@ -440,7 +440,7 @@ func (c *CollectorContext) OnDisconnection() {
 func (c *CollectorContext) OnEvent(msg *schema.ProbeEvent) {
 	log.Debug("received event from probeId%", c.Probe.Id)
 	if !c.Probe.Public {
-		msg.OrgId = c.OrgId
+		msg.OrgId = int64(c.User.ID)
 	}
 	publisher.AddEvent(msg)
 }
@@ -463,7 +463,7 @@ func (c *CollectorContext) OnResults(results []*schemaV0.MetricData) {
 		metrics[i].SetId()
 
 		if !c.Probe.Public {
-			metrics[i].OrgId = int(c.OrgId)
+			metrics[i].OrgId = c.User.ID
 		}
 	}
 	publisher.Add(metrics)

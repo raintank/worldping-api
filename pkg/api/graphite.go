@@ -39,7 +39,7 @@ func V1GraphiteProxy(c *middleware.Context) {
 	if proxyPath == "metrics/find" {
 		query := c.Query("query")
 		if strings.HasPrefix(query, "raintank_db") {
-			response, err := executeRaintankDbQuery(query, c.OrgId)
+			response, err := executeRaintankDbQuery(query, int64(c.User.ID))
 			if err != nil {
 				handleError(c, err)
 				return

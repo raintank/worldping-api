@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/go-macaron/binding"
-	"github.com/raintank/raintank-apps/pkg/auth"
-	"github.com/raintank/tsdb-gw/elasticsearch"
+	"github.com/grafana/worldping-gw/query/elasticsearch"
+	"github.com/raintank/tsdb-gw/auth/gcom"
 	"github.com/raintank/worldping-api/pkg/api/rbody"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
@@ -19,7 +19,7 @@ import (
 func Register(r *macaron.Macaron) {
 	r.Use(macaron.Renderer())
 	r.Use(middleware.GetContextHandler())
-	reqEditorRole := middleware.RoleAuth(auth.ROLE_EDITOR, auth.ROLE_ADMIN)
+	reqEditorRole := middleware.RoleAuth(gcom.ROLE_EDITOR, gcom.ROLE_ADMIN)
 	quota := middleware.Quota
 	bind := binding.Bind
 	wrap := rbody.Wrap

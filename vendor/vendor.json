@@ -21,10 +21,10 @@
 			"revisionTime": "2015-06-25T09:29:48Z"
 		},
 		{
-			"checksumSHA1": "Eq40BGwy01qYvfjJnZLImoGGJ7k=",
+			"checksumSHA1": "z2bIwqz7dIGu7/oAIAAyhlJUc0s=",
 			"path": "github.com/Shopify/sarama",
-			"revision": "d4ece5d05a86b2b64248f4943f872bea961ec835",
-			"revisionTime": "2017-04-04T10:29:40Z"
+			"revision": "41f00bce7fd3fb0f5c556458480aa59ed9fe079c",
+			"revisionTime": "2019-05-27T09:17:52Z"
 		},
 		{
 			"checksumSHA1": "QeC52aS9qzb+kumWIUoxcoWn8xM=",

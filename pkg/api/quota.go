@@ -12,7 +12,7 @@ func V1GetOrgQuotas(c *middleware.Context) {
 	var quotas []m.OrgQuotaDTO
 	var err error
 	if setting.Quota.Enabled {
-		quotas, err = sqlstore.GetOrgQuotas(c.OrgId)
+		quotas, err = sqlstore.GetOrgQuotas(int64(c.User.ID))
 		if err != nil {
 			handleError(c, err)
 			return
@@ -20,19 +20,19 @@ func V1GetOrgQuotas(c *middleware.Context) {
 	} else {
 		quotas = []m.OrgQuotaDTO{
 			{
-				OrgId:  c.OrgId,
+				OrgId:  int64(c.User.ID),
 				Target: "endpoint",
 				Limit:  -1,
 				Used:   -10,
 			},
 			{
-				OrgId:  c.OrgId,
+				OrgId:  int64(c.User.ID),
 				Target: "probe",
 				Limit:  -1,
 				Used:   -10,
 			},
 			{
-				OrgId:  c.OrgId,
+				OrgId:  int64(c.User.ID),
 				Target: "downloadLimit",
 				Limit:  -1,
 				Used:   -1,
@@ -46,26 +46,26 @@ func GetQuotas(c *middleware.Context) *rbody.ApiResponse {
 	var quotas []m.OrgQuotaDTO
 	var err error
 	if setting.Quota.Enabled {
-		quotas, err = sqlstore.GetOrgQuotas(c.OrgId)
+		quotas, err = sqlstore.GetOrgQuotas(int64(c.User.ID))
 		if err != nil {
 			return rbody.ErrResp(err)
 		}
 	} else {
 		quotas = []m.OrgQuotaDTO{
 			{
-				OrgId:  c.OrgId,
+				OrgId:  int64(c.User.ID),
 				Target: "endpoint",
 				Limit:  -1,
 				Used:   -1,
 			},
 			{
-				OrgId:  c.OrgId,
+				OrgId:  int64(c.User.ID),
 				Target: "probe",
 				Limit:  -1,
 				Used:   -1,
 			},
 			{
-				OrgId:  c.OrgId,
+				OrgId:  int64(c.User.ID),
 				Target: "downloadLimit",
 				Limit:  -1,
 				Used:   -1,
@@ -100,7 +100,7 @@ func GetOrgQuotas(c *middleware.Context) *rbody.ApiResponse {
 				Used:   -1,
 			},
 			{
-				OrgId:  c.OrgId,
+				OrgId:  int64(c.User.ID),
 				Target: "downloadLimit",
 				Limit:  -1,
 				Used:   -1,

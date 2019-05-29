@@ -730,7 +730,7 @@ func TestEndpointV1Api(t *testing.T) {
 							So(c.Frequency, ShouldEqual, 60)
 							So(c.Enabled, ShouldEqual, true)
 							So(c.EndpointId, ShouldEqual, endpoint.Id)
-							So(c.OrgId, ShouldEqual, endpoint.OrgId)
+							So(int64(c.User.ID), ShouldEqual, endpoint.OrgId)
 							switch c.Type {
 							case m.HTTP_CHECK:
 								So(c.Route.Type, ShouldEqual, m.RouteByTags)

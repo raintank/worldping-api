@@ -8,7 +8,7 @@ import (
 )
 
 func GetProbes(c *middleware.Context, query m.GetProbesQuery) *rbody.ApiResponse {
-	query.OrgId = c.OrgId
+	query.OrgId = int64(c.User.ID)
 
 	probes, err := sqlstore.GetProbes(&query)
 	if err != nil {
@@ -21,7 +21,7 @@ func GetProbes(c *middleware.Context, query m.GetProbesQuery) *rbody.ApiResponse
 func GetProbeById(c *middleware.Context) *rbody.ApiResponse {
 	id := c.ParamsInt64(":id")
 
-	probe, err := sqlstore.GetProbeById(id, c.OrgId)
+	probe, err := sqlstore.GetProbeById(id, int64(c.User.ID))
 	if err != nil {
 		return rbody.ErrResp(err)
 	}
@@ -32,7 +32,7 @@ func GetProbeById(c *middleware.Context) *rbody.ApiResponse {
 func DeleteProbe(c *middleware.Context) *rbody.ApiResponse {
 	id := c.ParamsInt64(":id")
 
-	err := sqlstore.DeleteProbe(id, c.OrgId)
+	err := sqlstore.DeleteProbe(id, int64(c.User.ID))
 	if err != nil {
 		return rbody.ErrResp(err)
 	}
@@ -41,7 +41,7 @@ func DeleteProbe(c *middleware.Context) *rbody.ApiResponse {
 }
 
 func AddProbe(c *middleware.Context, probe m.ProbeDTO) *rbody.ApiResponse {
-	probe.OrgId = c.OrgId
+	probe.OrgId = int64(c.User.ID)
 	if probe.Id != 0 {
 		return rbody.ErrResp(m.NewValidationError("Id already set. Try update instead of create."))
 	}
@@ -62,7 +62,7 @@ func AddProbe(c *middleware.Context, probe m.ProbeDTO) *rbody.ApiResponse {
 }
 
 func UpdateProbe(c *middleware.Context, probe m.ProbeDTO) *rbody.ApiResponse {
-	probe.OrgId = c.OrgId
+	probe.OrgId = int64(c.User.ID)
 	if probe.Name == "" {
 		return rbody.ErrResp(m.NewValidationError("Probe name not set."))
 	}
