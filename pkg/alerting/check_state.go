@@ -2,7 +2,6 @@ package alerting
 
 import (
 	"strings"
-	"time"
 
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
@@ -25,28 +24,24 @@ func InitResultHandler() {
 }
 
 func storeResults(stateChanges chan *m.AlertingJob) {
-	buf := make([]*m.AlertingJob, 0)
-	ticker := time.NewTicker(time.Second)
-	for {
-		select {
-		case <-ticker.C:
-			if len(buf) == 0 {
-				break
-			}
-			results, err := sqlstore.BatchUpdateCheckState(buf)
+	for j := range ResultQueue {
+		saved := false
+		attempts := 0
+		for !saved && attempts < 3 {
+			attempts++
+			change, err := sqlstore.UpdateCheckState(j)
 			if err != nil {
-				log.Error(3, "failed to update checkStates. ", err)
-				buf = buf[:0]
-				break
+				log.Warn("failed to update checkState for checkId=%d. %s", j.Id, err)
+				continue
 			}
-			log.Debug("updated state of %d checks in batch. %d resutled in stateChange.", len(buf), len(results))
-			for _, job := range results {
-				stateChanges <- job
+			saved = true
+			log.Debug("updated state of checkId=%d stateChange=%v", j.Id, change)
+			if change {
+				stateChanges <- j
 			}
-
-			buf = buf[:0]
-		case j := <-ResultQueue:
-			buf = append(buf, j)
+		}
+		if !saved {
+			log.Error(3, "failed to update checkState for checkId=%d", j.Id)
 		}
 	}
 }

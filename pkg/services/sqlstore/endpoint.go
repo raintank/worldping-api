@@ -777,7 +777,7 @@ func BatchUpdateCheckState(jobs []*m.AlertingJob) ([]*m.AlertingJob, error) {
 
 func batchUpdateCheckState(sess *session, jobs []*m.AlertingJob) ([]*m.AlertingJob, error) {
 	stateSql := "UPDATE `check` SET state=?, state_change=? WHERE id=? AND state != ? AND state_change < ?"
-	lastCheckSql := "UPDATE `check` SET state_check=? WHERE id=?"
+	lastCheckSql := "UPDATE `check` SET state_check=? WHERE id=? and state_check < ?"
 	jobsWithStateChange := make([]*m.AlertingJob, 0)
 	for _, j := range jobs {
 		res, err := sess.Exec(stateSql, int(j.NewState), j.TimeExec, j.Id, int(j.NewState), j.TimeExec)
@@ -791,13 +791,52 @@ func batchUpdateCheckState(sess *session, jobs []*m.AlertingJob) ([]*m.AlertingJ
 			jobsWithStateChange = append(jobsWithStateChange, j)
 		}
 
-		res, err = sess.Exec(lastCheckSql, j.TimeExec, j.Id)
+		res, err = sess.Exec(lastCheckSql, j.TimeExec, j.Id, j.TimeExec)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return jobsWithStateChange, nil
+}
+
+func UpdateCheckState(job *m.AlertingJob) (bool, error) {
+	sess, err := newSession(true, "check")
+	stateChange := false
+	if err != nil {
+		return stateChange, err
+	}
+	defer sess.Cleanup()
+	stateChange, err = updateCheckState(sess, job)
+	if err != nil {
+		return stateChange, err
+	}
+	sess.Complete()
+	return stateChange, nil
+}
+
+func updateCheckState(sess *session, j *m.AlertingJob) (bool, error) {
+	stateSql := "UPDATE `check` SET state=?, state_change=? WHERE id=? AND state != ? AND state_change < ?"
+	lastCheckSql := "UPDATE `check` SET state_check=? WHERE id=? and state_check < ?"
+	stateChange := false
+
+	res, err := sess.Exec(stateSql, int(j.NewState), j.TimeExec, j.Id, int(j.NewState), j.TimeExec)
+	if err != nil {
+		return stateChange, err
+	}
+
+	aff, _ := res.RowsAffected()
+	if aff > 0 {
+		// state change.
+		stateChange = true
+	}
+
+	res, err = sess.Exec(lastCheckSql, j.TimeExec, j.Id, j.TimeExec)
+	if err != nil {
+		return stateChange, err
+	}
+
+	return stateChange, nil
 }
 
 func GetChecksForAlerts(ts int64) ([]m.CheckForAlertDTO, error) {
