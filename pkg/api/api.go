@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/go-macaron/binding"
-	"github.com/grafana/worldping-gw/query/elasticsearch"
 	"github.com/raintank/tsdb-gw/auth/gcom"
 	"github.com/raintank/worldping-api/pkg/api/rbody"
+	"github.com/raintank/worldping-api/pkg/elasticsearch"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
 	m "github.com/raintank/worldping-api/pkg/models"

@@ -345,12 +345,6 @@
 			"revisionTime": "2016-01-13T08:38:23Z"
 		},
 		{
-			"checksumSHA1": "YP5MOKpfFQiS6F12th9I8hlI5EE=",
-			"path": "github.com/raintank/raintank-apps/pkg/auth",
-			"revision": "6bf25870e4795026c75afb6714849f74a0db7007",
-			"revisionTime": "2017-05-23T17:28:40Z"
-		},
-		{
 			"checksumSHA1": "CBZNCJPQkVxgkEdjVGA35fcFJ1E=",
 			"path": "github.com/raintank/raintank-probe/publisher",
 			"revision": "3969b73d30db27a25f475fa5f7ebd7f29a6f3d9e",

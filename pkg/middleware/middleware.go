@@ -18,8 +18,9 @@ type Context struct {
 
 var authPlugin auth.AuthPlugin
 
-func init() {
-	authPlugin = auth.NewGrafanaComAuth()
+func Init(adminKey string) {
+	authPlugin = auth.GetAuthPlugin("grafana")
+	auth.AdminKey = adminKey
 }
 
 func GetContextHandler() macaron.Handler {
@@ -56,10 +57,13 @@ func RoleAuth(roles ...gcom.RoleType) macaron.Handler {
 }
 
 func GetUser(adminKey, key string) (*auth.User, error) {
-	return authPlugin.Auth(adminKey, key)
+	return authPlugin.Auth("api_key", key)
 }
 
 func Auth(adminKey string) macaron.Handler {
+	if authPlugin == nil {
+		Init(adminKey)
+	}
 	return func(ctx *Context) {
 		key, err := getApiKey(ctx)
 		if err != nil {

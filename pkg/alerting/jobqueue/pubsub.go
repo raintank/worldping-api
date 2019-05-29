@@ -76,7 +76,9 @@ func (ps *KafkaPubSub) Run() {
 }
 
 func (ps *KafkaPubSub) Close() {
-	ps.consumer.Close()
+	if ps.consumer != nil {
+		ps.consumer.Close()
+	}
 	close(ps.shutdown)
 	ps.wg.Wait()
 }
