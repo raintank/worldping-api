@@ -67,19 +67,30 @@ func NewKafkaPubSub(brokersStr, topic string, pub <-chan *m.AlertingJob, sub cha
 
 func (ps *KafkaPubSub) Run() {
 	if ps.consumer != nil {
-		err := ps.consumer.Consume(context.Background(), []string{ps.topic}, ps)
-		if err != nil {
-			log.Fatal(2, "comsumerGroup error: %v", err)
-		}
+		go func() {
+			log.Info("JobQueue: consuming from consumerGroup")
+			for {
+				select {
+				case <-ps.shutdown:
+					log.Info("JobQueue: consumer is done")
+					return
+				default:
+					err := ps.consumer.Consume(context.Background(), []string{ps.topic}, ps)
+					if err != nil {
+						log.Fatal(2, "JobQueue: comsumerGroup error: %v", err)
+					}
+				}
+			}
+		}()
 	}
 	go ps.produce(ps.pub)
 }
 
 func (ps *KafkaPubSub) Close() {
+	close(ps.shutdown)
 	if ps.consumer != nil {
 		ps.consumer.Close()
 	}
-	close(ps.shutdown)
 	ps.wg.Wait()
 }
 
@@ -93,7 +104,7 @@ func (ps *KafkaPubSub) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sara
 	partition := claim.Partition()
 	log.Info("JobQueue: consumerClaim acquired for %d on topic %s", partition, topic)
 	defer func() {
-		log.Info("JobQueue: consumerClaim released for partition %d on topic %s", partition, topic)
+		log.Info("JobQueue: consumerClaim released partition %d on topic %s", partition, topic)
 	}()
 	msgCh := claim.Messages()
 
@@ -104,7 +115,11 @@ func (ps *KafkaPubSub) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sara
 		if err != nil {
 			log.Error(3, "JobQueue: kafka consumer failed to unmarshal job. %s", err)
 		} else {
-			ps.sub <- job
+			select {
+			case ps.sub <- job:
+			default:
+				log.Error(3, "JobQueue: message dropped as sub chan is full")
+			}
 		}
 		sess.MarkMessage(msg, "")
 	}
