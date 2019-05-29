@@ -1,9 +1,8 @@
 version: 2
 jobs:
   build:
-    working_directory: /go/src/github.com/raintank/worldping-api
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.12
     steps:
       - checkout
       - run: scripts/build.sh
@@ -13,9 +12,8 @@ jobs:
             - build
 
   test:
-    working_directory: /go/src/github.com/raintank/worldping-api
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.12
     steps:
       - checkout
       - run: test -z "$(gofmt -s -l main.go ./pkg/* | tee /dev/stderr)"
@@ -24,7 +22,7 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.12
     steps:
       - checkout
       - attach_workspace:
