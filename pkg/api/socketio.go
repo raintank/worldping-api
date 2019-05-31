@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 	"strings"
 	"sync"
 	"time"
-	"math/rand"
 
 	"github.com/fiorix/freegeoip"
 	"github.com/googollee/go-socket.io"
@@ -31,7 +31,7 @@ var server *socketio.Server
 var contextCache *ContextCache
 var geoipDB *freegeoip.DB
 var publisher services.MetricsEventsPublisher
-var heartbeatInterval = time.Second*30
+var heartbeatInterval = time.Second * 30
 
 var (
 	metricsRecvd                  met.Count
@@ -166,7 +166,7 @@ func (c *ContextCache) RefreshLoop() {
 			for _, ctx := range c.Contexts {
 				// add some jitter so that we avoid all probes refreshing at the same time.
 				// Probes will refresh between every 5 and 15minutes.
-				maxRefreshDelay := time.Minute * time.Duration(5 + rand.Intn(10))
+				maxRefreshDelay := time.Minute * time.Duration(5+rand.Intn(10))
 				if time.Since(ctx.LastRefresh) >= maxRefreshDelay {
 					sessList = append(sessList, ctx)
 				}
@@ -199,7 +199,7 @@ type CollectorContext struct {
 	Socket      socketio.Socket
 	Session     *m.ProbeSession
 	closed      bool
-	done 		chan struct{}
+	done        chan struct{}
 	LastRefresh time.Time
 }
 
@@ -404,7 +404,7 @@ func InitCollectorController(metrics met.Backend, pub services.MetricsEventsPubl
 			return
 		}
 		log.Info("saved session to DB for probeId=%d", c.Probe.Id)
-		
+
 		// write heartbeats to the DB
 		go func() {
 			ticker := time.NewTicker(heartbeatInterval)
@@ -514,7 +514,7 @@ func (c *CollectorContext) Refresh() {
 	c.LastRefresh = pre
 	log.Info("probeId=%d (%s) refreshing", c.Probe.Id, c.Probe.Name)
 	//step 1. get list of collectorSessions for this collector.
-	sessions, err := sqlstore.GetProbeSessions(c.Probe.Id, "", time.Now().Add(-2 * heartbeatInterval))
+	sessions, err := sqlstore.GetProbeSessions(c.Probe.Id, "", time.Now().Add(-2*heartbeatInterval))
 	if err != nil {
 		log.Error(3, "failed to get list of probeSessions.", err)
 		return
@@ -701,7 +701,7 @@ func HandleEndpointDeleted(event *events.EndpointDeleted) error {
 }
 
 func EmitCheckEvent(probeId int64, checkId int64, eventName string, event interface{}) error {
-	sessions, err := sqlstore.GetProbeSessions(probeId, "", time.Now().Add(-2 * heartbeatInterval))
+	sessions, err := sqlstore.GetProbeSessions(probeId, "", time.Now().Add(-2*heartbeatInterval))
 	if err != nil {
 		log.Error(3, "failed to get list of probeSessions.", err)
 		return err
