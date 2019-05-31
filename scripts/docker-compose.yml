@@ -1,0 +1,192 @@
+version: '2'
+
+services:
+  kafka:
+    hostname: kafka
+    image: raintank/kafka:v2.0.0
+    environment:
+      ADVERTISED_HOST: kafka
+      NUM_PARTITIONS: 8
+    ports:
+      - "2181:2181"
+      - "9092:9092"
+      - "9999:9999"
+    volumes:
+      - /tmp/kafka-logs
+
+  mysql:
+    image: mysql:5.7
+    hostname: mysql
+    ports:
+      - "3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: worldping
+      MYSQL_USER: worldping
+      MYSQL_PASSWORD: password
+    volumes:
+      - /var/lib/mysql
+
+  worldping-api:
+    image: raintank/worldping-api
+    hostname: worldping-api
+    ports:
+      - "8081:3000"
+    depends_on:
+      - mysql
+      - kafka
+    environment:
+      WAIT_HOSTS: kafka:9092,mysql:3306
+      WAIT_TIMEOUT: 30
+      WP_DEFAULT_INSTANCE_ID: worldping-api
+      WP_SERVER_ROOT_URL: http://localhost:8081
+      WP_SERVER_ADMIN_KEY: secret
+      WP_DATABASE_TYPE: mysql
+      WP_DATABASE_HOST: mysql:3306
+      WP_DATABASE_NAME: worldping
+      WP_DATABASE_USER: worldping
+      WP_DATABASE_PASSWORD: password
+      WP_RAINTANK_TSDB_URL: http://worldping-gw
+      WP_RAINTANK_ELASTICSEARCH_URL: http://localhost:9200
+      WP_KAFKA_ENABLED: 'true'
+      WP_KAFKA_BROKERS: kafka:9092
+      WP_TELEMETRY_STATSD_ENABLED: 'false'
+      WP_LOG_CONSOLE_LEVEL: 'Info'
+      WP_LOG_FILE_LEVEL: 'Info'
+      WP_LOG_LEVEL: 'Info'
+      WP_DEFAULT_APP_MODE: 'production'
+      WP_SMTP_ENABLED: 'false'
+      WP_QUOTA_ENABLED: 'true'
+      WP_QUOTA_ORG_ENDPOINT: '3'
+      WP_QUOTA_ORG_PROBE: '10'
+      WP_QUOTA_ORG_DOWNLOAD_LIMIT: '102400'
+      WP_QUOTA_GLOBAL_ENDPOINT: '-1'
+      WP_QUOTA_GLOBAL_PROBE: '-1'
+      WP_ALERTING_ENABLED: 'false'
+
+  worldping-alerting:
+    image: raintank/worldping-api
+    hostname: worldping-alerting
+    depends_on:
+      - mysql
+      - kafka
+      - worldping-api
+    environment:
+      WAIT_HOSTS: kafka:9092,mysql:3306,worldping-api:3000
+      WAIT_TIMEOUT: 30
+      WP_DEFAULT_INSTANCE_ID: worldping-alerting
+      WP_SERVER_ROOT_URL: http://localhost:8081
+      WP_SERVER_ADMIN_KEY: secret
+      WP_DATABASE_TYPE: mysql
+      WP_DATABASE_HOST: mysql:3306
+      WP_DATABASE_NAME: worldping
+      WP_DATABASE_USER: worldping
+      WP_DATABASE_PASSWORD: password
+      WP_RAINTANK_TSDB_URL: http://worldping-gw
+      WP_RAINTANK_ELASTICSEARCH_URL: http://localhost:9200
+      WP_KAFKA_ENABLED: 'true'
+      WP_KAFKA_BROKERS: kafka:9092
+      WP_TELEMETRY_STATSD_ENABLED: 'false'
+      WP_LOG_CONSOLE_LEVEL: 'Info'
+      WP_LOG_FILE_LEVEL: 'Info'
+      WP_LOG_LEVEL: 'Info'
+      WP_DEFAULT_APP_MODE: 'production'
+      WP_SMTP_ENABLED: 'false'
+      WP_QUOTA_ENABLED: 'true'
+      WP_QUOTA_ORG_ENDPOINT: '3'
+      WP_QUOTA_ORG_PROBE: '10'
+      WP_QUOTA_ORG_DOWNLOAD_LIMIT: '102400'
+      WP_QUOTA_GLOBAL_ENDPOINT: '-1'
+      WP_QUOTA_GLOBAL_PROBE: '-1'
+      WP_ALERTING_ENABLED: 'true'
+      WP_ALERTING_DISTRIBUTED: 'true'
+      WP_ALERTING_GRAPHITE_URL: http://localhost/
+      WP_ALERTING_ENABLE_SCHEDULER: 'false'
+
+  worldping-scheduler:
+    image: raintank/worldping-api
+    hostname: worldping-scheduler
+    depends_on:
+      - mysql
+      - kafka
+      - worldping-api
+    environment:
+      WAIT_HOSTS: kafka:9092,mysql:3306,worldping-api:3000
+      WAIT_TIMEOUT: 30
+      WP_DEFAULT_INSTANCE_ID: worldping-scheduler
+      WP_SERVER_ROOT_URL: http://localhost:8081
+      WP_SERVER_ADMIN_KEY: secret
+      WP_DATABASE_TYPE: mysql
+      WP_DATABASE_HOST: mysql:3306
+      WP_DATABASE_NAME: worldping
+      WP_DATABASE_USER: worldping
+      WP_DATABASE_PASSWORD: password
+      WP_RAINTANK_TSDB_URL: http://worldping-gw
+      WP_RAINTANK_ELASTICSEARCH_URL: http://localhost:9200
+      WP_KAFKA_ENABLED: 'true'
+      WP_KAFKA_BROKERS: kafka:9092
+      WP_TELEMETRY_STATSD_ENABLED: 'false'
+      WP_LOG_CONSOLE_LEVEL: 'Info'
+      WP_LOG_FILE_LEVEL: 'Info'
+      WP_LOG_LEVEL: 'Info'
+      WP_DEFAULT_APP_MODE: 'production'
+      WP_SMTP_ENABLED: 'false'
+      WP_QUOTA_ENABLED: 'true'
+      WP_QUOTA_ORG_ENDPOINT: '3'
+      WP_QUOTA_ORG_PROBE: '10'
+      WP_QUOTA_ORG_DOWNLOAD_LIMIT: '102400'
+      WP_QUOTA_GLOBAL_ENDPOINT: '-1'
+      WP_QUOTA_GLOBAL_PROBE: '-1'
+      WP_ALERTING_ENABLED: 'true'
+      WP_ALERTING_DISTRIBUTED: 'true'
+      WP_ALERTING_GRAPHITE_URL: http://localhost/
+      WP_ALERTING_ENABLE_SCHEDULER: 'true'
+      WP_ALERTING_ENABLE_WORKER: 'false'
+
+  worldping-gw:
+    hostname: worldping-gw
+    image: grafana/worldping-gw
+    ports:
+     - "9000:80"
+    depends_on:
+     - kafka
+    environment:
+     WAIT_HOSTS: kafka:9092
+     WAIT_TIMEOUT: 60
+     GW_ADMIN_KEY: secret
+     GW_KAFKA_TCP_ADDR: kafka:9092
+     GW_KAFKA_VERSION: 2.0.0
+     GW_METRICS_PUBLISH: 'false'
+     GW_EVENTS_PUBLISH: 'true'
+     GW_EVENTS_KAFKA_VERSION: 2.0.0
+
+  probe1:
+    image: raintank/raintank-probe
+    hostname: probe1
+    depends_on:
+      - worldping-api
+      - worldping-gw
+    environment:
+      RTPROBE_NAME: probe1
+      RTPROBE_SERVER_URL: ws://worldping-api:3000/
+      RTPROBE_TSDB_URL: http://worldping-gw/
+      RTPROBE_API_KEY: secret
+      RTPROBE_HEALTH_HOSTS: ""
+      WAIT_HOSTS: worldping-api:3000,worldping-gw:80
+      WAIT_TIMEOUT: 30
+
+  probe2:
+    image: raintank/raintank-probe
+    hostname: probe2
+    depends_on:
+      - worldping-api
+      - worldping-gw
+    environment:
+      RTPROBE_NAME: probe1
+      RTPROBE_SERVER_URL: ws://worldping-api:3000/
+      RTPROBE_TSDB_URL: http://worldping-gw/
+      RTPROBE_API_KEY: secret
+      RTPROBE_HEALTH_HOSTS: ""
+      WAIT_HOSTS: worldping-api:3000,worldping-gw:80
+      WAIT_TIMEOUT: 30
+   
