@@ -827,11 +827,8 @@ func updateCheckState(sess *session, j *m.AlertingJob) (bool, error) {
 	}
 
 	res, err = sess.Exec(lastCheckSql, j.TimeExec, j.Id, j.TimeExec)
-	if err != nil {
-		return stateChange, err
-	}
 
-	return stateChange, nil
+	return stateChange, err
 }
 
 func GetChecksForAlerts(ts int64) ([]m.CheckForAlertDTO, error) {
