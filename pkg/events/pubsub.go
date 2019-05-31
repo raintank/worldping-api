@@ -32,7 +32,7 @@ func Run(brokersStr, topic string, pub, sub chan Message) {
 	brokers := strings.Split(brokersStr, ",")
 	config := sarama.NewConfig()
 	config.ClientID = setting.InstanceId
-	config.Version = sarama.V0_10_0_0
+	config.Version = sarama.V2_0_0_0
 	config.Producer.RequiredAcks = sarama.WaitForAll // Wait for all in-sync replicas to ack the message
 	config.Producer.Retry.Max = 10                   // Retry up to 10 times to produce the message
 	config.Producer.Compression = sarama.CompressionSnappy
@@ -50,7 +50,7 @@ func Run(brokersStr, topic string, pub, sub chan Message) {
 	// validate our partitions
 	partitions, err := client.Partitions(topic)
 	if err != nil {
-		log.Fatal(4, "kafka: failed to get paritions for topic %s: %s", topic, err.Error())
+		log.Fatal(4, "kafka: failed to get partitions for topic %s: %s", topic, err.Error())
 	}
 
 	consumer, err := sarama.NewConsumerFromClient(client)

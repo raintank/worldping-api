@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"math/rand"
 
 	"github.com/fiorix/freegeoip"
 	"github.com/googollee/go-socket.io"
@@ -30,6 +31,7 @@ var server *socketio.Server
 var contextCache *ContextCache
 var geoipDB *freegeoip.DB
 var publisher services.MetricsEventsPublisher
+var heartbeatInterval = time.Second*30
 
 var (
 	metricsRecvd                  met.Count
@@ -52,17 +54,17 @@ type ContextCache struct {
 	refreshChan chan int64
 }
 
-func (s *ContextCache) Set(id string, context *CollectorContext) {
-	s.Lock()
-	s.Contexts[id] = context
-	s.Unlock()
+func (c *ContextCache) Set(id string, context *CollectorContext) {
+	c.Lock()
+	c.Contexts[id] = context
+	c.Unlock()
 	ProbesConnected.Inc(1)
 }
 
-func (s *ContextCache) Remove(id string) {
-	s.Lock()
-	delete(s.Contexts, id)
-	s.Unlock()
+func (c *ContextCache) Remove(id string) {
+	c.Lock()
+	delete(c.Contexts, id)
+	c.Unlock()
 	ProbesConnected.Inc(-1)
 }
 
@@ -81,15 +83,15 @@ func (c *ContextCache) Shutdown() {
 	return
 }
 
-func (s *ContextCache) Emit(id string, event string, payload interface{}) {
-	s.RLock()
-	context, ok := s.Contexts[id]
+func (c *ContextCache) Emit(id string, event string, payload interface{}) {
+	c.RLock()
+	context, ok := c.Contexts[id]
 	if !ok {
 		log.Info("socket " + id + " is not local.")
-		s.RUnlock()
+		c.RUnlock()
 		return
 	}
-	s.RUnlock()
+	c.RUnlock()
 	context.Socket.Emit(event, payload)
 	switch event {
 	case "updated":
@@ -151,7 +153,7 @@ func (c *ContextCache) RefreshQueue() {
 }
 
 func (c *ContextCache) RefreshLoop() {
-	ticker := time.NewTicker(time.Minute * 5)
+	ticker := time.NewTicker(time.Minute)
 	for {
 		select {
 		case <-c.shutdown:
@@ -162,7 +164,10 @@ func (c *ContextCache) RefreshLoop() {
 			sessList := make([]*CollectorContext, 0)
 			c.RLock()
 			for _, ctx := range c.Contexts {
-				if time.Since(ctx.LastRefresh) >= time.Minute*5 {
+				// add some jitter so that we avoid all probes refreshing at the same time.
+				// Probes will refresh between every 5 and 15minutes.
+				maxRefreshDelay := time.Minute * time.Duration(5 + rand.Intn(10))
+				if time.Since(ctx.LastRefresh) >= maxRefreshDelay {
 					sessList = append(sessList, ctx)
 				}
 			}
@@ -188,11 +193,13 @@ func NewContextCache() *ContextCache {
 }
 
 type CollectorContext struct {
+	sync.Mutex
 	*auth.User
 	Probe       *m.ProbeDTO
 	Socket      socketio.Socket
 	Session     *m.ProbeSession
 	closed      bool
+	done 		chan struct{}
 	LastRefresh time.Time
 }
 
@@ -215,14 +222,14 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 
 	name := req.Form.Get("name")
 	if name == "" {
-		return nil, errors.New("probe name not provided.")
+		return nil, errors.New("probe name not provided")
 	}
 
 	lastSocketId := req.Form.Get("lastSocketId")
 
 	versionStr := req.Form.Get("version")
 	if versionStr == "" {
-		return nil, errors.New("version number not provided.")
+		return nil, errors.New("version number not provided")
 	}
 	v, err := version.NewVersion(versionStr)
 	if err != nil {
@@ -232,7 +239,7 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	//--------- set required version of probe.------------//
 	minVersion, _ := version.NewVersion("0.1.4")
 	if v.LessThan(minVersion) {
-		return nil, errors.New("invalid probe version. Please upgrade.")
+		return nil, errors.New("invalid probe version. Please upgrade")
 	}
 
 	log.Info("probe %s with version %s connected", name, v.String())
@@ -249,7 +256,7 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 			return nil, err
 		}
 		if reached {
-			return nil, errors.New("Probe cant be created due to quota restriction.")
+			return nil, errors.New("Probe cant be created due to quota restriction")
 		}
 		//collector not found, so lets create a new one.
 		probe = &m.ProbeDTO{
@@ -270,13 +277,13 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	}
 	remoteIp := net.ParseIP(util.GetRemoteIp(so.Request()))
 	if remoteIp == nil {
-		log.Error(3, "Unable to lookup remote IP address of probeId=%d", probe.Id)
+		log.Error(3, "unable to lookup remote IP address of probeId=%d", probe.Id)
 		remoteIp = net.ParseIP("0.0.0.0")
 	} else if probe.Latitude == 0 || probe.Longitude == 0 {
 		var location freegeoip.DefaultQuery
 		err := geoipDB.Lookup(remoteIp, &location)
 		if err != nil {
-			log.Error(3, "Unabled to get location from IP.", err)
+			log.Error(3, "unable to get location from IP.", err)
 		} else {
 			probe.Latitude = location.Location.Latitude
 			probe.Longitude = location.Location.Longitude
@@ -301,6 +308,7 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 			InstanceId: setting.InstanceId,
 			RemoteIp:   remoteIp.String(),
 		},
+		done: make(chan struct{}),
 	}
 
 	log.Info("probe %s with probeId=%d owned by %d authenticated successfully from %s.", name, probe.Id, user.ID, remoteIp.String())
@@ -387,6 +395,8 @@ func InitCollectorController(metrics met.Backend, pub services.MetricsEventsPubl
 		c.Socket.On("disconnection", c.OnDisconnection)
 
 		log.Info("saving probe session to DB for probeId=%d", c.Probe.Id)
+		// adding the probeSession will emit an event that will trigger
+		// a refresh to be sent.
 		err = sqlstore.AddProbeSession(c.Session)
 		if err != nil {
 			log.Error(3, "Failed to add probeSession to DB.", err)
@@ -394,8 +404,27 @@ func InitCollectorController(metrics met.Backend, pub services.MetricsEventsPubl
 			return
 		}
 		log.Info("saved session to DB for probeId=%d", c.Probe.Id)
-		// adding the probeSession will emit an event that will trigger
-		// a refresh to be sent.
+		
+		// write heartbeats to the DB
+		go func() {
+			ticker := time.NewTicker(heartbeatInterval)
+			for {
+				select {
+				case <-ticker.C:
+					c.Lock()
+					c.Session.Updated = time.Now()
+					c.Unlock()
+					err = sqlstore.UpdateProbeSession(c.Session)
+					if err != nil {
+						log.Error(3, "Failed to update probeSession in DB. probeId=%d", c.Probe.Id, err)
+					}
+				case <-c.done:
+					// probe disconnected.
+					ticker.Stop()
+					return
+				}
+			}
+		}()
 	})
 
 	server.On("error", func(so socketio.Socket, err error) {
@@ -429,7 +458,11 @@ func (c *CollectorContext) Remove() error {
 }
 
 func (c *CollectorContext) OnDisconnection() {
-	c.closed = true
+	c.Lock()
+	if !c.closed {
+		c.closed = true
+		close(c.done)
+	}
 	log.Info("%s disconnected", c.Probe.Name)
 	contextCache.Remove(c.Session.SocketId)
 	if err := c.Remove(); err != nil {
@@ -478,7 +511,7 @@ func (c *CollectorContext) Refresh() {
 	c.LastRefresh = pre
 	log.Info("probeId=%d (%s) refreshing", c.Probe.Id, c.Probe.Name)
 	//step 1. get list of collectorSessions for this collector.
-	sessions, err := sqlstore.GetProbeSessions(c.Probe.Id, "")
+	sessions, err := sqlstore.GetProbeSessions(c.Probe.Id, "", time.Now().Add(-2 * heartbeatInterval))
 	if err != nil {
 		log.Error(3, "failed to get list of probeSessions.", err)
 		return
@@ -665,7 +698,7 @@ func HandleEndpointDeleted(event *events.EndpointDeleted) error {
 }
 
 func EmitCheckEvent(probeId int64, checkId int64, eventName string, event interface{}) error {
-	sessions, err := sqlstore.GetProbeSessions(probeId, "")
+	sessions, err := sqlstore.GetProbeSessions(probeId, "", time.Now().Add(-2 * heartbeatInterval))
 	if err != nil {
 		log.Error(3, "failed to get list of probeSessions.", err)
 		return err

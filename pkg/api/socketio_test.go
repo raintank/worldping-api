@@ -133,7 +133,7 @@ func TestProbeController(t *testing.T) {
 				}
 			case reason := <-errorChan:
 				errorMsg = true
-				So(reason, ShouldEqual, "invalid probe version. Please upgrade.")
+				So(reason, ShouldEqual, "invalid probe version. Please upgrade")
 				if disconnected && errorMsg {
 					timer.Stop()
 					break LOOP

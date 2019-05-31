@@ -596,28 +596,48 @@ func addProbeSession(sess *session, probeSess *m.ProbeSession) error {
 		Payload: probeSess,
 	}, 0)
 	return nil
-
 }
 
-func GetProbeSessions(probeId int64, instance string) ([]m.ProbeSession, error) {
+func UpdateProbeSession(probeSess *m.ProbeSession) error {
+	sess, err := newSession(true, "probe_session")
+	if err != nil {
+		return err
+	}
+	defer sess.Cleanup()
+	err = updateProbeSession(sess, probeSess)
+	if err != nil {
+		return err
+	}
+	sess.Complete()
+	return nil
+}
+
+func updateProbeSession(sess *session, probeSess *m.ProbeSession) error {
+	_, err := sess.Id(probeSess.Id).Update(probeSess)
+	return err
+}
+
+func GetProbeSessions(probeId int64, instance string, since time.Time) ([]m.ProbeSession, error) {
 	sess, err := newSession(false, "probe_session")
 	if err != nil {
 		return nil, err
 	}
-	return getProbeSessions(sess, probeId, instance)
+	return getProbeSessions(sess, probeId, instance, since)
 }
 
-func getProbeSessions(sess *session, probeId int64, instance string) ([]m.ProbeSession, error) {
+func getProbeSessions(sess *session, probeId int64, instance string, since time.Time) ([]m.ProbeSession, error) {
 	if probeId != 0 {
 		sess.And("probe_id=?", probeId)
 	}
 	if instance != "" {
 		sess.And("instance_id=?", instance)
 	}
+	if !since.IsZero() {
+		sess.And("updated>?", since)
+	}
 	sessions := make([]m.ProbeSession, 0)
 	err := sess.OrderBy("updated").Find(&sessions)
 	return sessions, err
-
 }
 
 func DeleteProbeSession(p *m.ProbeSession) error {
@@ -654,7 +674,7 @@ func deleteProbeSession(sess *session, p *m.ProbeSession) error {
 		//nothing was deleted. so no need to cleanup anything
 		return nil
 	}
-	sessions, err := getProbeSessions(sess, existing.ProbeId, "")
+	sessions, err := getProbeSessions(sess, existing.ProbeId, "", time.Time{})
 	if err != nil {
 		return err
 	}
@@ -694,7 +714,7 @@ func ClearProbeSessions(instance string) error {
 }
 
 func clearProbeSessions(sess *session, instance string) error {
-	sessions, err := getProbeSessions(sess, 0, instance)
+	sessions, err := getProbeSessions(sess, 0, instance, time.Time{})
 	if err != nil {
 		return err
 	}

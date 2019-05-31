@@ -32,6 +32,7 @@ require (
 	github.com/hashicorp/golang-lru v0.0.0-20150706174024-61b79a797853
 	github.com/howeyc/fsnotify v0.0.0-20151003194602-f0c08ee9c607
 	github.com/inconshreveable/log15 v0.0.0-20180818164646-67afb5ed74ec // indirect
+	github.com/jarcoal/httpmock v1.0.4 // indirect
 	github.com/jcmturner/gofork v0.0.0-20190328161633-dc7c13fece03
 	github.com/jtolds/gls v4.2.0+incompatible
 	github.com/klauspost/crc32 v0.0.0-20170210140523-1bab8b35b6bb

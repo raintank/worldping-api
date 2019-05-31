@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/raintank/worldping-api/pkg/events"
-	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 )
 
@@ -97,9 +96,7 @@ func (rows endpointRows) ToDTO() []m.EndpointDTO {
 }
 
 func GetEndpoints(query *m.GetEndpointsQuery) ([]m.EndpointDTO, error) {
-	log.Info("ENDPOINT: creating new DB session")
 	sess, err := newSession(false, "endpoint")
-	log.Info("ENDPOINT: session created")
 	if err != nil {
 		return nil, err
 	}
@@ -126,12 +123,10 @@ func getEndpoints(sess *session, query *m.GetEndpointsQuery) ([]m.EndpointDTO, e
 	sess.Join("LEFT", "check", "endpoint.id = `check`.endpoint_id")
 	sess.Join("LEFT", "endpoint_tag", "endpoint.id = endpoint_tag.endpoint_id")
 	sess.Cols("`endpoint`.*", "`check`.*", "`endpoint_tag`.*")
-	log.Info("ENDPOINT: executing find query")
 	err := sess.Find(&e)
 	if err != nil {
 		return nil, err
 	}
-	log.Info("ENDPOINT: converting rows to endpointDTO")
 	return e.ToDTO(), nil
 }
 
