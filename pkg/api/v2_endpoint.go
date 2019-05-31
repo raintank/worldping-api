@@ -9,7 +9,7 @@ import (
 )
 
 func GetEndpoints(c *middleware.Context, query m.GetEndpointsQuery) *rbody.ApiResponse {
-	query.OrgId = c.OrgId
+	query.OrgId = int64(c.User.ID)
 
 	endpoints, err := sqlstore.GetEndpoints(&query)
 	if err != nil {
@@ -22,7 +22,7 @@ func GetEndpoints(c *middleware.Context, query m.GetEndpointsQuery) *rbody.ApiRe
 func GetEndpointById(c *middleware.Context) *rbody.ApiResponse {
 	id := c.ParamsInt64(":id")
 
-	endpoint, err := sqlstore.GetEndpointById(c.OrgId, id)
+	endpoint, err := sqlstore.GetEndpointById(int64(c.User.ID), id)
 	if err != nil {
 		return rbody.ErrResp(err)
 	}
@@ -33,7 +33,7 @@ func GetEndpointById(c *middleware.Context) *rbody.ApiResponse {
 func DeleteEndpoint(c *middleware.Context) *rbody.ApiResponse {
 	id := c.ParamsInt64(":id")
 
-	err := sqlstore.DeleteEndpoint(c.OrgId, id)
+	err := sqlstore.DeleteEndpoint(int64(c.User.ID), id)
 	if err != nil {
 		return rbody.ErrResp(err)
 	}
@@ -42,19 +42,19 @@ func DeleteEndpoint(c *middleware.Context) *rbody.ApiResponse {
 }
 
 func AddEndpoint(c *middleware.Context, endpoint m.EndpointDTO) *rbody.ApiResponse {
-	endpoint.OrgId = c.OrgId
+	endpoint.OrgId = int64(c.User.ID)
 	if endpoint.Name == "" {
 		return rbody.ErrResp(m.NewValidationError("Endpoint name not set."))
 	}
 
-	quotas, err := sqlstore.GetOrgQuotas(c.OrgId)
+	quotas, err := sqlstore.GetOrgQuotas(int64(c.User.ID))
 	if err != nil {
 		return rbody.ErrResp(m.NewValidationError("Error checking quota"))
 	}
 
 	for i := range endpoint.Checks {
 		check := endpoint.Checks[i]
-		check.OrgId = c.OrgId
+		check.OrgId = int64(c.User.ID)
 		if !check.Enabled {
 			continue
 		}
@@ -77,7 +77,7 @@ func AddEndpoint(c *middleware.Context, endpoint m.EndpointDTO) *rbody.ApiRespon
 }
 
 func UpdateEndpoint(c *middleware.Context, endpoint m.EndpointDTO) *rbody.ApiResponse {
-	endpoint.OrgId = c.OrgId
+	endpoint.OrgId = int64(c.User.ID)
 	if endpoint.Name == "" {
 		return rbody.ErrResp(m.NewValidationError("Endpoint name not set."))
 	}
@@ -85,7 +85,7 @@ func UpdateEndpoint(c *middleware.Context, endpoint m.EndpointDTO) *rbody.ApiRes
 		return rbody.ErrResp(m.NewValidationError("Endpoint id not set."))
 	}
 
-	quotas, err := sqlstore.GetOrgQuotas(c.OrgId)
+	quotas, err := sqlstore.GetOrgQuotas(int64(c.User.ID))
 	if err != nil {
 		return rbody.ErrResp(m.NewValidationError("Error checking quota"))
 	}
@@ -119,7 +119,7 @@ func DiscoverEndpoint(c *middleware.Context, cmd m.DiscoverEndpointCmd) *rbody.A
 
 func DisableEndpoints(c *middleware.Context) *rbody.ApiResponse {
 	query := m.GetEndpointsQuery{
-		OrgId: c.OrgId,
+		OrgId: int64(c.User.ID),
 	}
 
 	endpoints, err := sqlstore.GetEndpoints(&query)

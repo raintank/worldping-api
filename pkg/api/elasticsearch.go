@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/raintank/tsdb-gw/elasticsearch"
+	"github.com/raintank/worldping-api/pkg/elasticsearch"
 	"github.com/raintank/worldping-api/pkg/middleware"
 )
 
@@ -17,7 +17,7 @@ func V1ElasticsearchProxy(c *middleware.Context) {
 		return
 	}
 	if c.Req.Request.Method == "POST" && proxyPath == "_msearch" {
-		elasticsearch.Proxy(c.OrgId, c.Context)
+		elasticsearch.Proxy(c.User.ID, c.Context)
 		return
 	}
 	c.JSON(404, "Not Found")

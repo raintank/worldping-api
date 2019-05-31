@@ -11,7 +11,7 @@ import (
 	"github.com/graarh/golang-socketio"
 	"github.com/graarh/golang-socketio/transport"
 	"github.com/raintank/met/helper"
-	"github.com/raintank/raintank-apps/pkg/auth"
+	"github.com/raintank/tsdb-gw/auth"
 	"github.com/raintank/worldping-api/pkg/events"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
@@ -86,7 +86,7 @@ func TestProbeController(t *testing.T) {
 				}
 			case reason := <-errorChan:
 				errorMsg = true
-				So(reason, ShouldEqual, auth.ErrInvalidApiKey.Error())
+				So(reason, ShouldEqual, auth.ErrInvalidCredentials.Error())
 				if disconnected && errorMsg {
 					timer.Stop()
 					break LOOP
@@ -133,7 +133,7 @@ func TestProbeController(t *testing.T) {
 				}
 			case reason := <-errorChan:
 				errorMsg = true
-				So(reason, ShouldEqual, "invalid probe version. Please upgrade.")
+				So(reason, ShouldEqual, "invalid probe version. Please upgrade")
 				if disconnected && errorMsg {
 					timer.Stop()
 					break LOOP

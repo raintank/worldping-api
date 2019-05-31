@@ -8,7 +8,7 @@ import (
 )
 
 func V1GetCollectors(c *middleware.Context, query m.GetProbesQuery) {
-	query.OrgId = c.OrgId
+	query.OrgId = int64(c.User.ID)
 	probes, err := sqlstore.GetProbes(&query)
 	if err != nil {
 		handleError(c, err)
@@ -20,7 +20,7 @@ func V1GetCollectors(c *middleware.Context, query m.GetProbesQuery) {
 
 func V1GetCollectorLocations(c *middleware.Context) {
 	query := m.GetProbesQuery{
-		OrgId: c.OrgId,
+		OrgId: int64(c.User.ID),
 	}
 
 	probes, err := sqlstore.GetProbes(&query)
@@ -46,7 +46,7 @@ func V1GetCollectorLocations(c *middleware.Context) {
 func V1GetCollectorById(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
-	probe, err := sqlstore.GetProbeById(id, c.OrgId)
+	probe, err := sqlstore.GetProbeById(id, int64(c.User.ID))
 	if err != nil {
 		handleError(c, err)
 		return
@@ -59,7 +59,7 @@ func V1GetCollectorById(c *middleware.Context) {
 func V1DeleteCollector(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
-	err := sqlstore.DeleteProbe(id, c.OrgId)
+	err := sqlstore.DeleteProbe(id, int64(c.User.ID))
 	if err != nil {
 		handleError(c, err)
 		return
@@ -70,7 +70,7 @@ func V1DeleteCollector(c *middleware.Context) {
 }
 
 func V1AddCollector(c *middleware.Context, probe m.ProbeDTO) {
-	probe.OrgId = c.OrgId
+	probe.OrgId = int64(c.User.ID)
 	if probe.Id != 0 {
 		c.JSON(400, "Id already set. Try update instead of create.")
 		return
@@ -90,7 +90,7 @@ func V1AddCollector(c *middleware.Context, probe m.ProbeDTO) {
 }
 
 func V1UpdateCollector(c *middleware.Context, probe m.ProbeDTO) {
-	probe.OrgId = c.OrgId
+	probe.OrgId = int64(c.User.ID)
 	if probe.Name == "" {
 		c.JSON(400, "Collector Name not set.")
 		return

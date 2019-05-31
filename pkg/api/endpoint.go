@@ -14,7 +14,7 @@ import (
 func V1GetEndpointById(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
-	endpoint, err := sqlstore.GetEndpointById(c.OrgId, id)
+	endpoint, err := sqlstore.GetEndpointById(int64(c.User.ID), id)
 	if err != nil {
 		handleError(c, err)
 		return
@@ -25,7 +25,7 @@ func V1GetEndpointById(c *middleware.Context) {
 }
 
 func V1GetEndpoints(c *middleware.Context, query m.GetEndpointsQuery) {
-	query.OrgId = c.OrgId
+	query.OrgId = int64(c.User.ID)
 	log.Info("calling sqlstore.GetEndpoints")
 	endpoints, err := sqlstore.GetEndpoints(&query)
 	if err != nil {
@@ -38,7 +38,7 @@ func V1GetEndpoints(c *middleware.Context, query m.GetEndpointsQuery) {
 func V1DeleteEndpoint(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
-	err := sqlstore.DeleteEndpoint(c.OrgId, id)
+	err := sqlstore.DeleteEndpoint(int64(c.User.ID), id)
 	if err != nil {
 		handleError(c, err)
 		return
@@ -49,7 +49,7 @@ func V1DeleteEndpoint(c *middleware.Context) {
 }
 
 func V1AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) {
-	cmd.OrgId = c.OrgId
+	cmd.OrgId = int64(c.User.ID)
 	if cmd.Name == "" {
 		c.JSON(400, "Endpoint name not set.")
 		return
@@ -57,7 +57,7 @@ func V1AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) {
 	checks := make([]m.Check, len(cmd.Monitors))
 	for i, mon := range cmd.Monitors {
 		checks[i] = m.Check{
-			OrgId:          c.OrgId,
+			OrgId:          int64(c.User.ID),
 			EndpointId:     0,
 			Type:           m.MonitorTypeToCheckTypeMap[mon.MonitorTypeId-1],
 			Frequency:      mon.Frequency,
@@ -98,7 +98,7 @@ func V1AddEndpoint(c *middleware.Context, cmd m.AddEndpointCommand) {
 }
 
 func V1UpdateEndpoint(c *middleware.Context, cmd m.UpdateEndpointCommand) {
-	cmd.OrgId = c.OrgId
+	cmd.OrgId = int64(c.User.ID)
 	if cmd.Name == "" {
 		c.JSON(400, "Endpoint name not set.")
 		return

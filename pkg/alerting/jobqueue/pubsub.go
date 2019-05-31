@@ -1,6 +1,7 @@
 package jobqueue
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -8,7 +9,6 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/bsm/sarama-cluster"
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
@@ -16,7 +16,7 @@ import (
 
 type KafkaPubSub struct {
 	instance string
-	consumer *cluster.Consumer
+	consumer sarama.ConsumerGroup
 	producer sarama.SyncProducer
 	topic    string
 	pub      <-chan *m.AlertingJob
@@ -27,29 +27,28 @@ type KafkaPubSub struct {
 
 func NewKafkaPubSub(brokersStr, topic string, pub <-chan *m.AlertingJob, sub chan<- *m.AlertingJob) *KafkaPubSub {
 	brokers := strings.Split(brokersStr, ",")
-	config := cluster.NewConfig()
+	config := sarama.NewConfig()
 	config.Consumer.Offsets.Initial = sarama.OffsetNewest
-	config.Group.Return.Notifications = true
 	config.ClientID = setting.InstanceId + "_alerting"
-	config.Version = sarama.V0_10_0_0
+	config.Version = sarama.V2_0_0_0
 	config.Producer.Flush.Frequency = time.Millisecond * time.Duration(100)
 	config.Producer.RequiredAcks = sarama.WaitForLocal // Wait for all in-sync replicas to ack the message
-	config.Producer.Retry.Max = 10                     // Retry up to 10 times to produce the message
+	config.Producer.Retry.Max = 3                      // Retry up to 10 times to produce the message
 	config.Producer.Compression = sarama.CompressionSnappy
 	config.Producer.Return.Successes = true
 	err := config.Validate()
 	if err != nil {
 		log.Fatal(2, "JobQueue: invalid kafka config: %s", err)
 	}
-	var consumer *cluster.Consumer
+	var consumer sarama.ConsumerGroup
 	if setting.Alerting.EnableWorker {
-		consumer, err = cluster.NewConsumer(brokers, "worldping-alerts", []string{topic}, config)
+		consumer, err = sarama.NewConsumerGroup(brokers, "worldping-alerts", config)
 		if err != nil {
 			log.Fatal(4, "JobQueue: failed to initialize kafka consumer: %s", err)
 		}
 	}
 
-	producer, err := sarama.NewSyncProducer(brokers, &config.Config)
+	producer, err := sarama.NewSyncProducer(brokers, config)
 	if err != nil {
 		log.Fatal(4, "JobQueue: failed to initialize kafka producer: %s", err)
 	}
@@ -68,51 +67,63 @@ func NewKafkaPubSub(brokersStr, topic string, pub <-chan *m.AlertingJob, sub cha
 
 func (ps *KafkaPubSub) Run() {
 	if ps.consumer != nil {
-		go ps.consume(ps.sub)
+		go func() {
+			log.Info("JobQueue: consuming from consumerGroup")
+			for {
+				select {
+				case <-ps.shutdown:
+					log.Info("JobQueue: consumer is done")
+					return
+				default:
+					err := ps.consumer.Consume(context.Background(), []string{ps.topic}, ps)
+					if err != nil {
+						log.Fatal(2, "JobQueue: comsumerGroup error: %v", err)
+					}
+				}
+			}
+		}()
 	}
 	go ps.produce(ps.pub)
 }
 
 func (ps *KafkaPubSub) Close() {
 	close(ps.shutdown)
+	if ps.consumer != nil {
+		ps.consumer.Close()
+	}
 	ps.wg.Wait()
 }
 
-func (ps *KafkaPubSub) consume(sub chan<- *m.AlertingJob) {
+func (ps *KafkaPubSub) Setup(_ sarama.ConsumerGroupSession) error   { return nil }
+func (ps *KafkaPubSub) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
+func (ps *KafkaPubSub) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	ps.wg.Add(1)
 	defer ps.wg.Done()
-	log.Info("JobQueue: consuming from %s", ps.topic)
 
-	for {
-		select {
-		case msg, ok := <-ps.consumer.Messages():
-			if !ok {
-				continue
+	topic := claim.Topic()
+	partition := claim.Partition()
+	log.Info("JobQueue: consumerClaim acquired for %d on topic %s", partition, topic)
+	defer func() {
+		log.Info("JobQueue: consumerClaim released partition %d on topic %s", partition, topic)
+	}()
+	msgCh := claim.Messages()
+
+	for msg := range msgCh {
+		log.Debug("JobQueue: kafka consumer received message: Topic %s, Partition: %d, Offset: %d, Key: %s", msg.Topic, msg.Partition, msg.Offset, msg.Key)
+		job := new(m.AlertingJob)
+		err := json.Unmarshal(msg.Value, job)
+		if err != nil {
+			log.Error(3, "JobQueue: kafka consumer failed to unmarshal job. %s", err)
+		} else {
+			select {
+			case ps.sub <- job:
+			default:
+				log.Error(3, "JobQueue: message dropped as sub chan is full")
 			}
-			log.Debug("JobQueue: kafka consumer received message: Topic %s, Partition: %d, Offset: %d, Key: %s", msg.Topic, msg.Partition, msg.Offset, msg.Key)
-			job := new(m.AlertingJob)
-			err := json.Unmarshal(msg.Value, job)
-			if err != nil {
-				log.Error(3, "JobQueue: kafka consumer failed to unmarshal job. %s", err)
-			} else {
-				sub <- job
-			}
-			ps.consumer.MarkOffset(msg, "")
-		case notification, ok := <-ps.consumer.Notifications():
-			if !ok {
-				continue
-			}
-			claimed := ""
-			for topic, partitions := range notification.Current {
-				claimed += fmt.Sprintf("%s:%v ", topic, partitions)
-			}
-			log.Info("JobQueue: kafka consumer rebalancing. claimed partitions: %s", claimed)
-		case <-ps.shutdown:
-			ps.consumer.Close()
-			log.Info("JobQueue: kafka consumer for %s", ps.topic)
-			return
 		}
+		sess.MarkMessage(msg, "")
 	}
+	return nil
 }
 
 func (ps *KafkaPubSub) produce(pub <-chan *m.AlertingJob) {

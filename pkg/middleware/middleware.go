@@ -5,21 +5,29 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/raintank/raintank-apps/pkg/auth"
+	"github.com/raintank/tsdb-gw/auth"
+	"github.com/raintank/tsdb-gw/auth/gcom"
 	"gopkg.in/macaron.v1"
 )
 
 type Context struct {
 	*macaron.Context
-	*auth.SignedInUser
+	*auth.User
 	ApiKey string
+}
+
+var authPlugin auth.AuthPlugin
+
+func Init(adminKey string) {
+	authPlugin = auth.GetAuthPlugin("grafana")
+	auth.AdminKey = adminKey
 }
 
 func GetContextHandler() macaron.Handler {
 	return func(c *macaron.Context) {
 		ctx := &Context{
-			Context:      c,
-			SignedInUser: &auth.SignedInUser{},
+			Context: c,
+			User:    &auth.User{},
 		}
 		c.Map(ctx)
 	}
@@ -33,7 +41,7 @@ func RequireAdmin() macaron.Handler {
 	}
 }
 
-func RoleAuth(roles ...auth.RoleType) macaron.Handler {
+func RoleAuth(roles ...gcom.RoleType) macaron.Handler {
 	return func(c *Context) {
 		ok := false
 		for _, role := range roles {
@@ -48,7 +56,14 @@ func RoleAuth(roles ...auth.RoleType) macaron.Handler {
 	}
 }
 
+func GetUser(adminKey, key string) (*auth.User, error) {
+	return authPlugin.Auth("api_key", key)
+}
+
 func Auth(adminKey string) macaron.Handler {
+	if authPlugin == nil {
+		Init(adminKey)
+	}
 	return func(ctx *Context) {
 		key, err := getApiKey(ctx)
 		if err != nil {
@@ -60,9 +75,9 @@ func Auth(adminKey string) macaron.Handler {
 			return
 		}
 
-		user, err := auth.Auth(adminKey, key)
+		user, err := GetUser(adminKey, key)
 		if err != nil {
-			if err == auth.ErrInvalidApiKey {
+			if err == auth.ErrInvalidCredentials {
 				ctx.JSON(401, "Unauthorized")
 				return
 			}
@@ -75,11 +90,11 @@ func Auth(adminKey string) macaron.Handler {
 			if header != "" {
 				orgId, err := strconv.ParseInt(header, 10, 64)
 				if err == nil && orgId != 0 {
-					user.OrgId = orgId
+					user.ID = int(orgId)
 				}
 			}
 		}
-		ctx.SignedInUser = user
+		ctx.User = user
 		ctx.ApiKey = key
 	}
 }

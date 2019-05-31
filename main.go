@@ -17,6 +17,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/cmd"
 	"github.com/raintank/worldping-api/pkg/events"
 	"github.com/raintank/worldping-api/pkg/log"
+	"github.com/raintank/worldping-api/pkg/middleware"
 	"github.com/raintank/worldping-api/pkg/services/endpointdiscovery"
 	"github.com/raintank/worldping-api/pkg/services/notifications"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
@@ -96,6 +97,7 @@ func initRuntime() {
 	setting.LogConfigurationInfo()
 
 	sqlstore.NewEngine()
+	middleware.Init(setting.AdminKey)
 }
 
 func listenToSystemSignels(notifyShutdown chan struct{}) {

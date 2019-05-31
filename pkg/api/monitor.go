@@ -11,7 +11,7 @@ import (
 )
 
 func V1GetMonitors(c *middleware.Context, query m.GetMonitorsQuery) {
-	endpoint, err := sqlstore.GetEndpointById(c.OrgId, query.EndpointId)
+	endpoint, err := sqlstore.GetEndpointById(int64(c.User.ID), query.EndpointId)
 	if err != nil {
 		handleError(c, err)
 		return
@@ -42,14 +42,14 @@ func V1GetMonitorTypes(c *middleware.Context) {
 func V1DeleteMonitor(c *middleware.Context) {
 	id := c.ParamsInt64(":id")
 
-	check, err := sqlstore.GetCheckById(c.OrgId, id)
+	check, err := sqlstore.GetCheckById(int64(c.User.ID), id)
 	if err != nil {
 		handleError(c, err)
 		return
 	}
 
 	// get the endpoint that the check belongs too.
-	endpoint, err := sqlstore.GetEndpointById(c.OrgId, check.EndpointId)
+	endpoint, err := sqlstore.GetEndpointById(int64(c.User.ID), check.EndpointId)
 	if err != nil {
 		handleError(c, err)
 		return
@@ -72,7 +72,7 @@ func V1DeleteMonitor(c *middleware.Context) {
 }
 
 func V1AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
-	cmd.OrgId = c.OrgId
+	cmd.OrgId = int64(c.User.ID)
 	if cmd.EndpointId == 0 {
 		c.JSON(400, "EndpointId not set.")
 		return
@@ -91,7 +91,7 @@ func V1AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 	}
 
 	// get the endpoint that the check belongs too.
-	endpoint, err := sqlstore.GetEndpointById(c.OrgId, cmd.EndpointId)
+	endpoint, err := sqlstore.GetEndpointById(int64(c.User.ID), cmd.EndpointId)
 	if err != nil {
 		handleError(c, err)
 		return
@@ -170,7 +170,7 @@ func V1AddMonitor(c *middleware.Context, cmd m.AddMonitorCommand) {
 }
 
 func V1UpdateMonitor(c *middleware.Context, cmd m.UpdateMonitorCommand) {
-	cmd.OrgId = c.OrgId
+	cmd.OrgId = int64(c.User.ID)
 	if cmd.EndpointId == 0 {
 		c.JSON(400, "EndpointId not set.")
 		return
@@ -189,7 +189,7 @@ func V1UpdateMonitor(c *middleware.Context, cmd m.UpdateMonitorCommand) {
 	}
 
 	// get the endpoint that the check belongs too.
-	endpoint, err := sqlstore.GetEndpointById(c.OrgId, cmd.EndpointId)
+	endpoint, err := sqlstore.GetEndpointById(int64(c.User.ID), cmd.EndpointId)
 	if err != nil {
 		handleError(c, err)
 		return
