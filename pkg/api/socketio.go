@@ -453,6 +453,9 @@ func (c *CollectorContext) EmitReady() error {
 func (c *CollectorContext) Remove() error {
 	log.Info("removing socket with Id %s for probeId=%d", c.Session.SocketId, c.Probe.Id)
 	err := sqlstore.DeleteProbeSession(c.Session)
+	if err != nil {
+
+	}
 	log.Info("probe session deleted from db for probeId=%d", c.Probe.Id)
 	return err
 }
@@ -810,7 +813,7 @@ func eventConsumer(channel chan events.RawEvent) {
 					log.Error(3, "failed to emit ProbeSessionCreated event.", err)
 				}
 				break
-			case "ProbeSesssion.deleted":
+			case "ProbeSession.deleted":
 				event := events.ProbeSessionDeleted{}
 				if err := json.Unmarshal(e.Body, &event.Payload); err != nil {
 					log.Error(3, "unable to unmarshal payload into ProbeSessionDeleted event.", err)
