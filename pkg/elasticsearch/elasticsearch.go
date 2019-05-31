@@ -9,10 +9,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/raintank/tsdb-gw/util"
-	"github.com/raintank/worldping-api/pkg/middleware"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/macaron.v1"
 )
@@ -155,19 +153,4 @@ func transformSearch(orgID int, search []byte) ([]byte, error) {
 	s.Query = Query
 
 	return json.Marshal(s)
-}
-
-func ElasticsearchProxy(c *middleware.Context) {
-	proxyPath := c.Params("*")
-	y, m, d := time.Now().Date()
-	idxDate := fmt.Sprintf("%s-%d-%02d-%02d", IndexName, y, m, d)
-	if c.Req.Request.Method == "GET" && proxyPath == fmt.Sprintf("%s/_stats", idxDate) {
-		c.JSON(200, "ok")
-		return
-	}
-	if c.Req.Request.Method == "POST" && proxyPath == "_msearch" {
-		Proxy(c.User.ID, c.Context)
-		return
-	}
-	c.JSON(404, "Not Found")
 }
