@@ -33,13 +33,14 @@ var executorAlertOutcomesUnkn met.Count
 var executorGraphiteEmptyResponse met.Count
 
 var executorJobExecDelay met.Timer
+var executorStateSaveDelay met.Timer
 var executorJobQueryGraphite met.Timer
 var executorJobParseAndEval met.Timer
 var executorGraphiteMissingVals met.Meter
 
 var metricsPublisher services.MetricsPublisher
 
-// Init initalizes all metrics
+// Init initializes all metrics
 // run this function when statsd is ready, so we can create the series
 func Init(metrics met.Backend, publisher services.MetricsPublisher) {
 	tickQueueItems = metrics.NewMeter("alert-tickqueue.items", 0)
@@ -63,6 +64,7 @@ func Init(metrics met.Backend, publisher services.MetricsPublisher) {
 	executorGraphiteEmptyResponse = metrics.NewCount("alert-executor.graphite-emptyresponse")
 
 	executorJobExecDelay = metrics.NewTimer("alert-executor.job_execution_delay", time.Duration(30)*time.Second)
+	executorStateSaveDelay = metrics.NewTimer("alert-executor.state_save_delay", time.Duration(30)*time.Second)
 	executorJobQueryGraphite = metrics.NewTimer("alert-executor.job_query_graphite", 0)
 	executorGraphiteMissingVals = metrics.NewMeter("alert-executor.graphite-missingVals", 0)
 
