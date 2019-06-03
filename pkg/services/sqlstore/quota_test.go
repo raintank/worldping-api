@@ -3,28 +3,16 @@ package sqlstore
 import (
 	"testing"
 
-	"github.com/go-xorm/xorm"
 	m "github.com/raintank/worldping-api/pkg/models"
-	"github.com/raintank/worldping-api/pkg/services/sqlstore/sqlutil"
 	"github.com/raintank/worldping-api/pkg/setting"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 func InitTestDB(t *testing.T) {
-
 	t.Log("InitTestDB")
-	x, err := xorm.NewEngine(sqlutil.TestDB_Sqlite3.DriverName, sqlutil.TestDB_Sqlite3.ConnStr)
-	//x, err := xorm.NewEngine(sqlutil.TestDB_Mysql.DriverName, sqlutil.TestDB_Mysql.ConnStr)
-	//x, err := xorm.NewEngine(sqlutil.TestDB_Postgres.DriverName, sqlutil.TestDB_Postgres.ConnStr)
-
+	err := MockEngine()
 	if err != nil {
-		t.Fatalf("Failed to init in memory sqllite3 db %v", err)
-	}
-
-	sqlutil.CleanDB(x)
-
-	if err := SetEngine(x, false); err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to init DB. %s", err)
 	}
 }
 

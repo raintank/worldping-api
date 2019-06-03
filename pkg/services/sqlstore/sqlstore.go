@@ -5,31 +5,55 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
+	"sync"
 
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore/migrations"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore/migrator"
+	"github.com/raintank/worldping-api/pkg/services/sqlstore/sqlutil"
 	"github.com/raintank/worldping-api/pkg/setting"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-xorm/xorm"
-	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 var (
 	x       *xorm.Engine
 	dialect migrator.Dialect
-
-	HasEngine bool
-
-	DbCfg struct {
+	l       sync.Mutex
+	DbCfg   struct {
 		Type, Host, Name, User, Pwd, Path, SslMode string
 	}
 
 	UseSQLite3 bool
 )
+
+// setup and manage an SQLite3 engine for testing.
+func MockEngine() error {
+	l.Lock()
+	defer l.Unlock()
+	if x != nil {
+		log.Info("cleaning existing DB")
+		sqlutil.CleanDB(x)
+		migrator := migrator.NewMigrator(x)
+		migrator.LogLevel = log.INFO
+		migrations.AddMigrations(migrator)
+
+		return migrator.Start()
+	}
+	e, err := xorm.NewEngine(sqlutil.TestDB_Sqlite3.DriverName, sqlutil.TestDB_Sqlite3.ConnStr)
+	//x, err := xorm.NewEngine(sqlutil.TestDB_Mysql.DriverName, sqlutil.TestDB_Mysql.ConnStr)
+	//x, err := xorm.NewEngine(sqlutil.TestDB_Postgres.DriverName, sqlutil.TestDB_Postgres.ConnStr)
+	e.SetMaxOpenConns(1)
+	if err != nil {
+		return err
+	}
+
+	sqlutil.CleanDB(e)
+
+	return SetEngine(e, false)
+}
 
 func NewEngine() {
 	x, err := getEngine()
@@ -48,6 +72,7 @@ func NewEngine() {
 
 func SetEngine(engine *xorm.Engine, enableLog bool) (err error) {
 	x = engine
+
 	dialect = migrator.NewDialect(x.DriverName())
 
 	migrator := migrator.NewMigrator(x)
@@ -82,17 +107,6 @@ func getEngine() (*xorm.Engine, error) {
 	case "mysql":
 		cnnstr = fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8",
 			DbCfg.User, DbCfg.Pwd, DbCfg.Host, DbCfg.Name)
-	case "postgres":
-		var host, port = "127.0.0.1", "5432"
-		fields := strings.Split(DbCfg.Host, ":")
-		if len(fields) > 0 && len(strings.TrimSpace(fields[0])) > 0 {
-			host = fields[0]
-		}
-		if len(fields) > 1 && len(strings.TrimSpace(fields[1])) > 0 {
-			port = fields[1]
-		}
-		cnnstr = fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=%s",
-			DbCfg.User, DbCfg.Pwd, host, port, DbCfg.Name, DbCfg.SslMode)
 	case "sqlite3":
 		if !filepath.IsAbs(DbCfg.Path) {
 			DbCfg.Path = filepath.Join(setting.DataPath, DbCfg.Path)
