@@ -53,7 +53,6 @@ func dispatchJobs(jobQ *jobqueue.JobQueue) {
 					continue
 				}
 				log.Debug("%d jobs found for TS: %d", len(jobs), next)
-				dispatcherJobSchedulesSeen.Inc(int64(len(jobs)))
 				for _, job := range jobs {
 					job.GeneratedAt = time.Now()
 					job.LastPointTs = time.Unix(next-1, 0)

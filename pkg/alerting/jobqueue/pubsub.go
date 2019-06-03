@@ -36,6 +36,7 @@ func NewKafkaPubSub(brokersStr, topic string, pub <-chan *m.AlertingJob, sub cha
 	config.Producer.Retry.Max = 3                      // Retry up to 10 times to produce the message
 	config.Producer.Compression = sarama.CompressionSnappy
 	config.Producer.Return.Successes = true
+	config.Producer.Partitioner = sarama.NewHashPartitioner
 	err := config.Validate()
 	if err != nil {
 		log.Fatal(2, "JobQueue: invalid kafka config: %s", err)
@@ -110,6 +111,7 @@ func (ps *KafkaPubSub) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sara
 
 	for msg := range msgCh {
 		log.Debug("JobQueue: kafka consumer received message: Topic %s, Partition: %d, Offset: %d, Key: %s", msg.Topic, msg.Partition, msg.Offset, msg.Key)
+		consumerMessageDelay.Value(time.Since(msg.Timestamp))
 		job := new(m.AlertingJob)
 		err := json.Unmarshal(msg.Value, job)
 		if err != nil {
@@ -117,7 +119,9 @@ func (ps *KafkaPubSub) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sara
 		} else {
 			select {
 			case ps.sub <- job:
+				jobsConsumedCount.Inc(1)
 			default:
+				jobsDroppedCount.Inc(1)
 				log.Error(3, "JobQueue: message dropped as sub chan is full")
 			}
 		}
@@ -148,9 +152,10 @@ func (ps *KafkaPubSub) produce(pub <-chan *m.AlertingJob) {
 				continue
 			}
 			pm := &sarama.ProducerMessage{
-				Topic: ps.topic,
-				Value: sarama.ByteEncoder(data),
-				Key:   sarama.StringEncoder(fmt.Sprintf("%d-%s", job.Id, job.LastPointTs.String())),
+				Topic:     ps.topic,
+				Value:     sarama.ByteEncoder(data),
+				Key:       sarama.StringEncoder(fmt.Sprintf("%d-%s", job.Id, job.LastPointTs.String())),
+				Timestamp: time.Now(),
 			}
 			go ps.sendMessage(pm)
 		case <-ps.shutdown:

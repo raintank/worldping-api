@@ -22,16 +22,14 @@ func ChanExecutor(jobQueue <-chan *m.AlertingJob, cache *lru.Cache) {
 	for j := range jobQueue {
 		wg.Add(1)
 		go func(job *m.AlertingJob) {
-			jobQueueInternalItems.Value(int64(len(jobQueue)))
-			jobQueueInternalSize.Value(int64(setting.Alerting.InternalJobQueueSize))
 			execute(job, cache)
 			wg.Done()
 		}(j)
 	}
 	log.Info("Alerting: chanExecutor jobQueue closed")
-	// dont return untl all jobs have executed.
+	// dont return until all jobs have executed.
 	wg.Wait()
-	log.Info("Alerting: chanExecutor all pending jobs executed.")
+	log.Info("Alerting: chanExecutor all pending jobs executed")
 }
 
 // execute executes an alerting job.
@@ -49,10 +47,10 @@ func execute(job *m.AlertingJob, cache *lru.Cache) {
 		return
 	}
 
-	executorNumOriginalTodo.Inc(1)
+	executorNumExecuted.Inc(1)
 
 	preExec := time.Now()
-	executorJobExecDelay.Value(preExec.Sub(job.LastPointTs))
+	executorJobExecDelay.Value(time.Since(job.LastPointTs))
 
 	headers := make(http.Header)
 	headers.Add("x-org-id", fmt.Sprintf("%d", job.OrgId))
@@ -64,8 +62,7 @@ func execute(job *m.AlertingJob, cache *lru.Cache) {
 	}
 	log.Debug("Alerting: querying graphite with /render?target=%s&from=%d&until=%d", req.Targets[0], req.Start.Unix(), req.End.Unix())
 	res, err := req.Query(setting.Alerting.GraphiteUrl+"render", headers)
-	durationExec := time.Since(preExec)
-	executorJobQueryGraphite.Value(durationExec)
+	executorJobQueryGraphite.Value(time.Since(preExec))
 	log.Debug("Alerting: job results - job:%v err:%v res:%v", job, err, res)
 
 	if err != nil {
