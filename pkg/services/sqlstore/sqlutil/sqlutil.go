@@ -43,5 +43,14 @@ func CleanDB(x *xorm.Engine) {
 				panic("failed to disable foreign key checks")
 			}
 		}
+	} else if x.DriverName() == "sqlite3" {
+		tables, _ := x.DBMetas()
+		sess := x.NewSession()
+		defer sess.Close()
+		for _, table := range tables {
+			if _, err := sess.Exec("drop table `" + table.Name + "` ;"); err != nil {
+				panic(fmt.Sprintf("failed to delete table: %v, err: %v", table.Name, err))
+			}
+		}
 	}
 }

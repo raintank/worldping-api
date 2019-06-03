@@ -7,6 +7,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
+	"github.com/raintank/worldping-api/pkg/util"
 )
 
 // getJobs retrieves all jobs for which lastPointAt % their freq == their offset.
@@ -45,8 +46,8 @@ func dispatchJobs(jobQ *jobqueue.JobQueue) {
 				pre := time.Now()
 				jobs, err := getJobs(next)
 				next++
-				dispatcherNumGetSchedules.Inc(1)
-				dispatcherGetSchedules.Value(time.Since(pre))
+				dispatcherNumGetSchedules.Inc()
+				dispatcherGetSchedules.Value(util.Since(pre))
 
 				if err != nil {
 					log.Error(0, "Alerting failed to get jobs from DB: %q", err)
@@ -57,7 +58,7 @@ func dispatchJobs(jobQ *jobqueue.JobQueue) {
 					job.GeneratedAt = time.Now()
 					job.LastPointTs = time.Unix(next-1, 0)
 					jobQ.QueueJob(job)
-					dispatcherJobsScheduled.Inc(1)
+					dispatcherJobsScheduled.Inc()
 				}
 			}
 		case <-offsetTicker.C:

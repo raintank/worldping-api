@@ -16,9 +16,9 @@ jobs:
       - image: circleci/golang:1.11.10
     steps:
       - checkout
-      - run: test -z "$(gofmt -s -l main.go ./pkg/* | tee /dev/stderr)"
-      - run: go test -v $(go list ./... | grep -v /vendor/)
-      - run: go vet $(go list ./... | grep -v /vendor/)
+      - run: test -z "$(gofmt -s -l ./ | tee /dev/stderr)"
+      - run: go test -race ./...
+      - run: go vet ./...
 
   deploy:
     docker:

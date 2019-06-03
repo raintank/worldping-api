@@ -12,12 +12,11 @@ import (
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
+	"github.com/raintank/worldping-api/pkg/util"
 	"gopkg.in/raintank/schema.v1"
 )
 
 func ChanExecutor(jobQueue <-chan *m.AlertingJob, cache *lru.Cache) {
-	executorNum.Inc(1)
-	defer executorNum.Dec(1)
 	var wg sync.WaitGroup
 	for j := range jobQueue {
 		wg.Add(1)
@@ -37,20 +36,20 @@ func execute(job *m.AlertingJob, cache *lru.Cache) {
 	key := fmt.Sprintf("%d-%d", job.Id, job.LastPointTs.Unix())
 
 	if time.Now().Sub(job.GeneratedAt) > time.Minute*time.Duration(10) {
-		executorNumTooOld.Inc(1)
+		executorNumTooOld.Inc()
 		return
 	}
 
 	if found, _ := cache.ContainsOrAdd(key, true); found {
-		executorNumAlreadyDone.Inc(1)
+		executorNumAlreadyDone.Inc()
 		log.Debug("Alerting: skipping job which has already been seen. jobId: %s", key)
 		return
 	}
 
-	executorNumExecuted.Inc(1)
+	executorNumExecuted.Inc()
 
 	preExec := time.Now()
-	executorJobExecDelay.Value(time.Since(job.LastPointTs))
+	executorJobExecDelay.Value(util.Since(job.LastPointTs))
 
 	headers := make(http.Header)
 	headers.Add("x-org-id", fmt.Sprintf("%d", job.OrgId))
@@ -62,18 +61,18 @@ func execute(job *m.AlertingJob, cache *lru.Cache) {
 	}
 	log.Debug("Alerting: querying graphite with /render?target=%s&from=%d&until=%d", req.Targets[0], req.Start.Unix(), req.End.Unix())
 	res, err := req.Query(setting.Alerting.GraphiteUrl+"render", headers)
-	executorJobQueryGraphite.Value(time.Since(preExec))
+	executorJobQueryGraphite.Value(util.Since(preExec))
 	log.Debug("Alerting: job results - job:%v err:%v res:%v", job, err, res)
 
 	if err != nil {
-		executorAlertOutcomesErr.Inc(1)
+		executorAlertOutcomesErr.Inc()
 		log.Error(3, "Alerting: query failed for job %q : %s", job, err.Error())
 		return
 	}
 
 	newState, err := eval(res, job.HealthSettings)
 	if err != nil {
-		executorAlertOutcomesErr.Inc(1)
+		executorAlertOutcomesErr.Inc()
 		log.Error(3, "Alerting: eval failed for job %q : %s", job, err.Error())
 		return
 	}
@@ -90,17 +89,17 @@ func execute(job *m.AlertingJob, cache *lru.Cache) {
 
 	switch newState {
 	case m.EvalResultOK:
-		executorAlertOutcomesOk.Inc(1)
+		executorAlertOutcomesOk.Inc()
 	case m.EvalResultCrit:
-		executorAlertOutcomesCrit.Inc(1)
+		executorAlertOutcomesCrit.Inc()
 	case m.EvalResultUnknown:
-		executorAlertOutcomesUnkn.Inc(1)
+		executorAlertOutcomesUnkn.Inc()
 	}
 }
 
 func eval(res graphite.Response, healthSettings *m.CheckHealthSettings) (m.CheckEvalResult, error) {
 	if len(res) == 0 {
-		executorGraphiteEmptyResponse.Inc(1)
+		executorGraphiteEmptyResponse.Inc()
 		return m.EvalResultUnknown, fmt.Errorf("fatal: no data returned for job")
 	}
 	badEndpoints := 0

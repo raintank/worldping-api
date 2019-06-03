@@ -12,6 +12,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
+	"github.com/raintank/worldping-api/pkg/util"
 )
 
 type KafkaPubSub struct {
@@ -111,7 +112,7 @@ func (ps *KafkaPubSub) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sara
 
 	for msg := range msgCh {
 		log.Debug("JobQueue: kafka consumer received message: Topic %s, Partition: %d, Offset: %d, Key: %s", msg.Topic, msg.Partition, msg.Offset, msg.Key)
-		consumerMessageDelay.Value(time.Since(msg.Timestamp))
+		consumerMessageDelay.Value(util.Since(msg.Timestamp))
 		job := new(m.AlertingJob)
 		err := json.Unmarshal(msg.Value, job)
 		if err != nil {
@@ -119,9 +120,9 @@ func (ps *KafkaPubSub) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sara
 		} else {
 			select {
 			case ps.sub <- job:
-				jobsConsumedCount.Inc(1)
+				jobsConsumedCount.Inc()
 			default:
-				jobsDroppedCount.Inc(1)
+				jobsDroppedCount.Inc()
 				log.Error(3, "JobQueue: message dropped as sub chan is full")
 			}
 		}
@@ -180,5 +181,5 @@ func (ps *KafkaPubSub) sendMessage(pm *sarama.ProducerMessage) {
 			break
 		}
 	}
-	jobsPublishedCount.Inc(1)
+	jobsPublishedCount.Inc()
 }

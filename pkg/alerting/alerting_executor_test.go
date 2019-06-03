@@ -11,7 +11,6 @@ import (
 
 	"bosun.org/graphite"
 	"github.com/hashicorp/golang-lru"
-	"github.com/raintank/met/helper"
 	"github.com/raintank/worldping-api/pkg/alerting/jobqueue"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
@@ -64,8 +63,7 @@ func (m *mockPublisher) Add(metrics []*schema.MetricData) {
 }
 
 func init() {
-	metrics, _ := helper.New(false, "", "standard", "worldping-api", "test")
-	Init(metrics, &mockPublisher{})
+	Init(&mockPublisher{})
 }
 
 func TestExecutor(t *testing.T) {
