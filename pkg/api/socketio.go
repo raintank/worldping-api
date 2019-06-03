@@ -4,17 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/fiorix/freegeoip"
 	"github.com/googollee/go-socket.io"
-	"github.com/hashicorp/go-version"
 	"github.com/grafana/metrictank/stats"
+	"github.com/hashicorp/go-version"
 	"github.com/raintank/tsdb-gw/auth"
+	"github.com/raintank/worldping-api/pkg/api/sockets"
 	"github.com/raintank/worldping-api/pkg/events"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/middleware"
@@ -23,189 +21,21 @@ import (
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
 	"github.com/raintank/worldping-api/pkg/util"
-	schemaV0 "gopkg.in/raintank/schema.v0"
-	"gopkg.in/raintank/schema.v1"
 )
 
 var server *socketio.Server
-var contextCache *ContextCache
 var geoipDB *freegeoip.DB
-var publisher services.MetricsEventsPublisher
+
 var heartbeatInterval = time.Second * 30
 
 var (
-	metricsRecvd = stats.NewCounter32("api.probes.metrics-recv")
-	ProbesConnected = stats.NewGauge32("api.probes.connected")
-
-	UpdatesSent = stats.NewCounter32("api.probes.updates-sent")
-	CreatesSent = stats.NewCounter32("api.probes.creates-sent")
-	RemovesSent = stats.NewCounter32("api.probes.removes-sent")
-
 	UpdatesRecv = stats.NewCounter32("api.probes.updates-recv")
 	CreatesRecv = stats.NewCounter32("api.probes.creates-recv")
 	RemovesRecv = stats.NewCounter32("api.probes.removes-recv")
 
-	RefreshDuration = stats.NewMeter32("api.probes.refresh-duration", true)
-
 	ProbeSessionCreatedEventsSeen = stats.NewCounter32("api.probes.session-created-events")
 	ProbeSessionDeletedEventsSeen = stats.NewCounter32("api.probes.session-deleted-events")
 )
-
-type ContextCache struct {
-	sync.RWMutex
-	Contexts    map[string]*CollectorContext
-	shutdown    chan struct{}
-	refreshChan chan int64
-}
-
-func (c *ContextCache) Set(id string, context *CollectorContext) {
-	c.Lock()
-	c.Contexts[id] = context
-	c.Unlock()
-	ProbesConnected.Inc()
-}
-
-func (c *ContextCache) Remove(id string) {
-	c.Lock()
-	delete(c.Contexts, id)
-	c.Unlock()
-	ProbesConnected.Dec()
-}
-
-func (c *ContextCache) Shutdown() {
-	c.shutdown <- struct{}{}
-	sessList := make([]*CollectorContext, 0)
-	c.Lock()
-	for _, ctx := range c.Contexts {
-		sessList = append(sessList, ctx)
-	}
-	c.Contexts = make(map[string]*CollectorContext)
-	c.Unlock()
-	for _, ctx := range sessList {
-		ctx.Remove()
-	}
-	return
-}
-
-func (c *ContextCache) Emit(id string, event string, payload interface{}) {
-	c.RLock()
-	context, ok := c.Contexts[id]
-	if !ok {
-		log.Info("socket " + id + " is not local.")
-		c.RUnlock()
-		return
-	}
-	c.RUnlock()
-	context.Socket.Emit(event, payload)
-	switch event {
-	case "updated":
-		UpdatesSent.Inc()
-	case "created":
-		CreatesSent.Inc()
-	case "removed":
-		RemovesSent.Inc()
-	}
-}
-
-func (c *ContextCache) Refresh(collectorId int64) {
-	c.refreshChan <- collectorId
-}
-
-func (c *ContextCache) refresh(collectorId int64) {
-	sessList := make([]*CollectorContext, 0)
-	c.RLock()
-	for _, ctx := range c.Contexts {
-		if ctx.Probe.Id == collectorId {
-			sessList = append(sessList, ctx)
-		}
-	}
-	c.RUnlock()
-	for _, ctx := range sessList {
-		ctx.Refresh()
-	}
-
-}
-
-func (c *ContextCache) RefreshQueue() {
-	ticker := time.NewTicker(time.Second * 2)
-	buffer := make([]int64, 0)
-	for {
-		select {
-		case <-c.shutdown:
-			log.Info("RefreshQueue terminating due to shutdown signal.")
-			ticker.Stop()
-			return
-		case <-ticker.C:
-			if len(buffer) == 0 {
-				break
-			}
-			log.Debug("processing %d queued probe refreshes.", len(buffer))
-			collectorIds := make(map[int64]struct{})
-			for _, id := range buffer {
-				collectorIds[id] = struct{}{}
-			}
-			log.Debug("%d refreshes are for %d probes", len(buffer), len(collectorIds))
-			for id := range collectorIds {
-				c.refresh(id)
-			}
-			buffer = buffer[:0]
-		case id := <-c.refreshChan:
-			log.Debug("adding refresh of %d to buffer", id)
-			buffer = append(buffer, id)
-		}
-	}
-}
-
-func (c *ContextCache) RefreshLoop() {
-	ticker := time.NewTicker(time.Minute)
-	for {
-		select {
-		case <-c.shutdown:
-			log.Info("RefreshLoop terminating due to shutdown signal.")
-			ticker.Stop()
-			return
-		case <-ticker.C:
-			sessList := make([]*CollectorContext, 0)
-			c.RLock()
-			for _, ctx := range c.Contexts {
-				// add some jitter so that we avoid all probes refreshing at the same time.
-				// Probes will refresh between every 5 and 15minutes.
-				maxRefreshDelay := time.Minute * time.Duration(5+rand.Intn(10))
-				if time.Since(ctx.LastRefresh) >= maxRefreshDelay {
-					sessList = append(sessList, ctx)
-				}
-			}
-			c.RUnlock()
-			for _, ctx := range sessList {
-				ctx.Refresh()
-			}
-
-		}
-	}
-}
-
-func NewContextCache() *ContextCache {
-	cache := &ContextCache{
-		Contexts:    make(map[string]*CollectorContext),
-		shutdown:    make(chan struct{}),
-		refreshChan: make(chan int64, 100),
-	}
-
-	go cache.RefreshLoop()
-	go cache.RefreshQueue()
-	return cache
-}
-
-type CollectorContext struct {
-	sync.Mutex
-	*auth.User
-	Probe       *m.ProbeDTO
-	Socket      socketio.Socket
-	Session     *m.ProbeSession
-	closed      bool
-	done        chan struct{}
-	LastRefresh time.Time
-}
 
 func authenticate(keyString string) (*auth.User, error) {
 	if keyString != "" {
@@ -214,7 +44,7 @@ func authenticate(keyString string) (*auth.User, error) {
 	return nil, auth.ErrInvalidCredentials
 }
 
-func register(so socketio.Socket) (*CollectorContext, error) {
+func register(so socketio.Socket) (*sockets.ProbeSocket, error) {
 	req := so.Request()
 	req.ParseForm()
 	keyString := req.Form.Get("apiKey")
@@ -299,45 +129,35 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 			}
 		}
 	}
-
-	sess := &CollectorContext{
-		User:   user,
-		Probe:  probe,
-		Socket: so,
-		Session: &m.ProbeSession{
-			OrgId:      int64(user.ID),
-			ProbeId:    probe.Id,
-			SocketId:   so.Id(),
-			Version:    versionStr,
-			InstanceId: setting.InstanceId,
-			RemoteIp:   remoteIp.String(),
-		},
-		done: make(chan struct{}),
+	sess := &m.ProbeSession{
+		OrgId:      int64(user.ID),
+		ProbeId:    probe.Id,
+		SocketId:   so.Id(),
+		Version:    versionStr,
+		InstanceId: setting.InstanceId,
+		RemoteIp:   remoteIp.String(),
 	}
+	sock := sockets.NewProbeSocket(user, probe, so, sess, heartbeatInterval)
 
 	log.Info("probe %s with probeId=%d owned by %d authenticated successfully from %s.", name, probe.Id, user.ID, remoteIp.String())
 	if lastSocketId != "" {
-		if err := sqlstore.DeleteProbeSession(&m.ProbeSession{OrgId: int64(sess.User.ID), SocketId: lastSocketId, ProbeId: sess.Probe.Id}); err != nil {
+		if err := sqlstore.DeleteProbeSession(&m.ProbeSession{OrgId: sess.OrgId, SocketId: lastSocketId, ProbeId: probe.Id}); err != nil {
 			log.Error(3, "failed to remove lastSocketId for probeId=%d", probe.Id, err)
 			return nil, err
 		}
-		log.Info("removed previous socket with Id %s from probeId=%d", lastSocketId, sess.Probe.Id)
+		log.Info("removed previous socket with Id %s from probeId=%d", lastSocketId, probe.Id)
 		//allow time for our change to propagate.
 		time.Sleep(time.Second)
 	}
-
-	contextCache.Set(sess.Session.SocketId, sess)
-	log.Info("saved session to contextCache for probeId=%d", probe.Id)
-	return sess, nil
+	return sock, nil
 }
 
 func InitCollectorController(pub services.MetricsEventsPublisher) {
-	publisher = pub
 	if err := sqlstore.ClearProbeSessions(setting.InstanceId); err != nil {
 		log.Fatal(4, "failed to clear collectorSessions", err)
 	}
 
-	contextCache = NewContextCache()
+	sockets.InitCache(pub)
 
 	channel := make(chan events.RawEvent, 100)
 	events.Subscribe("Endpoint.created", channel)
@@ -347,8 +167,6 @@ func InitCollectorController(pub services.MetricsEventsPublisher) {
 	events.Subscribe("ProbeSession.deleted", channel)
 	events.Subscribe("Probe.updated", channel)
 	go eventConsumer(channel)
-
-
 
 	// init GEOIP DB.
 	var err error
@@ -363,7 +181,7 @@ func InitCollectorController(pub services.MetricsEventsPublisher) {
 		return
 	}
 	server.On("connection", func(so socketio.Socket) {
-		c, err := register(so)
+		sock, err := register(so)
 		if err != nil {
 			if err == auth.ErrInvalidCredentials {
 				log.Info("probe failed to authenticate.")
@@ -375,184 +193,19 @@ func InitCollectorController(pub services.MetricsEventsPublisher) {
 			so.Emit("error", err.Error())
 			return
 		}
-		log.Info("connection for probeId=%d registered without error", c.Probe.Id)
-		if err := c.EmitReady(); err != nil {
-			return
-		}
-		log.Info("binding event handlers for probeId=%d", c.Probe.Id)
-		c.Socket.On("event", c.OnEvent)
-		c.Socket.On("results", c.OnResults)
-		c.Socket.On("disconnection", c.OnDisconnection)
-
-		log.Info("saving probe session to DB for probeId=%d", c.Probe.Id)
-		// adding the probeSession will emit an event that will trigger
-		// a refresh to be sent.
-		err = sqlstore.AddProbeSession(c.Session)
-		if err != nil {
-			log.Error(3, "Failed to add probeSession to DB.", err)
-			so.Emit("error", fmt.Sprintf("internal server error. %s", err.Error()))
-			return
-		}
-		log.Info("saved session to DB for probeId=%d", c.Probe.Id)
-
-		// write heartbeats to the DB
-		go func() {
-			ticker := time.NewTicker(heartbeatInterval)
-			for {
-				select {
-				case <-ticker.C:
-					c.Lock()
-					c.Session.Updated = time.Now()
-					c.Unlock()
-					err = sqlstore.UpdateProbeSession(c.Session)
-					if err != nil {
-						log.Error(3, "Failed to update probeSession in DB. probeId=%d", c.Probe.Id, err)
-					}
-				case <-c.done:
-					// probe disconnected.
-					ticker.Stop()
-					return
-				}
-			}
-		}()
+		sock.Start()
 	})
 
 	server.On("error", func(so socketio.Socket, err error) {
-		log.Error(3, "socket emitted error", err)
+		log.Error(3, "socket %s emitted error %s", so.Id(), err)
 	})
 
 }
 
 func ShutdownController() {
 	log.Info("shutting down collectorController")
-	contextCache.Shutdown()
+	sockets.Shutdown()
 	log.Info("collectorController shutdown.")
-}
-
-func (c *CollectorContext) EmitReady() error {
-	log.Info("sending ready event to probeId %d", c.Probe.Id)
-	readyPayload := &m.ProbeReadyPayload{
-		Collector:    c.Probe,
-		MonitorTypes: m.MonitorTypes,
-		SocketId:     c.Session.SocketId,
-	}
-	c.Socket.Emit("ready", readyPayload)
-	return nil
-}
-
-func (c *CollectorContext) Remove() error {
-	log.Info("removing socket with Id %s for probeId=%d", c.Session.SocketId, c.Probe.Id)
-	err := sqlstore.DeleteProbeSession(c.Session)
-	if err != nil {
-
-	}
-	log.Info("probe session deleted from db for probeId=%d", c.Probe.Id)
-	return err
-}
-
-func (c *CollectorContext) OnDisconnection() {
-	c.Lock()
-	if !c.closed {
-		c.closed = true
-		close(c.done)
-	}
-	log.Info("%s disconnected", c.Probe.Name)
-	contextCache.Remove(c.Session.SocketId)
-	if err := c.Remove(); err != nil {
-		log.Error(3, "Failed to remove probeSession for probeId=%d, %s", c.Probe.Id, err)
-	}
-}
-
-func (c *CollectorContext) OnEvent(msg *schema.ProbeEvent) {
-	log.Debug("received event from probeId%", c.Probe.Id)
-	if !c.Probe.Public {
-		msg.OrgId = int64(c.User.ID)
-	}
-	publisher.AddEvent(msg)
-}
-
-func (c *CollectorContext) OnResults(results []*schemaV0.MetricData) {
-	metricsRecvd.Add(len(results))
-	metrics := make([]*schema.MetricData, len(results))
-	for i, m := range results {
-		metrics[i] = &schema.MetricData{
-			Name:     strings.Replace(m.Name, "litmus.", "worldping.", 1),
-			Metric:   strings.Replace(m.Metric, "litmus.", "worldping.", 1),
-			Interval: m.Interval,
-			OrgId:    m.OrgId,
-			Value:    m.Value,
-			Time:     m.Time,
-			Unit:     m.Unit,
-			Mtype:    m.TargetType,
-			Tags:     m.Tags,
-		}
-		metrics[i].SetId()
-
-		if !c.Probe.Public {
-			metrics[i].OrgId = c.User.ID
-		}
-	}
-	publisher.Add(metrics)
-}
-
-func (c *CollectorContext) Refresh() {
-	if c.closed {
-		log.Info("Refresh called on closed session.")
-		return
-	}
-	pre := time.Now()
-	c.LastRefresh = pre
-	log.Info("probeId=%d (%s) refreshing", c.Probe.Id, c.Probe.Name)
-	//step 1. get list of collectorSessions for this collector.
-	sessions, err := sqlstore.GetProbeSessions(c.Probe.Id, "", time.Now().Add(-2*heartbeatInterval))
-	if err != nil {
-		log.Error(3, "failed to get list of probeSessions.", err)
-		return
-	}
-
-	totalSessions := int64(len(sessions))
-	log.Debug("probeId=%d has %d sessions", c.Probe.Id, totalSessions)
-	//step 2. for each session
-	for pos, sess := range sessions {
-		//we only need to refresh the 1 socket.
-		if sess.SocketId != c.Session.SocketId {
-			continue
-		}
-		//step 3. get list of checks configured for this colletor.
-		checks, err := sqlstore.GetProbeChecksWithEndpointSlug(c.Probe)
-		if err != nil {
-			log.Error(3, "failed to get checks for probeId=%d. %s", c.Probe.Id, err)
-			break
-		}
-
-		v, _ := version.NewVersion(c.Session.Version)
-		newVer, _ := version.NewVersion("0.9.1")
-		activeChecks := make([]m.CheckWithSlug, 0)
-		monitors := make([]m.MonitorDTO, 0)
-		for _, check := range checks {
-			if !check.Enabled {
-				continue
-			}
-			if check.Check.Id%totalSessions == int64(pos) {
-				if v.LessThan(newVer) {
-					monitors = append(monitors, m.MonitorDTOFromCheck(check.Check, check.Slug))
-				} else {
-					activeChecks = append(activeChecks, check)
-				}
-			}
-
-		}
-
-		if v.LessThan(newVer) {
-			log.Info("sending refresh to socket %s, probeId=%d,  %d checks", sess.SocketId, sess.ProbeId, len(monitors))
-			c.Socket.Emit("refresh", monitors)
-		} else {
-			log.Info("sending refresh to socket %s, probeId=%d,  %d checks", sess.SocketId, sess.ProbeId, len(activeChecks))
-			c.Socket.Emit("refresh", activeChecks)
-		}
-		break
-	}
-	RefreshDuration.Value(util.Since(pre))
 }
 
 func SocketIO(c *middleware.Context) {
@@ -710,44 +363,30 @@ func EmitCheckEvent(probeId int64, checkId int64, eventName string, event interf
 			if check, ok := event.(m.CheckWithSlug); ok {
 				monitor := m.MonitorDTOFromCheckWithSlug(check)
 				socketId := sessions[pos].SocketId
-				contextCache.Emit(socketId, eventName, monitor)
+				sockets.Emit(socketId, eventName, monitor)
 				return nil
 			}
 		}
 		socketId := sessions[pos].SocketId
-		contextCache.Emit(socketId, eventName, event)
+		sockets.Emit(socketId, eventName, event)
 	}
 	return nil
 }
 
 func HandleProbeSessionCreated(event *events.ProbeSessionCreated) error {
 	log.Info("ProbeSessionCreated on %s: ProbeId=%d", event.Payload.InstanceId, event.Payload.ProbeId)
-	contextCache.Refresh(event.Payload.ProbeId)
+	sockets.Refresh(event.Payload.ProbeId)
 	return nil
 }
 
 func HandleProbeSessionDeleted(event *events.ProbeSessionDeleted) error {
 	log.Info("ProbeSessionDeleted from %s: ProbeId=%d", event.Payload.InstanceId, event.Payload.ProbeId)
-	contextCache.Refresh(event.Payload.ProbeId)
+	sockets.Refresh(event.Payload.ProbeId)
 	return nil
 }
 
 func HandleProbeUpdated(event *events.ProbeUpdated) error {
-	contextCache.RLock()
-	defer contextCache.RUnlock()
-	// get list of local sockets for this collector.
-	contexts := make([]*CollectorContext, 0)
-	for _, ctx := range contextCache.Contexts {
-		if ctx.Probe.Id == event.Payload.Current.Id {
-			contexts = append(contexts, ctx)
-		}
-	}
-	if len(contexts) > 0 {
-		for _, ctx := range contexts {
-			ctx.Probe = event.Payload.Current
-			_ = ctx.EmitReady()
-		}
-	}
+	sockets.UpdateProbe(event.Payload.Current)
 
 	return nil
 }

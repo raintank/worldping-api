@@ -36,7 +36,7 @@ func Register(r *macaron.Macaron) {
 				r.Get("/:orgId", stats("admin.quotas"), wrap(GetOrgQuotas))
 				r.Put("/:orgId/:target/:limit", stats("admin.quotas"), wrap(UpdateOrgQuota))
 			})
-			r.Get("/usage",stats("admin.usage"), wrap(GetUsage))
+			r.Get("/usage", stats("admin.usage"), wrap(GetUsage))
 			r.Get("/billing", stats("admin.billing"), wrap(GetBilling))
 		}, middleware.RequireAdmin())
 
@@ -47,7 +47,7 @@ func Register(r *macaron.Macaron) {
 				Put(reqEditorRole, stats("endpoints"), bind(m.EndpointDTO{}), wrap(UpdateEndpoint))
 			r.Delete("/:id", reqEditorRole, stats("endpoints"), wrap(DeleteEndpoint))
 			r.Get("/discover", stats("endpoint_discover"), reqEditorRole, bind(m.DiscoverEndpointCmd{}), wrap(DiscoverEndpoint))
-			r.Get("/:id",stats("endpoints"), wrap(GetEndpointById))
+			r.Get("/:id", stats("endpoints"), wrap(GetEndpointById))
 			r.Post("/disable", stats("endpoints"), reqEditorRole, wrap(DisableEndpoints))
 		})
 

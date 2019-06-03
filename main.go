@@ -6,9 +6,9 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
-	"strings"
 
 	"github.com/grafana/metrictank/stats"
 	"github.com/raintank/raintank-probe/publisher"

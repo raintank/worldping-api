@@ -61,6 +61,7 @@ require (
 	github.com/tinylib/msgp v0.0.0-20170101023110-362bfb3384d5
 	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
 	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
+	github.com/yanzay/log v0.0.0-20160419144809-87352bb23506
 	golang.org/x/net v0.0.0-20190522155817-f3200d17e092
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
 	golang.org/x/sys v0.0.0-20190403152447-81d4e9dc473e
