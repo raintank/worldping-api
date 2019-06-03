@@ -2,12 +2,12 @@ package alerting
 
 import (
 	"strings"
-	"time"
 
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/services/notifications"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
+	"github.com/raintank/worldping-api/pkg/util"
 )
 
 var (
@@ -40,7 +40,7 @@ func storeResults(stateChanges chan *m.AlertingJob) {
 			if change {
 				stateChanges <- j
 			}
-			executorStateSaveDelay.Value(int(time.Since(j.TimeExec).Nanoseconds()))
+			executorStateSaveDelay.Value(util.Since(j.TimeExec))
 		}
 		if !saved {
 			log.Error(3, "failed to update checkState for checkId=%d", j.Id)
