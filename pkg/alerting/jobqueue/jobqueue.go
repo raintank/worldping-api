@@ -14,6 +14,7 @@ var (
 	jobQueueSize         met.Gauge
 	jobsDroppedCount     met.Count
 	jobsConsumedCount    met.Count
+	jobsPublishedCount   met.Count
 	consumerMessageDelay met.Timer
 )
 
@@ -23,6 +24,7 @@ func InitMetrics(metrics met.Backend) {
 	jobQueueSize = metrics.NewGauge("alert-jobqueue.size", int64(setting.Alerting.InternalJobQueueSize))
 	jobsDroppedCount = metrics.NewCount("kafka-pubsub.jobs-dropped")
 	jobsConsumedCount = metrics.NewCount("kafka-pubsub.jobs-consumed")
+	jobsPublishedCount = metrics.NewCount("kafka-pubsub.jobs-published")
 	consumerMessageDelay = metrics.NewTimer("kafka-pubsub.message_delay", 0)
 }
 
