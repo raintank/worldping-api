@@ -4,6 +4,7 @@ require (
 	bosun.org v0.0.0-20160609184141-bb4e4366b216
 	github.com/DataDog/datadog-go v0.0.0-20150618030719-a27810dd518c
 	github.com/DataDog/zstd v1.4.0
+	github.com/Dieterbe/go-metrics v0.0.0-20181015090856-87383909479d
 	github.com/Dieterbe/profiletrigger v0.0.0-20150625092948-98e0b12887d3
 	github.com/Shopify/sarama v0.0.0-20190527091752-41f00bce7fd3
 	github.com/Unknwon/com v0.0.0-20151008135407-28b053d5a292
@@ -39,6 +40,7 @@ require (
 	github.com/lib/pq v0.0.0-20150109111458-19eeca3e30d2
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-sqlite3 v0.0.0-20150323234855-e28cd440fabd
+	github.com/metrics20/go-metrics20 v0.0.0-20180821133656-717ed3a27bf9 // indirect
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/oschwald/maxminddb-golang v0.0.0-20160523021551-03a3feaec4e5
 	github.com/philhofer/fwd v0.0.0-20150722221502-4dbda5e2904d
