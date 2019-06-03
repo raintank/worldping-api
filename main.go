@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	"strings"
 
-	"github.com/Dieterbe/profiletrigger/heap"
-	"github.com/raintank/met/helper"
+	"github.com/grafana/metrictank/stats"
 	"github.com/raintank/raintank-probe/publisher"
 	"github.com/raintank/worldping-api/pkg/alerting"
 	"github.com/raintank/worldping-api/pkg/api"
@@ -44,28 +44,21 @@ func main() {
 	flag.Parse()
 	initRuntime()
 
-	if setting.ProfileHeapMB > 0 {
-		errors := make(chan error)
-		go func() {
-			for e := range errors {
-				log.Error(0, e.Error())
-			}
-		}()
-		heap, _ := heap.New(setting.ProfileHeapDir, setting.ProfileHeapMB*1000000, setting.ProfileHeapWait, time.Duration(1)*time.Second, errors)
-		go heap.Run()
-	}
-
-	metricsBackend, err := helper.New(setting.StatsdEnabled, setting.StatsdAddr, setting.StatsdType, "worldping-api", setting.InstanceId)
-	if err != nil {
-		log.Error(3, "Statsd client:", err)
+	if setting.StatsEnabled {
+		stats.NewMemoryReporter()
+		hostname, _ := os.Hostname()
+		prefix := strings.Replace(setting.StatsPrefix, "$hostname", strings.Replace(hostname, ".", "_", -1), -1)
+		stats.NewGraphite(prefix, setting.StatsAddr, setting.StatsInterval, setting.StatsBufferSize, setting.StatsTimeout)
+	} else {
+		stats.NewDevnull()
 	}
 
 	events.Init()
 	tsdbUrl, _ := url.Parse(setting.TsdbUrl)
 	tsdbPublisher := publisher.NewTsdb(tsdbUrl, setting.AdminKey, 1)
-	api.InitCollectorController(metricsBackend, tsdbPublisher)
+	api.InitCollectorController(tsdbPublisher)
 	if setting.Alerting.Enabled {
-		alerting.Init(metricsBackend, tsdbPublisher)
+		alerting.Init(tsdbPublisher)
 		alerting.Construct()
 	}
 

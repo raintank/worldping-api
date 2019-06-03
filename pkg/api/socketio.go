@@ -13,7 +13,7 @@ import (
 	"github.com/fiorix/freegeoip"
 	"github.com/googollee/go-socket.io"
 	"github.com/hashicorp/go-version"
-	"github.com/raintank/met"
+	"github.com/grafana/metrictank/stats"
 	"github.com/raintank/tsdb-gw/auth"
 	"github.com/raintank/worldping-api/pkg/events"
 	"github.com/raintank/worldping-api/pkg/log"
@@ -34,17 +34,21 @@ var publisher services.MetricsEventsPublisher
 var heartbeatInterval = time.Second * 30
 
 var (
-	metricsRecvd                  met.Count
-	ProbesConnected               met.Gauge
-	ProbeSessionCreatedEventsSeen met.Count
-	ProbeSessionDeletedEventsSeen met.Count
-	UpdatesSent                   met.Count
-	CreatesSent                   met.Count
-	RemovesSent                   met.Count
-	UpdatesRecv                   met.Count
-	CreatesRecv                   met.Count
-	RemovesRecv                   met.Count
-	RefreshDuration               met.Timer
+	metricsRecvd = stats.NewCounter32("api.probes.metrics-recv")
+	ProbesConnected = stats.NewGauge32("api.probes.connected")
+
+	UpdatesSent = stats.NewCounter32("api.probes.updates-sent")
+	CreatesSent = stats.NewCounter32("api.probes.creates-sent")
+	RemovesSent = stats.NewCounter32("api.probes.removes-sent")
+
+	UpdatesRecv = stats.NewCounter32("api.probes.updates-recv")
+	CreatesRecv = stats.NewCounter32("api.probes.creates-recv")
+	RemovesRecv = stats.NewCounter32("api.probes.removes-recv")
+
+	RefreshDuration = stats.NewMeter32("api.probes.refresh-duration", true)
+
+	ProbeSessionCreatedEventsSeen = stats.NewCounter32("api.probes.session-created-events")
+	ProbeSessionDeletedEventsSeen = stats.NewCounter32("api.probes.session-deleted-events")
 )
 
 type ContextCache struct {
@@ -58,14 +62,14 @@ func (c *ContextCache) Set(id string, context *CollectorContext) {
 	c.Lock()
 	c.Contexts[id] = context
 	c.Unlock()
-	ProbesConnected.Inc(1)
+	ProbesConnected.Inc()
 }
 
 func (c *ContextCache) Remove(id string) {
 	c.Lock()
 	delete(c.Contexts, id)
 	c.Unlock()
-	ProbesConnected.Inc(-1)
+	ProbesConnected.Dec()
 }
 
 func (c *ContextCache) Shutdown() {
@@ -95,11 +99,11 @@ func (c *ContextCache) Emit(id string, event string, payload interface{}) {
 	context.Socket.Emit(event, payload)
 	switch event {
 	case "updated":
-		UpdatesSent.Inc(1)
+		UpdatesSent.Inc()
 	case "created":
-		CreatesSent.Inc(1)
+		CreatesSent.Inc()
 	case "removed":
-		RemovesSent.Inc(1)
+		RemovesSent.Inc()
 	}
 }
 
@@ -327,7 +331,7 @@ func register(so socketio.Socket) (*CollectorContext, error) {
 	return sess, nil
 }
 
-func InitCollectorController(metrics met.Backend, pub services.MetricsEventsPublisher) {
+func InitCollectorController(pub services.MetricsEventsPublisher) {
 	publisher = pub
 	if err := sqlstore.ClearProbeSessions(setting.InstanceId); err != nil {
 		log.Fatal(4, "failed to clear collectorSessions", err)
@@ -344,21 +348,7 @@ func InitCollectorController(metrics met.Backend, pub services.MetricsEventsPubl
 	events.Subscribe("Probe.updated", channel)
 	go eventConsumer(channel)
 
-	metricsRecvd = metrics.NewCount("collector-ctrl.metrics-recv")
-	ProbesConnected = metrics.NewGauge("collector-ctrl.probes-connected", 0)
 
-	UpdatesSent = metrics.NewCount("collector-ctrl.updates-sent")
-	CreatesSent = metrics.NewCount("collector-ctrl.creates-sent")
-	RemovesSent = metrics.NewCount("collector-ctrl.removes-sent")
-
-	UpdatesRecv = metrics.NewCount("collector-ctrl.updates-recv")
-	CreatesRecv = metrics.NewCount("collector-ctrl.creates-recv")
-	RemovesRecv = metrics.NewCount("collector-ctrl.removes-recv")
-
-	RefreshDuration = metrics.NewTimer("collector-ctrl.refresh-duration", 0)
-
-	ProbeSessionCreatedEventsSeen = metrics.NewCount("collector-ctrl.probe-session-created-events")
-	ProbeSessionDeletedEventsSeen = metrics.NewCount("collector-ctrl.probe-session-deleted-events")
 
 	// init GEOIP DB.
 	var err error
@@ -482,7 +472,7 @@ func (c *CollectorContext) OnEvent(msg *schema.ProbeEvent) {
 }
 
 func (c *CollectorContext) OnResults(results []*schemaV0.MetricData) {
-	metricsRecvd.Inc(int64(len(results)))
+	metricsRecvd.Add(len(results))
 	metrics := make([]*schema.MetricData, len(results))
 	for i, m := range results {
 		metrics[i] = &schema.MetricData{
@@ -562,7 +552,7 @@ func (c *CollectorContext) Refresh() {
 		}
 		break
 	}
-	RefreshDuration.Value(time.Since(pre))
+	RefreshDuration.Value(util.Since(pre))
 }
 
 func SocketIO(c *middleware.Context) {
@@ -774,7 +764,7 @@ func eventConsumer(channel chan events.RawEvent) {
 					log.Error(3, "unable to unmarshal payload into EndpointUpdated event.", err)
 					break
 				}
-				UpdatesRecv.Inc(1)
+				UpdatesRecv.Inc()
 				if err := HandleEndpointUpdated(&event); err != nil {
 					log.Error(3, "failed to emit EndpointUpdated event.", err)
 					// this is bad, but as probes refresh every 5minutes, the changes will propagate.
@@ -786,7 +776,7 @@ func eventConsumer(channel chan events.RawEvent) {
 					log.Error(3, "unable to unmarshal payload into EndpointUpdated event.", err)
 					break
 				}
-				CreatesRecv.Inc(1)
+				CreatesRecv.Inc()
 				if err := HandleEndpointCreated(&event); err != nil {
 					log.Error(3, "failed to emit EndpointCreated event.", err)
 				}
@@ -797,7 +787,7 @@ func eventConsumer(channel chan events.RawEvent) {
 					log.Error(3, "unable to unmarshal payload into EndpointDeleted event.", err)
 					break
 				}
-				RemovesRecv.Inc(1)
+				RemovesRecv.Inc()
 				if err := HandleEndpointDeleted(&event); err != nil {
 					log.Error(3, "failed to emit EndpointDeleted event.", err)
 				}
@@ -808,7 +798,7 @@ func eventConsumer(channel chan events.RawEvent) {
 					log.Error(3, "unable to unmarshal payload into ProbeSessionCreated event.", err)
 					break
 				}
-				ProbeSessionCreatedEventsSeen.Inc(1)
+				ProbeSessionCreatedEventsSeen.Inc()
 				if err := HandleProbeSessionCreated(&event); err != nil {
 					log.Error(3, "failed to emit ProbeSessionCreated event.", err)
 				}
@@ -819,7 +809,7 @@ func eventConsumer(channel chan events.RawEvent) {
 					log.Error(3, "unable to unmarshal payload into ProbeSessionDeleted event.", err)
 					break
 				}
-				ProbeSessionDeletedEventsSeen.Inc(1)
+				ProbeSessionDeletedEventsSeen.Inc()
 
 				if err := HandleProbeSessionDeleted(&event); err != nil {
 					log.Error(3, "failed to emit ProbeSessionDeleted event.", err)

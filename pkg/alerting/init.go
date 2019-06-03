@@ -2,75 +2,51 @@ package alerting
 
 import (
 	"fmt"
-	"time"
 
+	"github.com/grafana/metrictank/stats"
 	"github.com/hashicorp/golang-lru"
-	"github.com/raintank/met"
 	"github.com/raintank/worldping-api/pkg/alerting/jobqueue"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/services"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
-var tickQueueItems met.Meter
-var tickQueueSize met.Gauge
-var dispatcherJobsSkippedDueToSlowJobQueueInternal met.Count
-var dispatcherTicksSkippedDueToSlowTickQueue met.Count
+var (
+	tickQueueItems                                 = stats.NewMeter32("alert-tickqueue.items", true)
+	tickQueueSize                                  = stats.NewGauge32("alert-tickqueue.size")
+	dispatcherJobsSkippedDueToSlowJobQueueInternal = stats.NewCounterRate32("alert-dispatcher.jobs-skipped-due-to-slow-internal-jobqueue")
+	dispatcherTicksSkippedDueToSlowTickQueue       = stats.NewCounterRate32("alert-dispatcher.ticks-skipped-due-to-slow-tickqueue")
 
-var dispatcherGetSchedules met.Timer
-var dispatcherNumGetSchedules met.Count
-var dispatcherJobsScheduled met.Count
+	dispatcherGetSchedules    = stats.NewMeter32("alert-dispatcher.get-schedules", true)
+	dispatcherNumGetSchedules = stats.NewCounterRate32("alert-dispatcher.num-getschedules")
+	dispatcherJobsScheduled   = stats.NewCounterRate32("alert-dispatcher.jobs-scheduled")
 
-var executorNum met.Gauge
+	executorNum = stats.NewGauge32("alert-executor.num")
 
-var executorNumTooOld met.Count
-var executorNumAlreadyDone met.Count
-var executorNumExecuted met.Count
-var executorAlertOutcomesErr met.Count
-var executorAlertOutcomesOk met.Count
-var executorAlertOutcomesCrit met.Count
-var executorAlertOutcomesUnkn met.Count
-var executorGraphiteEmptyResponse met.Count
+	executorNumTooOld             = stats.NewCounterRate32("alert-executor.too-old")
+	executorNumAlreadyDone        = stats.NewCounterRate32("alert-executor.already-done")
+	executorNumExecuted           = stats.NewCounterRate32("alert-executor.executed")
+	executorAlertOutcomesErr      = stats.NewCounterRate32("alert-executor.alert-outcomes.error")
+	executorAlertOutcomesOk       = stats.NewCounterRate32("alert-executor.alert-outcomes.ok")
+	executorAlertOutcomesCrit     = stats.NewCounterRate32("alert-executor.alert-outcomes.critical")
+	executorAlertOutcomesUnkn     = stats.NewCounterRate32("alert-executor.alert-outcomes.unknown")
+	executorGraphiteEmptyResponse = stats.NewCounterRate32("alert-executor.graphite-emptyresponse")
 
-var executorJobExecDelay met.Timer
-var executorStateSaveDelay met.Timer
-var executorJobQueryGraphite met.Timer
-var executorJobParseAndEval met.Timer
-var executorGraphiteMissingVals met.Meter
+	executorJobExecDelay        = stats.NewMeter32("alert-executor.job_execution_delay", true)
+	executorStateSaveDelay      = stats.NewMeter32("alert-executor.state_save_delay", true)
+	executorJobQueryGraphite    = stats.NewMeter32("alert-executor.job_query_graphite", true)
+	executorGraphiteMissingVals = stats.NewCounterRate32("alert-executor.graphite-missingVals")
 
-var metricsPublisher services.MetricsPublisher
+	executorEmailSent   = stats.NewCounterRate32("alert-executor.emails.sent")
+	executorEmailFailed = stats.NewCounterRate32("alert-executor.emails.failed")
+
+	metricsPublisher services.MetricsPublisher
+)
 
 // Init initializes all metrics
 // run this function when statsd is ready, so we can create the series
-func Init(metrics met.Backend, publisher services.MetricsPublisher) {
-	tickQueueItems = metrics.NewMeter("alert-tickqueue.items", 0)
-	tickQueueSize = metrics.NewGauge("alert-tickqueue.size", int64(setting.Alerting.TickQueueSize))
-	dispatcherJobsSkippedDueToSlowJobQueueInternal = metrics.NewCount("alert-dispatcher.jobs-skipped-due-to-slow-internal-jobqueue")
-	dispatcherTicksSkippedDueToSlowTickQueue = metrics.NewCount("alert-dispatcher.ticks-skipped-due-to-slow-tickqueue")
-
-	dispatcherGetSchedules = metrics.NewTimer("alert-dispatcher.get-schedules", 0)
-	dispatcherNumGetSchedules = metrics.NewCount("alert-dispatcher.num-getschedules")
-	dispatcherJobsScheduled = metrics.NewCount("alert-dispatcher.jobs-scheduled")
-
-	executorNum = metrics.NewGauge("alert-executor.num", 0)
-
-	executorNumTooOld = metrics.NewCount("alert-executor.too-old")
-	executorNumAlreadyDone = metrics.NewCount("alert-executor.already-done")
-	executorNumExecuted = metrics.NewCount("alert-executor.executed")
-	executorAlertOutcomesErr = metrics.NewCount("alert-executor.alert-outcomes.error")
-	executorAlertOutcomesOk = metrics.NewCount("alert-executor.alert-outcomes.ok")
-	executorAlertOutcomesCrit = metrics.NewCount("alert-executor.alert-outcomes.critical")
-	executorAlertOutcomesUnkn = metrics.NewCount("alert-executor.alert-outcomes.unknown")
-	executorGraphiteEmptyResponse = metrics.NewCount("alert-executor.graphite-emptyresponse")
-
-	executorJobExecDelay = metrics.NewTimer("alert-executor.job_execution_delay", time.Duration(30)*time.Second)
-	executorStateSaveDelay = metrics.NewTimer("alert-executor.state_save_delay", time.Duration(30)*time.Second)
-	executorJobQueryGraphite = metrics.NewTimer("alert-executor.job_query_graphite", 0)
-	executorGraphiteMissingVals = metrics.NewMeter("alert-executor.graphite-missingVals", 0)
-
+func Init(publisher services.MetricsPublisher) {
 	metricsPublisher = publisher
-
-	jobqueue.InitMetrics(metrics)
 }
 
 func Construct() {

@@ -23,41 +23,42 @@ func Register(r *macaron.Macaron) {
 	quota := middleware.Quota
 	bind := binding.Bind
 	wrap := rbody.Wrap
+	stats := middleware.RequestStats
 
 	// used by LB healthchecks
 	r.Get("/login", Heartbeat)
 
 	r.Group("/api/v2", func() {
-		r.Get("/quotas", wrap(GetQuotas))
+		r.Get("/quotas", stats("quotas"), wrap(GetQuotas))
 
 		r.Group("/admin", func() {
 			r.Group("/quotas", func() {
-				r.Get("/:orgId", wrap(GetOrgQuotas))
-				r.Put("/:orgId/:target/:limit", wrap(UpdateOrgQuota))
+				r.Get("/:orgId", stats("admin.quotas"), wrap(GetOrgQuotas))
+				r.Put("/:orgId/:target/:limit", stats("admin.quotas"), wrap(UpdateOrgQuota))
 			})
-			r.Get("/usage", wrap(GetUsage))
-			r.Get("/billing", wrap(GetBilling))
+			r.Get("/usage",stats("admin.usage"), wrap(GetUsage))
+			r.Get("/billing", stats("admin.billing"), wrap(GetBilling))
 		}, middleware.RequireAdmin())
 
 		r.Group("/endpoints", func() {
 			r.Combo("/").
-				Get(bind(m.GetEndpointsQuery{}), wrap(GetEndpoints)).
-				Post(reqEditorRole, quota("endpoint"), bind(m.EndpointDTO{}), wrap(AddEndpoint)).
-				Put(reqEditorRole, bind(m.EndpointDTO{}), wrap(UpdateEndpoint))
-			r.Delete("/:id", reqEditorRole, wrap(DeleteEndpoint))
-			r.Get("/discover", reqEditorRole, bind(m.DiscoverEndpointCmd{}), wrap(DiscoverEndpoint))
-			r.Get("/:id", wrap(GetEndpointById))
-			r.Post("/disable", reqEditorRole, wrap(DisableEndpoints))
+				Get(bind(m.GetEndpointsQuery{}), stats("endpoints"), wrap(GetEndpoints)).
+				Post(reqEditorRole, quota("endpoint"), stats("endpoints"), bind(m.EndpointDTO{}), wrap(AddEndpoint)).
+				Put(reqEditorRole, stats("endpoints"), bind(m.EndpointDTO{}), wrap(UpdateEndpoint))
+			r.Delete("/:id", reqEditorRole, stats("endpoints"), wrap(DeleteEndpoint))
+			r.Get("/discover", stats("endpoint_discover"), reqEditorRole, bind(m.DiscoverEndpointCmd{}), wrap(DiscoverEndpoint))
+			r.Get("/:id",stats("endpoints"), wrap(GetEndpointById))
+			r.Post("/disable", stats("endpoints"), reqEditorRole, wrap(DisableEndpoints))
 		})
 
 		r.Group("/probes", func() {
 			r.Combo("/").
-				Get(bind(m.GetProbesQuery{}), wrap(GetProbes)).
-				Post(reqEditorRole, quota("probe"), bind(m.ProbeDTO{}), wrap(AddProbe)).
-				Put(reqEditorRole, bind(m.ProbeDTO{}), wrap(UpdateProbe))
-			r.Delete("/:id", reqEditorRole, wrap(DeleteProbe))
-			r.Get("/locations", V1GetCollectorLocations)
-			r.Get("/:id", wrap(GetProbeById))
+				Get(bind(m.GetProbesQuery{}), stats("probes"), wrap(GetProbes)).
+				Post(reqEditorRole, quota("probe"), stats("probes"), bind(m.ProbeDTO{}), wrap(AddProbe)).
+				Put(reqEditorRole, bind(m.ProbeDTO{}), stats("probes"), wrap(UpdateProbe))
+			r.Delete("/:id", reqEditorRole, stats("probes"), wrap(DeleteProbe))
+			r.Get("/locations", stats("probes"), V1GetCollectorLocations)
+			r.Get("/:id", stats("probes"), wrap(GetProbeById))
 		})
 
 	}, middleware.Auth(setting.AdminKey))
@@ -68,44 +69,44 @@ func Register(r *macaron.Macaron) {
 	r.Group("/api", func() {
 		// org information available to all users.
 		r.Group("/org", func() {
-			r.Get("/quotas", V1GetOrgQuotas)
+			r.Get("/quotas", stats("v1_quotas"), V1GetOrgQuotas)
 		})
 
 		r.Group("/collectors", func() {
 			r.Combo("/").
-				Get(bind(m.GetProbesQuery{}), V1GetCollectors).
-				Put(reqEditorRole, quota("probe"), bind(m.ProbeDTO{}), V1AddCollector).
-				Post(reqEditorRole, bind(m.ProbeDTO{}), V1UpdateCollector)
-			r.Get("/locations", V1GetCollectorLocations)
-			r.Get("/:id", V1GetCollectorById)
-			r.Delete("/:id", reqEditorRole, V1DeleteCollector)
+				Get(bind(m.GetProbesQuery{}), stats("v1_probes"), V1GetCollectors).
+				Put(reqEditorRole, quota("probe"), stats("v1_probes"), bind(m.ProbeDTO{}), V1AddCollector).
+				Post(reqEditorRole, stats("v1_probes"), bind(m.ProbeDTO{}), V1UpdateCollector)
+			r.Get("/locations", stats("v1_probes"), V1GetCollectorLocations)
+			r.Get("/:id", stats("v1_probes"), V1GetCollectorById)
+			r.Delete("/:id", stats("v1_probes"), reqEditorRole, V1DeleteCollector)
 		})
 
 		// Monitors
 		r.Group("/monitors", func() {
 			r.Combo("/").
-				Get(bind(m.GetMonitorsQuery{}), V1GetMonitors).
-				Put(reqEditorRole, bind(m.AddMonitorCommand{}), V1AddMonitor).
-				Post(reqEditorRole, bind(m.UpdateMonitorCommand{}), V1UpdateMonitor)
-			r.Delete("/:id", reqEditorRole, V1DeleteMonitor)
+				Get(bind(m.GetMonitorsQuery{}), stats("v1_monitors"), V1GetMonitors).
+				Put(reqEditorRole, stats("v1_monitors"), bind(m.AddMonitorCommand{}), V1AddMonitor).
+				Post(reqEditorRole, stats("v1_monitors"), bind(m.UpdateMonitorCommand{}), V1UpdateMonitor)
+			r.Delete("/:id", stats("v1_monitors"), reqEditorRole, V1DeleteMonitor)
 		})
 		// endpoints
 		r.Group("/endpoints", func() {
 			r.Combo("/").Get(bind(m.GetEndpointsQuery{}), V1GetEndpoints).
-				Put(reqEditorRole, quota("endpoint"), bind(m.AddEndpointCommand{}), V1AddEndpoint).
-				Post(reqEditorRole, bind(m.UpdateEndpointCommand{}), V1UpdateEndpoint)
-			r.Get("/:id", V1GetEndpointById)
-			r.Delete("/:id", reqEditorRole, V1DeleteEndpoint)
-			r.Get("/discover", reqEditorRole, bind(m.DiscoverEndpointCmd{}), V1DiscoverEndpoint)
+				Put(reqEditorRole, quota("endpoint"), stats("v1_endpoints"), bind(m.AddEndpointCommand{}), V1AddEndpoint).
+				Post(reqEditorRole, stats("v1_endpoints"), bind(m.UpdateEndpointCommand{}), V1UpdateEndpoint)
+			r.Get("/:id", stats("v1_endpoints"), V1GetEndpointById)
+			r.Delete("/:id", stats("v1_endpoints"), reqEditorRole, V1DeleteEndpoint)
+			r.Get("/discover", stats("v1_endpoint_discover"), reqEditorRole, bind(m.DiscoverEndpointCmd{}), V1DiscoverEndpoint)
 		})
 
 		r.Get("/monitor_types", V1GetMonitorTypes)
 
 		//Get Graph data from Graphite.
-		r.Any("/graphite/*", V1GraphiteProxy)
+		r.Any("/graphite/*", stats("graphite"), V1GraphiteProxy)
 
 		//Elasticsearch proxy
-		r.Any("/elasticsearch/*", V1ElasticsearchProxy)
+		r.Any("/elasticsearch/*", stats("elasticsearch"), V1ElasticsearchProxy)
 
 	}, middleware.Auth(setting.AdminKey))
 
@@ -114,7 +115,7 @@ func Register(r *macaron.Macaron) {
 
 	r.Any("/socket.io/", SocketIO)
 
-	r.NotFound(NotFoundHandler)
+	r.NotFound(stats("not_found"), NotFoundHandler)
 
 	if err := initGraphiteProxy(); err != nil {
 		log.Fatal(4, "API: failed to initialize Graphite Proxy. %s", err)

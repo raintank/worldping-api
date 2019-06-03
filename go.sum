@@ -5,6 +5,8 @@ github.com/DataDog/datadog-go v0.0.0-20150618030719-a27810dd518c/go.mod h1:LButx
 github.com/DataDog/zstd v1.3.6-0.20190409195224-796139022798/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
 github.com/DataDog/zstd v1.4.0 h1:vhoV+DUHnRZdKW1i5UMjAk2G4JY8wN4ayRfYDNdEhwo=
 github.com/DataDog/zstd v1.4.0/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
+github.com/Dieterbe/artisanalhistogram v0.0.0-20170619072513-f61b7225d304 h1:sbyOmR/OuOAFQIFjjW2aDVPJFQov0JjEm0mATV9fQd4=
+github.com/Dieterbe/artisanalhistogram v0.0.0-20170619072513-f61b7225d304/go.mod h1:cvs23dBNM28q/IWeu4hOdRwEcgaVHWJbXLG4cIib8iU=
 github.com/Dieterbe/go-metrics v0.0.0-20181015090856-87383909479d h1:U/sZpL6NSWONN/4kS3s9kjoJd2y2enXsElP1h1kze4s=
 github.com/Dieterbe/go-metrics v0.0.0-20181015090856-87383909479d/go.mod h1:j+eQi4f2k/Euay5RbXyA+U0tLdZoo5OzCRyl1egmP44=
 github.com/Dieterbe/profiletrigger v0.0.0-20150625092948-98e0b12887d3 h1:UkHQH8ujobdDnNRD4PmDzFYe2U73sqLffgYJwVAI6Uo=
@@ -30,6 +32,8 @@ github.com/davecgh/go-spew v0.0.0-20151105211317-5215b55f46b2/go.mod h1:J7Y8YcW2
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
+github.com/dgryski/go-linlog v0.0.0-20180207191225-edcf2dfd90ff h1:+NjfJ0G4z14aixDkcmlNXF/dH2j1csTVAGFJbyIU5sI=
+github.com/dgryski/go-linlog v0.0.0-20180207191225-edcf2dfd90ff/go.mod h1:M3z/8vKBGvqlq/3mChKmXhXFrQUGqMiCohBsvTKxMzQ=
 github.com/dgryski/go-sip13 v0.0.0-20181026042036-e10d5fee7954/go.mod h1:vAd38F8PWV+bWy6jNmig1y/TA+kYO4g3RSRF0IAv0no=
 github.com/eapache/go-resiliency v0.0.0-20160104191539-b86b1ec0dd42/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
 github.com/eapache/go-resiliency v1.1.0 h1:1NtRmCAqadE2FN4ZcN6g90TP3uk8cg9rn9eNK2197aU=
@@ -76,6 +80,8 @@ github.com/graarh/golang-socketio v0.0.0-20160527125345-533dd6f9e8e9 h1:JcFd+pTC
 github.com/graarh/golang-socketio v0.0.0-20160527125345-533dd6f9e8e9/go.mod h1:8gudiNCFh3ZfvInknmoXzPeV17FSH+X2J5k2cUPIwnA=
 github.com/grafana/grafana v4.2.0+incompatible h1:K8nM/StrbvF8TpOVKRRKRS9/G6I9xBuM3NRW7RDnjnQ=
 github.com/grafana/grafana v4.2.0+incompatible/go.mod h1:U8QyUclJHj254BFcuw45p6sg7eeGYX44qn1ShYo5rGE=
+github.com/grafana/metrictank v0.12.0 h1:ltV6mAscdtdvjlINX9VugQf5BjTmIZkF/Re55KnJCGk=
+github.com/grafana/metrictank v0.12.0/go.mod h1:+W7kcYMB3XFMCQdmZSrXvqb8KCE84tQMaijapcRbptE=
 github.com/hashicorp/go-uuid v1.0.1 h1:fv1ep09latC32wFoVwnqcnKJGnMSdBanPczbHAYm1BE=
 github.com/hashicorp/go-uuid v1.0.1/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/hashicorp/go-version v0.0.0-20160519212729-0181db470237 h1:d6eCXmroV08aT5fUYqhHYFHInUoPZ7CPlHSWAexmVfQ=

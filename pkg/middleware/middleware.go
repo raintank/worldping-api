@@ -2,9 +2,13 @@ package middleware
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
+	"github.com/grafana/metrictank/stats"
 	"github.com/raintank/tsdb-gw/auth"
 	"github.com/raintank/tsdb-gw/auth/gcom"
 	"gopkg.in/macaron.v1"
@@ -16,11 +20,84 @@ type Context struct {
 	ApiKey string
 }
 
+type requestStats struct {
+	sync.Mutex
+	responseCounts    map[string]map[int]*stats.CounterRate32
+	latencyHistograms map[string]*stats.LatencyHistogram15s32
+	sizeMeters        map[string]*stats.Meter32
+}
+
+func (r *requestStats) StatusCount(handler string, status int) {
+	metricKey := fmt.Sprintf("api.request.%s.status.%d", handler, status)
+	r.Lock()
+	p, ok := r.responseCounts[handler]
+	if !ok {
+		p = make(map[int]*stats.CounterRate32)
+		r.responseCounts[handler] = p
+	}
+	c, ok := p[status]
+	if !ok {
+		c = stats.NewCounterRate32(metricKey)
+		p[status] = c
+	}
+	r.Unlock()
+	c.Inc()
+}
+
+func (r *requestStats) Latency(handler string, dur time.Duration) {
+	r.Lock()
+	p, ok := r.latencyHistograms[handler]
+	if !ok {
+		p = stats.NewLatencyHistogram15s32(fmt.Sprintf("api.request.%s", handler))
+		r.latencyHistograms[handler] = p
+	}
+	r.Unlock()
+	p.Value(dur)
+}
+
+func (r *requestStats) PathSize(handler string, size int) {
+	r.Lock()
+	p, ok := r.sizeMeters[handler]
+	if !ok {
+		p = stats.NewMeter32(fmt.Sprintf("api.request.%s.size", handler), false)
+		r.sizeMeters[handler] = p
+	}
+	r.Unlock()
+	p.Value(size)
+}
+
+// RequestStats returns a middleware that tracks request metrics.
+func RequestStats(handler string) macaron.Handler {
+	return func(ctx *Context) {
+		if handlerStats == nil {
+			return
+		}
+		start := time.Now()
+		rw := ctx.Resp.(macaron.ResponseWriter)
+		// call next handler. This will return after all handlers
+		// have completed and the request has been sent.
+		ctx.Next()
+		status := rw.Status()
+		handlerStats.StatusCount(handler, status)
+		handlerStats.Latency(handler, time.Since(start))
+		// only record the request size if the request succeeded.
+		if status < 300 {
+			handlerStats.PathSize(handler, rw.Size())
+		}
+	}
+}
+
 var authPlugin auth.AuthPlugin
+var handlerStats *requestStats
 
 func Init(adminKey string) {
 	authPlugin = auth.GetAuthPlugin("grafana")
 	auth.AdminKey = adminKey
+	handlerStats = &requestStats{
+		responseCounts:    make(map[string]map[int]*stats.CounterRate32),
+		latencyHistograms: make(map[string]*stats.LatencyHistogram15s32),
+		sizeMeters:        make(map[string]*stats.Meter32),
+	}
 }
 
 func GetContextHandler() macaron.Handler {

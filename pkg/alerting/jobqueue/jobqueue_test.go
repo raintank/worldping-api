@@ -4,16 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/raintank/met/helper"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
 	. "github.com/smartystreets/goconvey/convey"
 )
-
-func init() {
-	metrics, _ := helper.New(false, "", "standard", "worldping-api", "test")
-	InitMetrics(metrics)
-}
 
 func TestJobQueuePublish(t *testing.T) {
 	setting.Alerting.InternalJobQueueSize = 1

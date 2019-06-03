@@ -3,30 +3,20 @@ package jobqueue
 import (
 	"time"
 
-	"github.com/raintank/met"
+	"github.com/grafana/metrictank/stats"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
 )
 
 var (
-	jobQueueInItems      met.Gauge
-	jobQueueOutItems     met.Gauge
-	jobQueueSize         met.Gauge
-	jobsDroppedCount     met.Count
-	jobsConsumedCount    met.Count
-	jobsPublishedCount   met.Count
-	consumerMessageDelay met.Timer
+	jobQueueInItems      = stats.NewGauge32("alert-jobqueue.in-items")
+	jobQueueOutItems     = stats.NewGauge32("alert-jobqueue.out-items")
+	jobQueueSize         = stats.NewGauge32("alert-jobqueue.size")
+	jobsDroppedCount     = stats.NewCounterRate32("kafka-pubsub.jobs-dropped")
+	jobsConsumedCount    = stats.NewCounterRate32("kafka-pubsub.jobs-consumed")
+	jobsPublishedCount   = stats.NewCounterRate32("kafka-pubsub.jobs-published")
+	consumerMessageDelay = stats.NewMeter32("kafka-pubsub.message_delay", true)
 )
-
-func InitMetrics(metrics met.Backend) {
-	jobQueueInItems = metrics.NewGauge("alert-jobqueue.in-items", 0)
-	jobQueueOutItems = metrics.NewGauge("alert-jobqueue.out-items", 0)
-	jobQueueSize = metrics.NewGauge("alert-jobqueue.size", int64(setting.Alerting.InternalJobQueueSize))
-	jobsDroppedCount = metrics.NewCount("kafka-pubsub.jobs-dropped")
-	jobsConsumedCount = metrics.NewCount("kafka-pubsub.jobs-consumed")
-	jobsPublishedCount = metrics.NewCount("kafka-pubsub.jobs-published")
-	consumerMessageDelay = metrics.NewTimer("kafka-pubsub.message_delay", 0)
-}
 
 type JobQueue struct {
 	jobsIn  chan *m.AlertingJob
@@ -56,9 +46,9 @@ func NewJobQueue() *JobQueue {
 func (q *JobQueue) stats() {
 	ticker := time.NewTicker(time.Second * 2)
 	for range ticker.C {
-		jobQueueInItems.Value(int64(len(q.jobsIn)))
-		jobQueueOutItems.Value(int64(len(q.jobsOut)))
-		jobQueueSize.Value(int64(setting.Alerting.InternalJobQueueSize))
+		jobQueueInItems.Set(len(q.jobsIn))
+		jobQueueOutItems.Set(len(q.jobsOut))
+		jobQueueSize.Set(setting.Alerting.InternalJobQueueSize)
 	}
 }
 

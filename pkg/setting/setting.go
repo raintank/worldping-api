@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"gopkg.in/ini.v1"
 
@@ -79,12 +80,12 @@ var (
 	appliedCommandLineProperties []string
 	appliedEnvOverrides          []string
 
-	StatsdEnabled   bool
-	StatsdAddr      string
-	StatsdType      string
-	ProfileHeapMB   int
-	ProfileHeapWait int
-	ProfileHeapDir  string
+	StatsEnabled    bool
+	StatsAddr       string
+	StatsPrefix     string
+	StatsInterval   int
+	StatsTimeout    time.Duration
+	StatsBufferSize int
 
 	Kafka KafkaSettings
 
@@ -367,12 +368,12 @@ func NewConfigContext(args *CommandLineArgs) error {
 	}
 
 	telemetry := Cfg.Section("telemetry")
-	StatsdEnabled = telemetry.Key("statsd_enabled").MustBool(false)
-	StatsdAddr = telemetry.Key("statsd_addr").String()
-	StatsdType = telemetry.Key("statsd_type").String()
-	ProfileHeapMB = telemetry.Key("profile_heap_MB").MustInt(0)
-	ProfileHeapWait = telemetry.Key("profile_heap_wait").MustInt(3600)
-	ProfileHeapDir = telemetry.Key("profile_heap_dir").MustString("/tmp")
+	StatsEnabled = telemetry.Key("stats_enabled").MustBool(false)
+	StatsAddr = telemetry.Key("stats_addr").String()
+	StatsPrefix = telemetry.Key("stats_prefix").String()
+	StatsInterval = telemetry.Key("stats_interval").MustInt(10)
+	StatsTimeout = telemetry.Key("stats_timeout").MustDuration(time.Second * 10)
+	StatsBufferSize = telemetry.Key("stats_buffer_size").MustInt(20000)
 
 	readKafkaSettings()
 	readAlertingSettings()

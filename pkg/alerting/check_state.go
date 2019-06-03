@@ -40,7 +40,7 @@ func storeResults(stateChanges chan *m.AlertingJob) {
 			if change {
 				stateChanges <- j
 			}
-			executorStateSaveDelay.Value(time.Since(j.TimeExec))
+			executorStateSaveDelay.Value(int(time.Since(j.TimeExec).Nanoseconds()))
 		}
 		if !saved {
 			log.Error(3, "failed to update checkState for checkId=%d", j.Id)
@@ -89,6 +89,9 @@ func handleStateChange(c chan *m.AlertingJob) {
 				go func(sendCmd *m.SendEmailCommand, job *m.AlertingJob) {
 					if err := notifications.SendEmail(sendCmd); err != nil {
 						log.Error(3, "failed to send email to %s. OrgId: %d monitorId: %d due to: %s", sendCmd.To, job.OrgId, job.Id, err)
+						executorEmailFailed.Inc()
+					} else {
+						executorEmailSent.Inc()
 					}
 				}(&sendCmd, job)
 			}

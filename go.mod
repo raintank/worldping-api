@@ -4,6 +4,7 @@ require (
 	bosun.org v0.0.0-20160609184141-bb4e4366b216
 	github.com/DataDog/datadog-go v0.0.0-20150618030719-a27810dd518c
 	github.com/DataDog/zstd v1.4.0
+	github.com/Dieterbe/artisanalhistogram v0.0.0-20170619072513-f61b7225d304 // indirect
 	github.com/Dieterbe/go-metrics v0.0.0-20181015090856-87383909479d
 	github.com/Dieterbe/profiletrigger v0.0.0-20150625092948-98e0b12887d3
 	github.com/Shopify/sarama v0.0.0-20190527091752-41f00bce7fd3
@@ -12,6 +13,7 @@ require (
 	github.com/bsm/sarama-cluster v0.0.0-20161206102625-11887f57ba85
 	github.com/codeskyblue/go-uuid v0.0.0-20140208115753-952abbca900b // indirect
 	github.com/davecgh/go-spew v1.1.1
+	github.com/dgryski/go-linlog v0.0.0-20180207191225-edcf2dfd90ff // indirect
 	github.com/eapache/go-resiliency v1.1.0
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21
 	github.com/eapache/queue v1.1.0
@@ -29,6 +31,7 @@ require (
 	github.com/gorilla/websocket v0.0.0-20150515162638-1551221275a7
 	github.com/graarh/golang-socketio v0.0.0-20160527125345-533dd6f9e8e9
 	github.com/grafana/grafana v4.2.0+incompatible
+	github.com/grafana/metrictank v0.12.0
 	github.com/hashicorp/go-version v0.0.0-20160519212729-0181db470237
 	github.com/hashicorp/golang-lru v0.0.0-20150706174024-61b79a797853
 	github.com/howeyc/fsnotify v0.0.0-20151003194602-f0c08ee9c607

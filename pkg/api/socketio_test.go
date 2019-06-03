@@ -10,7 +10,6 @@ import (
 
 	"github.com/graarh/golang-socketio"
 	"github.com/graarh/golang-socketio/transport"
-	"github.com/raintank/met/helper"
 	"github.com/raintank/tsdb-gw/auth"
 	"github.com/raintank/worldping-api/pkg/events"
 	m "github.com/raintank/worldping-api/pkg/models"
@@ -36,9 +35,8 @@ func TestProbeController(t *testing.T) {
 	setting.AdminKey = "test"
 	InitTestDB(t)
 
-	backend, _ := helper.New(false, "", "standard", "", "")
 	events.Init()
-	InitCollectorController(backend, &mockPublisher{})
+	InitCollectorController(&mockPublisher{})
 	r := macaron.Classic()
 	Register(r)
 	srv := httptest.NewServer(r)
