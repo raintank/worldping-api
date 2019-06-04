@@ -165,7 +165,7 @@ func (c *Cache) refreshQueue() {
 }
 
 func (c *Cache) refreshLoop() {
-	ticker := time.NewTicker(time.Minute)
+	ticker := time.NewTicker(time.Second * 30)
 	for {
 		select {
 		case <-c.done:
@@ -177,12 +177,9 @@ func (c *Cache) refreshLoop() {
 			c.RLock()
 			for _, sock := range c.Sockets {
 				// add some jitter so that we avoid all probes refreshing at the same time.
-				// Probes will refresh between every 5 and 15minutes.
-				maxRefreshDelay := time.Minute * time.Duration(5+rand.Intn(10))
-				sock.Lock()
-				lastRefresh := sock.LastRefresh
-				sock.Unlock()
-				if time.Since(lastRefresh) >= maxRefreshDelay {
+				// Probes will refresh between every 5 and 10minutes.
+				maxRefreshDelay := time.Second * time.Duration(300+rand.Intn(240))
+				if time.Since(sock.LastRefresh()) >= maxRefreshDelay {
 					sessList = append(sessList, sock)
 				}
 			}

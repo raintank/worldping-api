@@ -50,7 +50,7 @@ services:
       WP_RAINTANK_ELASTICSEARCH_URL: http://localhost:9200
       WP_KAFKA_ENABLED: 'true'
       WP_KAFKA_BROKERS: kafka:9092
-      WP_TELEMETRY_STATSD_ENABLED: 'false'
+      WP_TELEMETRY_STATS_ENABLED: 'false'
       WP_LOG_CONSOLE_LEVEL: 'Info'
       WP_LOG_FILE_LEVEL: 'Info'
       WP_LOG_LEVEL: 'Info'
@@ -86,7 +86,7 @@ services:
       WP_RAINTANK_ELASTICSEARCH_URL: http://localhost:9200
       WP_KAFKA_ENABLED: 'true'
       WP_KAFKA_BROKERS: kafka:9092
-      WP_TELEMETRY_STATSD_ENABLED: 'false'
+      WP_TELEMETRY_STATS_ENABLED: 'false'
       WP_LOG_CONSOLE_LEVEL: 'Info'
       WP_LOG_FILE_LEVEL: 'Info'
       WP_LOG_LEVEL: 'Info'
@@ -125,7 +125,7 @@ services:
       WP_RAINTANK_ELASTICSEARCH_URL: http://localhost:9200
       WP_KAFKA_ENABLED: 'true'
       WP_KAFKA_BROKERS: kafka:9092
-      WP_TELEMETRY_STATSD_ENABLED: 'false'
+      WP_TELEMETRY_STATS_ENABLED: 'false'
       WP_LOG_CONSOLE_LEVEL: 'Info'
       WP_LOG_FILE_LEVEL: 'Info'
       WP_LOG_LEVEL: 'Info'
