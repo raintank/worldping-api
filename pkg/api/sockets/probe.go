@@ -31,7 +31,7 @@ type ProbeSocket struct {
 	Session           *m.ProbeSession
 	closed            bool
 	done              chan struct{}
-	LastRefresh       time.Time
+	lastRefresh       time.Time
 	heartbeatInterval time.Duration
 }
 
@@ -126,7 +126,7 @@ func (p *ProbeSocket) Refresh() {
 		return
 	}
 	pre := time.Now()
-	p.LastRefresh = pre
+	p.lastRefresh = pre
 	p.Unlock()
 	log.Info("probeId=%d (%s) refreshing", p.Probe.Id, p.Probe.Name)
 	//step 1. get list of collectorSessions for this collector.
@@ -225,4 +225,11 @@ func (p *ProbeSocket) Start() {
 			}
 		}
 	}()
+}
+
+func (p *ProbeSocket) LastRefresh() time.Time {
+	p.Lock()
+	l := p.lastRefresh
+	p.Unlock()
+	return l
 }
