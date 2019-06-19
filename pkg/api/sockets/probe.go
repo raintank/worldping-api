@@ -75,6 +75,7 @@ func (p *ProbeSocket) Remove() error {
 
 func (p *ProbeSocket) OnDisconnection() {
 	p.Lock()
+  defer p.Unlock()
 	if !p.closed {
 		p.closed = true
 		close(p.done)
