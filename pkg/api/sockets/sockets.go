@@ -166,6 +166,11 @@ func (c *Cache) refreshQueue() {
 
 func (c *Cache) refreshLoop() {
 	ticker := time.NewTicker(time.Second * 30)
+
+	// allow up to 10 probes to be refreshing concurrently.
+	// we constrain this as querying the DB and marshaling all of the checks into the refresh
+	// payload can be quite resource intensive.
+	limiter := make(chan struct{}, 10)
 	for {
 		select {
 		case <-c.done:
@@ -176,16 +181,21 @@ func (c *Cache) refreshLoop() {
 			sessList := make([]*ProbeSocket, 0)
 			c.RLock()
 			for _, sock := range c.Sockets {
+				sessList = append(sessList, sock)
+			}
+			c.RUnlock()
+
+			for _, sock := range sessList {
 				// add some jitter so that we avoid all probes refreshing at the same time.
 				// Probes will refresh between every 5 and 10minutes.
 				maxRefreshDelay := time.Second * time.Duration(300+rand.Intn(240))
 				if time.Since(sock.LastRefresh()) >= maxRefreshDelay {
-					sessList = append(sessList, sock)
+					limiter <- struct{}{}
+					go func() {
+						sock.Refresh()
+						<-limiter
+					}()
 				}
-			}
-			c.RUnlock()
-			for _, sock := range sessList {
-				sock.Refresh()
 			}
 		}
 	}
