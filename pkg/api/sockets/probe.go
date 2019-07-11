@@ -32,6 +32,7 @@ type ProbeSocket struct {
 	closed            bool
 	done              chan struct{}
 	lastRefresh       time.Time
+	refreshing        bool
 	heartbeatInterval time.Duration
 }
 
@@ -127,8 +128,21 @@ func (p *ProbeSocket) Refresh() {
 		return
 	}
 	pre := time.Now()
-	p.lastRefresh = pre
+	refreshInProgress := p.refreshing
+	if !refreshInProgress {
+		p.refreshing = true
+		p.lastRefresh = pre
+	}
 	p.Unlock()
+	if refreshInProgress {
+		log.Info("probeId=%d (%s) ignoring refresh request as one is already running", p.Probe.Id, p.Probe.Name)
+		return
+	}
+	defer func() {
+		p.Lock()
+		p.refreshing = false
+		p.Unlock()
+	}()
 	log.Info("probeId=%d (%s) refreshing", p.Probe.Id, p.Probe.Name)
 	//step 1. get list of collectorSessions for this collector.
 	sessions, err := sqlstore.GetProbeSessions(p.Probe.Id, "", time.Now().Add(-2*p.heartbeatInterval))
