@@ -191,10 +191,10 @@ func (c *Cache) refreshLoop() {
 				maxRefreshDelay := time.Second * time.Duration(300+rand.Intn(240))
 				if time.Since(sock.LastRefresh()) >= maxRefreshDelay {
 					limiter <- struct{}{}
-					go func() {
+					go func(sock *ProbeSocket) {
 						sock.Refresh()
 						<-limiter
-					}()
+					}(sock)
 				}
 			}
 		}
