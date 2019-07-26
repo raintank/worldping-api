@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"bosun.org/graphite"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
+	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
 	"github.com/raintank/worldping-api/pkg/setting"
@@ -50,9 +52,17 @@ func execute(job *m.AlertingJob, cache *lru.Cache) {
 
 	preExec := time.Now()
 	executorJobExecDelay.Value(util.Since(job.LastPointTs))
-
+	tracer := opentracing.GlobalTracer()
+	span := tracer.StartSpan("queryGraphite")
+	ext.SpanKindRPCClient.Set(span)
+	ext.PeerService.Set(span, "graphite")
 	headers := make(http.Header)
 	headers.Add("x-org-id", fmt.Sprintf("%d", job.OrgId))
+	carrier := opentracing.HTTPHeadersCarrier(headers)
+	err := tracer.Inject(span.Context(), opentracing.HTTPHeaders, carrier)
+	if err != nil {
+		log.Error(3, "Alerting: failed to inject span into headers of graphite request: %s", err.Error())
+	}
 	start := job.LastPointTs.Add(time.Duration(int64(-1)*job.Frequency*int64(job.HealthSettings.Steps)) * time.Second)
 	req := graphite.Request{
 		Start:   &start,
