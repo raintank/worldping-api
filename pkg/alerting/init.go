@@ -43,9 +43,9 @@ var (
 	metricsPublisher services.MetricsPublisher
 )
 
-// Init initializes all metrics
-// run this function when statsd is ready, so we can create the series
+// Init initializes the alerting engine.
 func Init(publisher services.MetricsPublisher) {
+
 	metricsPublisher = publisher
 }
 

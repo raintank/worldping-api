@@ -44,7 +44,7 @@ require (
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/mattn/go-sqlite3 v0.0.0-20150323234855-e28cd440fabd
 	github.com/metrics20/go-metrics20 v0.0.0-20180821133656-717ed3a27bf9 // indirect
-	github.com/opentracing/opentracing-go v1.1.0 // indirect
+	github.com/opentracing/opentracing-go v1.1.0
 	github.com/oschwald/maxminddb-golang v0.0.0-20160523021551-03a3feaec4e5
 	github.com/philhofer/fwd v0.0.0-20150722221502-4dbda5e2904d
 	github.com/pierrec/lz4 v0.0.0-20190327172049-315a67e90e41
@@ -59,8 +59,9 @@ require (
 	github.com/smartystreets/assertions v0.0.0-20160707190355-2063fd1cc7c9
 	github.com/smartystreets/goconvey v0.0.0-20161103171500-019319c870f8
 	github.com/tinylib/msgp v0.0.0-20170101023110-362bfb3384d5
-	github.com/uber/jaeger-client-go v2.16.0+incompatible // indirect
+	github.com/uber/jaeger-client-go v2.16.0+incompatible
 	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
+	github.com/weaveworks/common v0.0.0-20190714171817-ddeaa31513fd // indirect
 	github.com/yanzay/log v0.0.0-20160419144809-87352bb23506
 	golang.org/x/net v0.0.0-20190522155817-f3200d17e092
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect

@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"os/signal"
@@ -22,6 +24,7 @@ import (
 	"github.com/raintank/worldping-api/pkg/services/notifications"
 	"github.com/raintank/worldping-api/pkg/services/sqlstore"
 	"github.com/raintank/worldping-api/pkg/setting"
+	jaegercfg "github.com/uber/jaeger-client-go/config"
 )
 
 var version = "master"
@@ -58,6 +61,8 @@ func main() {
 	tsdbPublisher := publisher.NewTsdb(tsdbUrl, setting.AdminKey, 1)
 	api.InitCollectorController(tsdbPublisher)
 	if setting.Alerting.Enabled {
+		closer := initTracing()
+		defer closer.Close()
 		alerting.Init(tsdbPublisher)
 		alerting.Construct()
 	}
@@ -118,4 +123,23 @@ func listenToSystemSignels(notifyShutdown chan struct{}) {
 	api.ShutdownController()
 	log.Close()
 	os.Exit(code)
+}
+
+func initTracing() io.Closer {
+	log.Info("initializing jaeger")
+	cfg, err := jaegercfg.FromEnv()
+	if err != nil {
+		log.Fatal(3, err.Error())
+	}
+	if cfg.Sampler.SamplingServerURL == "" && cfg.Reporter.LocalAgentHostPort == "" {
+		log.Info("Jaeger tracer disabled: No trace report agent or config server specified")
+		return ioutil.NopCloser(nil)
+	}
+
+	closer, err := cfg.InitGlobalTracer("worldping-alerting")
+	if err != nil {
+		log.Fatal(3, err.Error())
+	}
+
+	return closer
 }
