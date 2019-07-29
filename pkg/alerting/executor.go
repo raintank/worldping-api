@@ -54,6 +54,7 @@ func execute(job *m.AlertingJob, cache *lru.Cache) {
 	executorJobExecDelay.Value(util.Since(job.LastPointTs))
 	tracer := opentracing.GlobalTracer()
 	span := tracer.StartSpan("queryGraphite")
+	defer span.Finish()
 	ext.SpanKindRPCClient.Set(span)
 	ext.PeerService.Set(span, "graphite")
 	headers := make(http.Header)
