@@ -73,7 +73,7 @@ func execute(job *m.AlertingJob, cache *lru.Cache) {
 	res, err := req.Query(setting.Alerting.GraphiteUrl+"render", headers)
 	executorJobQueryGraphite.Value(util.Since(preExec))
 	log.Debug("Alerting: job results - job:%v err:%v res:%v", job, err, res)
-
+	span.Finish()
 	if err != nil {
 		executorAlertOutcomesErr.Inc()
 		log.Error(3, "Alerting: query failed for job %q : %s", job, err.Error())
