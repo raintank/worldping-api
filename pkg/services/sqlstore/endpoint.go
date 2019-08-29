@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/raintank/worldping-api/pkg/events"
@@ -681,7 +682,7 @@ func getProbeChecks(sess *session, probe *m.ProbeDTO) ([]m.Check, error) {
 		CheckId int64
 	}
 	checkIds := make([]checkIdRow, 0)
-	rawQuery := "SELECT check_id FROM route_by_id_index where probe_id = ?"
+	rawQuery := "SELECT check_id FROM route_by_id_index JOIN `check` on `check`.id=route_by_id_index.check_id where probe_id = ? and `check`.enabled=1"
 	rawParams := make([]interface{}, 0)
 	rawParams = append(rawParams, probe.Id)
 
@@ -704,8 +705,9 @@ func getProbeChecks(sess *session, probe *m.ProbeDTO) ([]m.Check, error) {
 	for i, c := range checkIds {
 		cid[i] = c.CheckId
 	}
+	checkIdsStr := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(cid)), ","), "[]")
 	sess.Table("check")
-	sess.In("id", cid).And("`check`.enabled=1")
+	sess.Where(fmt.Sprintf("`check`.id IN (%s)", checkIdsStr)).And("`check`.enabled=1")
 	err = sess.Find(&checks)
 	return checks, err
 }
@@ -725,7 +727,7 @@ func getProbeChecksWithEndpointSlug(sess *session, probe *m.ProbeDTO) ([]m.Check
 		CheckId int64
 	}
 	checkIds := make([]checkIdRow, 0)
-	rawQuery := "SELECT check_id FROM route_by_id_index where probe_id = ?"
+	rawQuery := "SELECT check_id FROM route_by_id_index JOIN `check` on `check`.id=route_by_id_index.check_id where probe_id = ? and `check`.enabled=1"
 	rawParams := make([]interface{}, 0)
 	rawParams = append(rawParams, probe.Id)
 
@@ -748,9 +750,10 @@ func getProbeChecksWithEndpointSlug(sess *session, probe *m.ProbeDTO) ([]m.Check
 	for i, c := range checkIds {
 		cid[i] = c.CheckId
 	}
+	checkIdsStr := strings.Trim(strings.Join(strings.Fields(fmt.Sprint(cid)), ","), "[]")
 	sess.Table("check")
 	sess.Join("INNER", "endpoint", "`check`.endpoint_id=endpoint.id")
-	sess.In("`check`.id", cid).And("`check`.enabled=1")
+	sess.Where(fmt.Sprintf("`check`.id IN (%s)", checkIdsStr)).And("`check`.enabled=1")
 	sess.Cols("`check`.*", "endpoint.slug")
 	err = sess.Find(&checks)
 	return checks, err
