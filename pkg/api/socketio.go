@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/fiorix/freegeoip"
-	"github.com/googollee/go-socket.io"
+	socketio "github.com/googollee/go-socket.io"
 	"github.com/grafana/metrictank/stats"
 	"github.com/hashicorp/go-version"
 	"github.com/raintank/tsdb-gw/auth"
