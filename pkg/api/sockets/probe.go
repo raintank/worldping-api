@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/googollee/go-socket.io"
+	socketio "github.com/googollee/go-socket.io"
 	"github.com/grafana/metrictank/stats"
 	"github.com/hashicorp/go-version"
 	"github.com/raintank/tsdb-gw/auth"
@@ -48,7 +48,7 @@ func NewProbeSocket(user *auth.User, probe *m.ProbeDTO, so socketio.Socket, sess
 }
 
 func (p *ProbeSocket) EmitReady() error {
-	log.Info("sending ready event to probeId %d", p.Probe.Id)
+	log.Info("sending ready event to probeId=%d socketId=%s", p.Probe.Id, p.Session.SocketId)
 	readyPayload := &m.ProbeReadyPayload{
 		Collector:    p.Probe,
 		MonitorTypes: m.MonitorTypes,
@@ -65,10 +65,10 @@ func (p *ProbeSocket) emit(message string, payload interface{}) error {
 }
 
 func (p *ProbeSocket) Remove() error {
-	log.Info("removing socket with Id %s for probeId=%d", p.Session.SocketId, p.Probe.Id)
+	log.Info("removing socketId=%s for probeId=%d", p.Session.SocketId, p.Probe.Id)
 	err := sqlstore.DeleteProbeSession(p.Session)
 	if err != nil {
-
+		log.Error(3, "Failed to delete probeSession from db for probeId=%d err=%s", p.Probe.Id, err)
 	}
 	log.Info("probe session deleted from db for probeId=%d", p.Probe.Id)
 	return err
@@ -81,15 +81,15 @@ func (p *ProbeSocket) OnDisconnection() {
 		p.closed = true
 		close(p.done)
 	}
-	log.Info("%s disconnected", p.Probe.Name)
+	log.Info("probeId=%d (%s) disconnected. socketId=%s", p.Probe.Id, p.Probe.Name, p.Session.SocketId)
 	Remove(p.Session.SocketId)
 	if err := p.Remove(); err != nil {
-		log.Error(3, "Failed to remove probeSession for probeId=%d, %s", p.Probe.Id, err)
+		log.Error(3, "Failed to remove probeSession for probeId=%d err=%s", p.Probe.Id, err)
 	}
 }
 
 func (p *ProbeSocket) OnEvent(msg *schema.ProbeEvent) {
-	log.Debug("received event from probeId%", p.Probe.Id)
+	log.Debug("received event from probeId=%d", p.Probe.Id)
 	if !p.Probe.Public {
 		msg.OrgId = int64(p.User.ID)
 	}
@@ -124,7 +124,7 @@ func (p *ProbeSocket) Refresh() {
 	p.Lock()
 	if p.closed {
 		p.Unlock()
-		log.Info("Refresh called on closed session.")
+		log.Info("Refresh called on closed session for probeId=%d socketId=%s.", p.Probe.Id, p.Session.SocketId)
 		return
 	}
 	pre := time.Now()
@@ -143,15 +143,19 @@ func (p *ProbeSocket) Refresh() {
 		p.refreshing = false
 		p.Unlock()
 	}()
-	log.Info("probeId=%d (%s) refreshing", p.Probe.Id, p.Probe.Name)
+	log.Info("sending refresh to probe. probeId=%d socketId=%s", p.Probe.Id, p.Session.SocketId)
 	//step 1. get list of collectorSessions for this collector.
 	sessions, err := sqlstore.GetProbeSessions(p.Probe.Id, "", time.Now().Add(-2*p.heartbeatInterval))
 	if err != nil {
-		log.Error(3, "failed to get list of probeSessions.", err)
+		log.Error(3, "failed to get list of probeSessions for probeId=%d err=%s", p.Probe.Id, err)
 		return
 	}
 
 	totalSessions := int64(len(sessions))
+	if totalSessions == 0 {
+		log.Error(3, "probeId=%d no probeSessions found when running refresh", p.Probe.Id)
+		return
+	}
 	log.Debug("probeId=%d has %d sessions", p.Probe.Id, totalSessions)
 	//step 2. for each session
 	for pos, sess := range sessions {
@@ -159,10 +163,10 @@ func (p *ProbeSocket) Refresh() {
 		if sess.SocketId != p.Session.SocketId {
 			continue
 		}
-		//step 3. get list of checks configured for this colletor.
+		//step 3. get list of checks configured for this collector.
 		checks, err := sqlstore.GetProbeChecksWithEndpointSlug(p.Probe)
 		if err != nil {
-			log.Error(3, "failed to get checks for probeId=%d. %s", p.Probe.Id, err)
+			log.Error(3, "failed to get checks for probeId=%d err=%s", p.Probe.Id, err)
 			break
 		}
 
@@ -181,15 +185,21 @@ func (p *ProbeSocket) Refresh() {
 					activeChecks = append(activeChecks, check)
 				}
 			}
-
 		}
 
 		if v.LessThan(newVer) {
-			log.Info("sending refresh to socket %s, probeId=%d,  %d checks", sess.SocketId, sess.ProbeId, len(monitors))
-			p.emit("refresh", monitors)
+			log.Info("sending refresh to socketId=%s probeId=%d checkCount=%d", sess.SocketId, sess.ProbeId, len(monitors))
+			err = p.emit("refresh", monitors)
+			if err != nil {
+				log.Error(3, "failed to emit refresh for probeId=%d socketId=%s err=%s", p.Probe.Id, sess.SocketId, err)
+			}
+
 		} else {
-			log.Info("sending refresh to socket %s, probeId=%d,  %d checks", sess.SocketId, sess.ProbeId, len(activeChecks))
-			p.emit("refresh", activeChecks)
+			log.Info("sending refresh to socketId=%s probeId=%d checkCount=%d", sess.SocketId, sess.ProbeId, len(activeChecks))
+			err = p.emit("refresh", activeChecks)
+			if err != nil {
+				log.Error(3, "failed to emit refresh for probeId=%d socketId=%s err=%s", p.Probe.Id, sess.SocketId, err)
+			}
 		}
 		break
 	}
@@ -198,23 +208,23 @@ func (p *ProbeSocket) Refresh() {
 
 func (p *ProbeSocket) Start() {
 	Set(p.Socket.Id(), p)
-	log.Info("added probeSocket to socketCache for probeId=%d socketId=%s", p.Probe.Id, p.Socket.Id())
+	log.Info("added probeSocket to socketCache for probeId=%d socketId=%s", p.Probe.Id, p.Session.SocketId)
 	log.Info("connection for probeId=%d registered without error", p.Probe.Id)
 	if err := p.EmitReady(); err != nil {
-		log.Error(3, "failed to send ready event to probe. %s", err)
+		log.Error(3, "failed to send ready event to probeId=%d socketId=%s err=%s", p.Probe.Id, p.Session.SocketId, err)
 		return
 	}
-	log.Info("binding event handlers for probeId=%d", p.Probe.Id)
+	log.Info("binding event handlers for probeId=%d socketId=%s", p.Probe.Id, p.Session.SocketId)
 	p.Socket.On("event", p.OnEvent)
 	p.Socket.On("results", p.OnResults)
 	p.Socket.On("disconnection", p.OnDisconnection)
 
-	log.Info("saving probe session to DB for probeId=%d", p.Probe.Id)
+	log.Info("saving probe session for probeId=%d to DB", p.Probe.Id)
 	// adding the probeSession will emit an event that will trigger
 	// a refresh to be sent.
 	err := sqlstore.AddProbeSession(p.Session)
 	if err != nil {
-		log.Error(3, "Failed to add probeSession to DB.", err)
+		log.Error(3, "Failed to add probeSession to DB for probeId=%d. err=%s", p.Probe.Id, err)
 		p.emit("error", fmt.Sprintf("internal server error. %s", err.Error()))
 		return
 	}
@@ -231,7 +241,7 @@ func (p *ProbeSocket) Start() {
 				p.Unlock()
 				err = sqlstore.UpdateProbeSession(p.Session)
 				if err != nil {
-					log.Error(3, "Failed to update probeSession in DB. probeId=%d", p.Probe.Id, err)
+					log.Error(3, "Failed to update probeSession in DB. probeId=%d err=%s", p.Probe.Id, err)
 				}
 			case <-p.done:
 				// probe disconnected.
