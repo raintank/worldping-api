@@ -1,4 +1,4 @@
-FROM ubuntu:xenial
+FROM debian:stable-slim
 MAINTAINER Anthony Woods awoods@raintank.io
 
 RUN apt-get update && apt-get -y install netcat-traditional ca-certificates iputils-ping
