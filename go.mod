@@ -27,7 +27,7 @@ require (
 	github.com/golang/snappy v0.0.1
 	github.com/googollee/go-engine.io v0.0.0-20150203162345-597faf3df88a
 	github.com/googollee/go-socket.io v0.0.0-20150201044939-31886c563625
-	github.com/gopherjs/gopherjs v0.0.0-20160129235136-4b53e1bddba0
+	github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00
 	github.com/gorilla/websocket v0.0.0-20150515162638-1551221275a7
 	github.com/graarh/golang-socketio v0.0.0-20160527125345-533dd6f9e8e9
 	github.com/grafana/grafana v4.2.0+incompatible
@@ -38,7 +38,7 @@ require (
 	github.com/inconshreveable/log15 v0.0.0-20180818164646-67afb5ed74ec // indirect
 	github.com/jarcoal/httpmock v1.0.4 // indirect
 	github.com/jcmturner/gofork v0.0.0-20190328161633-dc7c13fece03
-	github.com/jtolds/gls v4.2.0+incompatible
+	github.com/jtolds/gls v4.20.0+incompatible
 	github.com/klauspost/crc32 v0.0.0-20170210140523-1bab8b35b6bb
 	github.com/lib/pq v0.0.0-20150109111458-19eeca3e30d2
 	github.com/mattn/go-colorable v0.1.2 // indirect
@@ -56,18 +56,20 @@ require (
 	github.com/raintank/tsdb-gw v0.0.0-20190408195803-9b50e6fd3947
 	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/sirupsen/logrus v1.2.0
-	github.com/smartystreets/assertions v0.0.0-20160707190355-2063fd1cc7c9
-	github.com/smartystreets/goconvey v0.0.0-20161103171500-019319c870f8
+	github.com/smartystreets/assertions v1.1.0
+	github.com/smartystreets/goconvey v1.6.4
 	github.com/tinylib/msgp v0.0.0-20170101023110-362bfb3384d5
 	github.com/uber/jaeger-client-go v2.16.0+incompatible
 	github.com/uber/jaeger-lib v2.0.0+incompatible // indirect
 	github.com/weaveworks/common v0.0.0-20190714171817-ddeaa31513fd // indirect
 	github.com/yanzay/log v0.0.0-20160419144809-87352bb23506
-	golang.org/x/net v0.0.0-20190522155817-f3200d17e092
-	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
-	golang.org/x/sys v0.0.0-20190403152447-81d4e9dc473e
+	golang.org/x/net v0.0.0-20200226121028-0de0cce0169b
+	golang.org/x/sys v0.0.0-20190412213103-97732733099d
+	golang.org/x/tools v0.0.0-20200515220128-d3bf790afa53 // indirect
 	gopkg.in/ini.v1 v1.21.1
 	gopkg.in/macaron.v1 v1.1.8
 	gopkg.in/raintank/schema.v0 v0.0.0-20160713163449-b1d2969aa4a5
 	gopkg.in/raintank/schema.v1 v1.0.0-20170112123755-a323316458b5
 )
+
+go 1.13

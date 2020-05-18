@@ -27,7 +27,7 @@ func check(series []graphite.Series, steps, numProbes int) m.CheckEvalResult {
 		NumProbes: numProbes,
 		Steps:     steps,
 	}
-	result, err := eval(res, &healthSettings)
+	result, err := eval(res, 1, &healthSettings)
 	So(err, ShouldBeNil)
 	return result
 }
