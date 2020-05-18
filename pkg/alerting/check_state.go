@@ -2,6 +2,7 @@ package alerting
 
 import (
 	"strings"
+	"time"
 
 	"github.com/raintank/worldping-api/pkg/log"
 	m "github.com/raintank/worldping-api/pkg/models"
@@ -18,8 +19,9 @@ func InitResultHandler() {
 	ResultQueue = make(chan *m.AlertingJob, 1000)
 
 	stateChanges := make(chan *m.AlertingJob, 1000)
-
-	go storeResults(stateChanges)
+	for i := 0; i < 5; i++ {
+		go storeResults(stateChanges)
+	}
 	go handleStateChange(stateChanges)
 
 }
@@ -30,7 +32,9 @@ func storeResults(stateChanges chan *m.AlertingJob) {
 		attempts := 0
 		for !saved && attempts < 3 {
 			attempts++
+			pre := time.Now()
 			change, err := sqlstore.UpdateCheckState(j)
+			executorStateDBUpdate.Value(util.Since(pre))
 			if err != nil {
 				log.Warn("failed to update checkState for checkId=%d. %s", j.Id, err)
 				continue
