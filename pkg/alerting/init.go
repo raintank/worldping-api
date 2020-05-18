@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/grafana/metrictank/stats"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/raintank/worldping-api/pkg/alerting/jobqueue"
 	"github.com/raintank/worldping-api/pkg/log"
 	"github.com/raintank/worldping-api/pkg/services"
@@ -34,6 +34,7 @@ var (
 
 	executorJobExecDelay        = stats.NewMeter32("alert-executor.job_execution_delay", true)
 	executorStateSaveDelay      = stats.NewMeter32("alert-executor.state_save_delay", true)
+	executorStateDBUpdate       = stats.NewMeter32("alert-executor.state_db_update", true)
 	executorJobQueryGraphite    = stats.NewMeter32("alert-executor.job_query_graphite", true)
 	executorGraphiteMissingVals = stats.NewCounterRate32("alert-executor.graphite-missingVals")
 

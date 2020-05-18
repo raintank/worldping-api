@@ -18,6 +18,10 @@ import (
 	"gopkg.in/raintank/schema.v1"
 )
 
+var (
+	ErrNoData = fmt.Errorf("fatal: no data returned for job")
+)
+
 func ChanExecutor(jobQueue <-chan *m.AlertingJob, cache *lru.Cache) {
 	var wg sync.WaitGroup
 	for j := range jobQueue {
@@ -80,10 +84,9 @@ func execute(job *m.AlertingJob, cache *lru.Cache) {
 		return
 	}
 
-	newState, err := eval(res, job.HealthSettings)
+	newState, err := eval(res, job.Id, job.HealthSettings)
 	if err != nil {
 		executorAlertOutcomesErr.Inc()
-		log.Error(3, "Alerting: eval failed for job %q : %s", job, err.Error())
 		return
 	}
 	job.NewState = newState
@@ -107,10 +110,11 @@ func execute(job *m.AlertingJob, cache *lru.Cache) {
 	}
 }
 
-func eval(res graphite.Response, healthSettings *m.CheckHealthSettings) (m.CheckEvalResult, error) {
+func eval(res graphite.Response, checkId int64, healthSettings *m.CheckHealthSettings) (m.CheckEvalResult, error) {
 	if len(res) == 0 {
 		executorGraphiteEmptyResponse.Inc()
-		return m.EvalResultUnknown, fmt.Errorf("fatal: no data returned for job")
+		log.Debug("Alerting: no data returned for job checkId=%d", checkId)
+		return m.EvalResultUnknown, ErrNoData
 	}
 	badEndpoints := 0
 	endpointsWithData := 0

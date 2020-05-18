@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.11.10
+      - image: circleci/golang:1.13.5
     steps:
       - checkout
       - run: scripts/build.sh
@@ -13,7 +13,7 @@ jobs:
 
   test:
     docker:
-      - image: circleci/golang:1.11.10
+      - image: circleci/golang:1.13.5
     steps:
       - checkout
       - run: test -z "$(gofmt -s -l ./ | tee /dev/stderr)"
@@ -22,7 +22,7 @@ jobs:
 
   deploy:
     docker:
-      - image: circleci/golang:1.11.10
+      - image: circleci/golang:1.13.5
     steps:
       - checkout
       - attach_workspace:
