@@ -636,7 +636,7 @@ func getProbeSessions(sess *session, probeId int64, instance string, since time.
 		sess.And("updated>?", since)
 	}
 	sessions := make([]m.ProbeSession, 0)
-	err := sess.OrderBy("updated").Find(&sessions)
+	err := sess.OrderBy("id").Find(&sessions)
 	return sessions, err
 }
 
