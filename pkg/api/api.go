@@ -75,8 +75,8 @@ func Register(r *macaron.Macaron) {
 		r.Group("/collectors", func() {
 			r.Combo("/").
 				Get(bind(m.GetProbesQuery{}), stats("v1_probes"), V1GetCollectors).
-				Put(reqEditorRole, quota("probe"), stats("v1_probes"), bind(m.ProbeDTO{}), V1AddCollector).
-				Post(reqEditorRole, stats("v1_probes"), bind(m.ProbeDTO{}), V1UpdateCollector)
+				Put(reqEditorRole, stats("v1_probes"), bind(m.ProbeDTO{}), V1AddCollector).
+				Post(reqEditorRole, quota("probe"), stats("v1_probes"), bind(m.ProbeDTO{}), V1UpdateCollector)
 			r.Get("/locations", stats("v1_probes"), V1GetCollectorLocations)
 			r.Get("/:id", stats("v1_probes"), V1GetCollectorById)
 			r.Delete("/:id", stats("v1_probes"), reqEditorRole, V1DeleteCollector)
@@ -93,8 +93,8 @@ func Register(r *macaron.Macaron) {
 		// endpoints
 		r.Group("/endpoints", func() {
 			r.Combo("/").Get(bind(m.GetEndpointsQuery{}), V1GetEndpoints).
-				Put(reqEditorRole, quota("endpoint"), stats("v1_endpoints"), bind(m.AddEndpointCommand{}), V1AddEndpoint).
-				Post(reqEditorRole, stats("v1_endpoints"), bind(m.UpdateEndpointCommand{}), V1UpdateEndpoint)
+				Put(reqEditorRole, stats("v1_endpoints"), bind(m.AddEndpointCommand{}), V1AddEndpoint).
+				Post(reqEditorRole, quota("endpoint"), stats("v1_endpoints"), bind(m.UpdateEndpointCommand{}), V1UpdateEndpoint)
 			r.Get("/:id", stats("v1_endpoints"), V1GetEndpointById)
 			r.Delete("/:id", stats("v1_endpoints"), reqEditorRole, V1DeleteEndpoint)
 			r.Get("/discover", stats("v1_endpoint_discover"), reqEditorRole, bind(m.DiscoverEndpointCmd{}), V1DiscoverEndpoint)
